@@ -1,0 +1,22 @@
+{
+  "id": "KS48100_BLE",
+  "manufacturer": "KS (KS Energy)",
+  "model": "KS48100 BMS (BLE protocol)",
+  "hardware_revisions": ["all (KS48100 BLE protocol family)"],
+  "protocol": "KS48100_BLE",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FF00",
+    "characteristic_uuid": "FF01",
+    "control_characteristic_uuid": "FF02",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/KsBmsDecoder.cpp",
+    "client": "src/bms/KsBmsBleClient.cpp",
+    "tests": ["test/test_ks_bms_decoder/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

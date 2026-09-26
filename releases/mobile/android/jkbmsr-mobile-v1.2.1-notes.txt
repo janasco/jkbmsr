@@ -1,0 +1,5 @@
+Release: v1.2.1
+Built: Fri Jul 31 13:43:43 UTC 2026
+APK SHA256: 86a9294db1eb0ba631757929c5f94bfeec1bab21d652702fedf312898eb5119b
+
+The .apk is for direct/sideload installs via /downloads on jkbmsr.com.

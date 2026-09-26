@@ -1,0 +1,23 @@
+# Layered on sdkconfig.defaults + sdkconfig.defaults.secure for
+# env:idf-secureboot-s3. Mirrors sdkconfig.defaults.secureboot (classic
+# ESP32) but omits CONFIG_ESP32_REV_MIN_3 — that Kconfig symbol only exists
+# for the classic ESP32 target. ESP32-S3 has no chip-revision gate for
+# Secure Boot v2; it's supported on every S3 revision. See
+# docs/phase3-production-hardening.md §0.
+#
+# Dev signing key is gitignored — generate with:
+#   scripts/generate-secure-boot-dev-key.sh
+# See docs/phase2-encryption-spec.md (P2-4) and docs/secure-bringup.md.
+
+# Secure Boot v2 + signed app/bootloader images.
+CONFIG_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_V2_ENABLED=y
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=y
+CONFIG_SECURE_BOOT_SIGNING_KEY="keys/secure_boot_signing_key.pem"
+CONFIG_SECURE_BOOT_FLASH_BOOTLOADER_DEFAULT=y
+
+# Signature block needs room before the partition table.
+CONFIG_PARTITION_TABLE_OFFSET=0xD000
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-secureboot.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions-secureboot.csv"

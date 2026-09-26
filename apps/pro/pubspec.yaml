@@ -1,0 +1,70 @@
+name: jkbmsr_pro
+description: "JKBMSR Pro — remote monitoring for JK-BMS. Not affiliated with JK-BMS."
+version: 1.3.29+61
+
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.5
+  google_fonts: ^6.1.0
+  go_router: ^13.0.0
+  flutter_svg: ^2.0.9
+  http: ^1.6.0
+  shared_preferences: ^2.2.0
+  # Real push notifications (docs/notification-plan.md). Firebase.initializeApp()
+  # is guarded at startup and degrades gracefully until a real Firebase project's
+  # google-services.json / GoogleService-Info.plist are added through the
+  # approved secrets process — see docs/AI_HANDOFF_MOBILE_MVP.md.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  # Production crash/error reporting (docs/mobile-roadmap.md Phase 4). Reuses
+  # the same Firebase project as push notifications; also degrades to a no-op
+  # until that project's config files are added.
+  url_launcher: ^6.3.0
+  google_sign_in: ^6.3.0
+  local_auth: ^2.3.0
+  # Keep the session token in SharedPreferences as today, but store the
+  # email+password used for silent biometric re-login (after idle timeout or
+  # server-side token expiry) in the OS keychain/keystore, not in a plaintext
+  # prefs file — see lib/services/secure_credential_store.dart.
+  flutter_secure_storage: ^9.2.4
+  package_info_plus: ^8.1.1
+  # QR scanning for device claiming (scan device+code off the web claim
+  # page's QR instead of typing it) — MLKit on Android, AVFoundation on iOS.
+  mobile_scanner: ^5.2.3
+  # Cloud Service long-term history screen: fl_chart for the trend chart,
+  # path_provider + share_plus to write the CSV export to a temp file and
+  # hand it to the OS share sheet (no csv package needed — the CSV itself is
+  # generated server-side and just written/shared as-is).
+  fl_chart: ^0.69.0
+  path_provider: ^2.1.4
+  share_plus: ^10.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/
+
+# Generates android/app/src/main/res/mipmap-*/ic_launcher.png and
+# ios/Runner/Assets.xcassets/AppIcon.appiconset from the JKBMSR mark (the
+# cloud+battery glyph shared with the web app), replacing the default Flutter
+# template icon. Run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#10151A"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  remove_alpha_ios: true

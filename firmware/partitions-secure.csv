@@ -1,0 +1,11 @@
+# Name,   Type, SubType,  Offset,   Size, Flags
+# Phase 2 secure partition map for 4MB esp32dev modules.
+# App slots sized like the Arduino OTA default (~1.75MB each) so the
+# Arduino-as-IDF image (~1.0MB today, growing with encryption) fits with
+# headroom. nvs_keys is reserved for NVS encryption (P2-3); unused until
+# CONFIG_NVS_ENCRYPTION is enabled. See docs/phase2-encryption-spec.md.
+nvs,      data, nvs,      0x9000,   0x5000,
+nvs_keys, data, nvs_keys, 0xE000,   0x1000, encrypted
+otadata,  data, ota,      0xF000,   0x2000,
+app0,     app,  ota_0,    0x20000,  0x1C0000,
+app1,     app,  ota_1,    0x1E0000, 0x1C0000,

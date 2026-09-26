@@ -1,0 +1,21 @@
+{
+  "id": "DALY_UART_0xA5",
+  "manufacturer": "Daly",
+  "model": "Daly Smart BMS (classic J/T/A/U/W/ND series, 0xA5 UART protocol)",
+  "hardware_revisions": ["all (0xA5 UART protocol family)"],
+  "protocol": "DALY_0xA5_UART",
+  "transport": {
+    "type": "uart",
+    "baud_rate": 9600,
+    "default_rx_pin": "GPIO16",
+    "default_tx_pin": "GPIO17"
+  },
+  "implementation": {
+    "decoder": "src/bms/DalyBmsParser.cpp",
+    "client": "src/bms/DalyBmsParser.cpp",
+    "tests": ["test/test_daly_bms_parser/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

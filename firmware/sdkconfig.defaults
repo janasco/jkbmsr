@@ -1,0 +1,59 @@
+# Shared ESP-IDF defaults for env:idf (Arduino as a component).
+# Encryption / Secure Boot flags land in later Phase 2 tasks — keep this file
+# limited to what is required for a green Arduino+IDF link. See
+# docs/phase2-encryption-spec.md.
+
+CONFIG_AUTOSTART_ARDUINO=y
+CONFIG_ARDUINO_LOOP_STACK_SIZE=16384
+CONFIG_FREERTOS_HZ=1000
+
+# Nothing here ever set an explicit optimization level, so every idf-family
+# env silently fell back to ESP-IDF's own default: CONFIG_COMPILER_OPTIMIZATION_DEBUG
+# (-Og). That's debug-oriented, not what a shipping build should use, and it's
+# the real reason classic ESP32 (idf/idf-8mb) overflows its IRAM budget by
+# 2832 bytes -- confirmed on real hardware (2026-08-21). Compiling for size
+# is the standard, correct choice here regardless of the IRAM question.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# JK-BMS Bluetooth client: use the ESP-IDF NimBLE host/controller when Arduino
+# is built as an IDF component.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# Pin NimBLE's timer backend to FreeRTOS instead of esp_timer. Confirmed on
+# real hardware (2026-08-21): any env that passes an explicit
+# -DSDKCONFIG_DEFAULTS override (as every idf-family env does once it layers
+# in more than just this one file) loses some additional default PlatformIO
+# would otherwise silently contribute when relying on its own implicit
+# default-file handling, which flips this option's resolved default to
+# enabled. That path doesn't compile: the vendored NimBLE-Arduino's
+# nimble_npl_os.h uses esp_timer_handle_t without including esp_timer.h (a
+# real bug in that vendored header, not fixable here since it's fetched
+# fresh from the PlatformIO registry on every install). Pinning explicitly
+# avoids depending on this untested code path at all.
+CONFIG_BT_NIMBLE_USE_ESP_TIMER=n
+
+# Required by Arduino WiFiClientSecure (ssl_client.cpp is compiled out without
+# these — otherwise the final link fails with undefined ssl_init/start_ssl_client).
+CONFIG_MBEDTLS_PSK_MODES=y
+CONFIG_MBEDTLS_KEY_EXCHANGE_PSK=y
+
+# Match the Arduino-prebuilt defaults we already rely on for TLS / WiFi.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN=y
+
+# Partition table (custom CSV; nvs_keys reserved for P2-3).
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-secure.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions-secure.csv"
+
+# --- OTA rollback safety net ---
+# Without this, a bad OTA image that crashes or boot-loops has no automatic
+# recovery -- the device just stays broken. Confirmed missing entirely
+# (2026-08-21) while scoping "OTA under encryption" testing (P2-5): nothing
+# in this codebase ever called esp_ota_mark_app_valid_cancel_rollback(), and
+# this Kconfig option was never set, so ESP-IDF's own anti-brick rollback
+# was silently off for every idf-family env. Matters most on flash-encrypted
+# units, where jkbmsr.com/flash can no longer physically re-recover a bricked
+# board at all -- see main.cpp's call to esp_ota_mark_app_valid_cancel_rollback().
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y

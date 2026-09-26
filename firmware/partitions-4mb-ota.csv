@@ -1,0 +1,13 @@
+# OTA-capable layout for 4MB flash with app slots large enough for the BLE
+# stack (the stock default.csv 1.25MB slots overflow once NimBLE links in).
+# nvs/otadata offsets match default.csv, so Preferences data and the browser
+# flasher offsets (0x1000/0x8000/0xe000/0x10000) are unchanged. Devices flashed
+# with the old table must be re-flashed over USB once — OTA cannot rewrite the
+# partition table.
+# Name,    Type, SubType,  Offset,   Size
+nvs,       data, nvs,      0x9000,   0x5000
+otadata,   data, ota,      0xe000,   0x2000
+app0,      app,  ota_0,    0x10000,  0x1E0000
+app1,      app,  ota_1,    0x1F0000, 0x1E0000
+spiffs,    data, spiffs,   0x3D0000, 0x20000
+coredump,  data, coredump, 0x3F0000, 0x10000

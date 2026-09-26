@@ -1,0 +1,5 @@
+Release: v1.2.2
+Built: Fri Jul 31 22:33:09 UTC 2026
+APK SHA256: 69381137919fa312cac27d82b1e93caf62d588787404cdacae39c0229e9e1a91
+
+Includes app logo, app name update to JKBMSR, and Google Sign-in support.

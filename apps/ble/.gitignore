@@ -1,0 +1,68 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/build/
+/android/.gradle/
+
+# Android release signing material — never commit keys or passwords
+/android/key.properties
+/android/upload-keystore.jks
+
+# Release upload secrets for scripts/publish-release.sh — never commit
+/scripts/.env.local
+
+# Local secrets — never commit. A previously-tracked .env here held a live
+# Polar.sh access token; the Polar checkout was removed in v4.17.4, so the
+# file is now vestigial and must stay out of history.
+/.env
+/.env.*
+!/.env.example
+
+# Local release artifacts (published via scripts/publish-release.sh, never committed)
+/jkbmsr-ble-v*.apk
+/jkbmsr-ble-v*.apk.sha256
+/jkbmsr-ble-v*.aab
+/jkbmsr-ble-v*.aab.sha256
+/notes.txt

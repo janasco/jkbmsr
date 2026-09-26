@@ -1,0 +1,7 @@
+## Copy this file to android/key.properties (gitignored) and fill in real
+## values from your own upload keystore. Never commit the real file, the
+## keystore itself, or these passwords.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=/absolute/path/to/your-upload-keystore.jks

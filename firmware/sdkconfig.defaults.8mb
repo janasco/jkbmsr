@@ -1,0 +1,5 @@
+# Forces the real flash-size Kconfig symbol for the idf-family envs whose
+# board_build.flash_size = 8MB. See sdkconfig.defaults.4mb for why this is
+# necessary -- board_build.flash_size alone does not propagate into the
+# compiled sdkconfig for Arduino-as-IDF-component builds.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y

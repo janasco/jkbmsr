@@ -1,0 +1,21 @@
+# Layered on sdkconfig.defaults + sdkconfig.defaults.secure for env:idf-secureboot.
+# Secure Boot v2 requires ESP32 ECO3+ (rev ≥ 3.0). Older modules will not boot
+# this image. Dev signing key is gitignored — generate with:
+#   scripts/generate-secure-boot-dev-key.sh
+# See docs/phase2-encryption-spec.md (P2-4) and docs/secure-bringup.md.
+
+# Minimum chip revision for Secure Boot v2 on classic ESP32.
+CONFIG_ESP32_REV_MIN_3=y
+
+# Secure Boot v2 + signed app/bootloader images.
+CONFIG_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_V2_ENABLED=y
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=y
+CONFIG_SECURE_BOOT_SIGNING_KEY="keys/secure_boot_signing_key.pem"
+CONFIG_SECURE_BOOT_FLASH_BOOTLOADER_DEFAULT=y
+
+# Signature block needs room before the partition table.
+CONFIG_PARTITION_TABLE_OFFSET=0xD000
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-secureboot.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions-secureboot.csv"

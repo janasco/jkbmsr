@@ -1,0 +1,82 @@
+# Root .gitignore for the janasco/jkbmsr monorepo.
+#
+# Each component keeps its own .gitignore, and git applies the nearest one to a
+# given path, so component rules still work. This file only covers things that
+# are cross-cutting: editor cruft, and the classes of secret that must never
+# appear anywhere in a public tree regardless of which component produced them.
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# ---- Secrets. None of these belong in this repository. ----
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+*_KEYSTORE_CREDENTIALS*
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
+service-account*.json
+
+# Keys and certificates: deny by default, then re-admit the specific PUBLIC
+# material the project has to ship.
+#
+# A bare `*.pem` rule is wrong in both directions, and the failure is silent
+# because the files simply never appear in a fresh clone:
+#
+#   * `firmware/data/cert/cacert.pem` and `extra-roots.pem` are the CA trust
+#     anchors the prebuilt `x509_crt_bundle.bin` is generated from. The firmware
+#     embeds the .bin, so TLS keeps working without them — but the bundle can no
+#     longer be regenerated or audited, and there is no way to notice a CA
+#     rotation.
+#   * `firmware/docs/ota-signing-public-key.pem` and
+#     `releases/ota/keys/public/jkbmsr-ota-p256-20260705.pem` are the OTA
+#     verification key. A device that cannot obtain it cannot check a signed
+#     release, and the release index has nothing to verify against.
+#
+# A public key or a CA root is not a secret. What must never be committed is the
+# matching PRIVATE key, so the deny rules below are named for that rather than
+# for the file extension.
+*.pem
+!firmware/data/cert/cacert.pem
+!firmware/data/cert/extra-roots.pem
+!firmware/docs/ota-signing-public-key.pem
+# Must re-include by file pattern, not by naming the directories: `*.pem`
+# matches the file itself, and a pattern naming only a parent directory never
+# wins against it. Globs rather than an exact filename, so rotating the OTA
+# signing key does not require editing this file.
+!releases/ota/keys/public/*.pem
+
+# Private key material, by name — these stay excluded even if a public key of the
+# same name is legitimately tracked alongside them.
+*private*.pem
+*-private-key.pem
+*secret*.pem
+*.key
+
+# ---- Build output ----
+node_modules/
+.dart_tool/
+build/
+dist/
+out/
+.next/
+*.tsbuildinfo
+
+# The staged components are Flutter apps; their Gradle caches were accidentally
+# committed in one of them and leaked absolute local paths.
+.gradle/
+
+# ---- Test / coverage output ----
+coverage/
+*.log

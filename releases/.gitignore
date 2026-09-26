@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+.wrangler/
+
+# Binary build artifacts (attached as GitHub Release Assets instead)
+*.apk
+*.aab

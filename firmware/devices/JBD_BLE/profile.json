@@ -1,0 +1,22 @@
+{
+  "id": "JBD_BLE",
+  "manufacturer": "JBD",
+  "model": "JBD-BMS (Jiabaida / Xiaoxiang / Overkill Solar rebrand family, BLE)",
+  "hardware_revisions": ["all (0xFF00 default service UUID; a minority of rebrand SKUs use different UUIDs, not handled)"],
+  "protocol": "JBD_UART",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FF00",
+    "characteristic_uuid": "FF01",
+    "control_characteristic_uuid": "FF02",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/JbdBmsParser.cpp",
+    "client": "src/bms/JbdBmsBleClient.cpp",
+    "tests": ["test/test_jbd_bms_parser/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "targets": [
+    {
+      "targetHardware": "esp32-classic-4mb",
+      "platformioEnvironment": "dev",
+      "chipFamily": "ESP32",
+      "platform": "esp32",
+      "releaseStatus": "supported",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": true, "ota": true },
+      "defaultUart": { "rxPin": 16, "txPin": 17, "baudRate": 115200 },
+      "boardProfiles": ["esp32dev"],
+      "boards": ["ESP32-WROOM-32", "ESP32-WROOM-32D", "ESP32-WROOM-32E", "ESP32-WROOM-32U", "DOIT ESP32 DEVKIT V1", "NodeMCU-32S"]
+    },
+    {
+      "targetHardware": "esp32-c3-4mb",
+      "platformioEnvironment": "esp32-c3-4mb",
+      "chipFamily": "ESP32-C3",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": true, "ota": true },
+      "defaultUart": { "rxPin": 4, "txPin": 5, "baudRate": 115200 },
+      "boardProfiles": ["esp32-c3-devkitm-1"],
+      "boards": ["ESP32-C3-DevKitM-1", "Lolin C3 Mini", "ESP32-C3 Super Mini", "Seeed XIAO ESP32-C3", "WeAct Studio ESP32-C3 CoreBoard"]
+    },
+    {
+      "targetHardware": "esp32-s3-4mb",
+      "platformioEnvironment": "esp32-s3-4mb",
+      "chipFamily": "ESP32-S3",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": true, "ota": true },
+      "defaultUart": { "rxPin": 16, "txPin": 17, "baudRate": 115200 },
+      "boardProfiles": ["esp32-s3-devkitc-1"],
+      "boards": ["ESP32-S3-DevKitC-1", "Lolin S3 Mini", "ESP32-S3 Super Mini", "Seeed XIAO ESP32-S3"]
+    },
+    {
+      "targetHardware": "esp8266-uart-lite",
+      "platformioEnvironment": "esp8266-nodemcu",
+      "chipFamily": "ESP8266",
+      "platform": "esp8266",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": false, "ota": false },
+      "defaultUart": { "rxPin": 14, "txPin": 12, "baudRate": 115200 },
+      "boardProfiles": ["nodemcuv2"],
+      "boards": ["NodeMCU ESP8266 v2/v3", "Wemos D1 mini", "ESP-12E/ESP-12F development boards"]
+    },
+    {
+      "targetHardware": "esp32-s2-4mb",
+      "platformioEnvironment": "esp32-s2-4mb",
+      "chipFamily": "ESP32-S2",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": false, "ota": true },
+      "defaultUart": { "rxPin": 16, "txPin": 17, "baudRate": 115200 },
+      "boardProfiles": ["esp32-s2-saola-1"],
+      "boards": ["ESP32-S2-Saola-1", "Lolin S2 Mini", "Compatible 4 MB ESP32-S2 development boards"]
+    },
+    {
+      "targetHardware": "esp32-classic-8mb",
+      "platformioEnvironment": "esp32-classic-8mb",
+      "chipFamily": "ESP32",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 8,
+      "capabilities": { "wifi": true, "uart": true, "ble": true, "ota": true },
+      "defaultUart": { "rxPin": 16, "txPin": 17, "baudRate": 115200 },
+      "boardProfiles": ["esp32dev"],
+      "boards": ["ESP32-WROOM-32 (8 MB flash)", "ESP32-WROOM-32D/32E (8 MB flash)", "Generic ESP32-WROOM development boards with 8 MB flash"]
+    },
+    {
+      "targetHardware": "esp32-c6-4mb",
+      "platformioEnvironment": "esp32-c6-4mb",
+      "chipFamily": "ESP32-C6",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 4,
+      "capabilities": { "wifi": true, "uart": true, "ble": true, "ota": true },
+      "defaultUart": { "rxPin": 6, "txPin": 7, "baudRate": 115200 },
+      "boardProfiles": ["esp32-c6-devkitc-1"],
+      "boards": ["ESP32-C6-DevKitC-1", "ESP32-C6-DevKitM-1", "ESP32-C6 Super Mini", "Compatible 4 MB ESP32-C6 development boards"]
+    }
+  ]
+}

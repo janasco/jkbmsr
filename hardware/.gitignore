@@ -1,0 +1,34 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Build output
+build/
+dist/
+gerbers/
+fabrication/
+
+# KiCad backups and autosaves
+*-backups/
+*.bak
+*.kicad_pcb-bak
+*.sch-bak
+
+# Temporary files
+tmp/
+temp/

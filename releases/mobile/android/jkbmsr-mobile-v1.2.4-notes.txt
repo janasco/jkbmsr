@@ -1,0 +1,8 @@
+JKBMSR Mobile v1.2.4
+
+Highlights:
+- Battery cell charging & discharging animations with gradient flow & energy pulse.
+- Gateway settings tab reorganization (OTA update controls, BMS hardware config, display options, and advanced gateway settings).
+- Enhanced alerts screen with status metrics, severity filtering (All, Critical, Warning), live search, and inline acknowledge actions.
+- Automatic entitlement binding for unassigned licenses.
+- Updated Gateway Sharing cap to 5 users.

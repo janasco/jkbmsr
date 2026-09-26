@@ -1,0 +1,57 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+build/
+dist/
+out/
+target/
+.pio/
+managed_components/
+.platformio-core/
+.wrangler/
+
+# ESP-IDF generated sdkconfig (env:idf*). Intentional defaults live in
+# sdkconfig.defaults*; the merged per-env file is a build artifact.
+sdkconfig
+sdkconfig.idf
+sdkconfig.idf-*
+sdkconfig.esp32dev
+sdkconfig.*.old
+!sdkconfig.defaults
+!sdkconfig.defaults.*
+dependencies.lock
+
+# Secure Boot / flash-encryption private material (Phase 2+). Never commit.
+keys/*.pem
+!keys/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Temporary files
+tmp/
+temp/

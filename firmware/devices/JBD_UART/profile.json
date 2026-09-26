@@ -1,0 +1,21 @@
+{
+  "id": "JBD_UART",
+  "manufacturer": "JBD",
+  "model": "JBD-BMS (Jiabaida / Xiaoxiang / Overkill Solar rebrand family)",
+  "hardware_revisions": ["all (0xDD/0x77 UART protocol family)"],
+  "protocol": "JBD_UART",
+  "transport": {
+    "type": "uart",
+    "baud_rate": 9600,
+    "default_rx_pin": "GPIO16",
+    "default_tx_pin": "GPIO17"
+  },
+  "implementation": {
+    "decoder": "src/bms/JbdBmsParser.cpp",
+    "client": "src/bms/JbdBmsParser.cpp",
+    "tests": ["test/test_jbd_bms_parser/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

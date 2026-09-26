@@ -1,0 +1,21 @@
+{
+  "id": "JK_UART_GPS_PORT",
+  "manufacturer": "JK",
+  "model": "All JK-BMS models with software >= 6.0 (wired GPS/UART port)",
+  "hardware_revisions": ["all (software >= 6.0)"],
+  "protocol": "0x4E57_v1",
+  "transport": {
+    "type": "uart",
+    "baud_rate": 115200,
+    "default_rx_pin": "GPIO16",
+    "default_tx_pin": "GPIO17"
+  },
+  "implementation": {
+    "decoder": "src/bms/JkBmsParser.cpp",
+    "client": "src/bms/JkBmsParser.cpp",
+    "tests": ["test/test_jk_bms_parser/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

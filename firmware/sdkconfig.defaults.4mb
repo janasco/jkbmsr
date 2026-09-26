@@ -1,0 +1,12 @@
+# Forces the real flash-size Kconfig symbol for the idf-family envs whose
+# board_build.flash_size = 4MB. Confirmed on real ESP32-S3 hardware
+# (2026-08-21): PlatformIO's board_build.flash_size setting does not
+# propagate into the compiled sdkconfig for Arduino-as-IDF-component builds
+# -- it silently falls back to ESP-IDF's raw default (2MB) regardless of
+# what board_build.flash_size claims, which esptool then flags at upload
+# time ("Flash memory size mismatch") and which corrupts flash-encrypted
+# boots (encryption is address-dependent, so a wrong size assumption
+# produces garbage reads -- this is what caused the "invalid header"
+# boot-loop on env:idf-secure-s3). Fix: set the Kconfig symbol explicitly
+# instead of relying on board_build.flash_size alone.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y

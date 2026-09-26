@@ -1,0 +1,4 @@
+# The browser flasher moved to jkbmsr.com/flash (the React/timeline UI) —
+# this static esp-web-tools page was retired. Keep old links/bookmarks working.
+/flash    https://jkbmsr.com/flash   301
+/flash/*  https://jkbmsr.com/flash   301

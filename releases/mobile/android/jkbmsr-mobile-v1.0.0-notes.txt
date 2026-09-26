@@ -1,0 +1,7 @@
+Release: v1.0.0
+Built: Mon Jul 27 12:10:43 UTC 2026
+APK SHA256: dea39a3b8a8b2868217c66c05a502524e4e229308e2dc52fc6cbf5957d708b15
+AAB SHA256: 8998a9cb1a3d77845ab095f1b737b3f7743bb5f1da5004afc6c1eb3e6d554e4a
+
+The .apk is for direct/sideload installs. The .aab is what gets
+uploaded to Google Play Console — it is not directly installable.
