@@ -1,0 +1,35 @@
+{
+  "name": "JKBMSR Gateway",
+  "version": "0.6.0",
+  "new_install_improv_wait_time": 20,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "targetHardware": "esp32-c3-4mb",
+      "capabilities": {
+        "wifi": true,
+        "uart": true,
+        "ble": true,
+        "ota": true
+      },
+      "parts": [
+        {
+          "path": "./bootloader.bin",
+          "offset": 0
+        },
+        {
+          "path": "./partitions.bin",
+          "offset": 32768
+        },
+        {
+          "path": "./boot_app0.bin",
+          "offset": 57344
+        },
+        {
+          "path": "./firmware.bin",
+          "offset": 65536
+        }
+      ]
+    }
+  ]
+}

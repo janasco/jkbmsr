@@ -1,0 +1,22 @@
+{
+  "id": "LOLAN_BLE",
+  "manufacturer": "Lolan (KSP Smart BMS)",
+  "model": "Lolan Smart BMS (BLE protocol)",
+  "hardware_revisions": ["all (Lolan BLE protocol family)"],
+  "protocol": "LOLAN_BLE",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FFE0",
+    "characteristic_uuid": "FFE1",
+    "control_characteristic_uuid": "FFE2",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/LolanBmsDecoder.cpp",
+    "client": "src/bms/LolanBmsBleClient.cpp",
+    "tests": ["test/test_lolan_bms_decoder/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

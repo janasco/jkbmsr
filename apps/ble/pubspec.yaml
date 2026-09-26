@@ -1,0 +1,49 @@
+name: jkbmsr_ble
+description: "JKBMSR Local BLE Monitor - Bluetooth telemetry and control for JK-BMS."
+publish_to: 'none'
+version: 4.17.19+39
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_blue_plus: ^1.34.4
+  fl_chart: ^0.69.0
+  google_fonts: ^6.2.1
+  share_plus: ^10.1.2
+  path_provider: ^2.1.5
+  url_launcher: ^6.3.1
+  webview_flutter: ^4.10.0
+  in_app_purchase: ^3.3.0
+  package_info_plus: ^8.1.0
+  http: ^1.2.2
+  qr_flutter: ^4.1.0
+  sqflite: ^2.4.1
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  # Test-only: lets widget tests install a no-op FlutterBluePlusPlatform so the
+  # full app can be mounted on the Dart VM (flutter_blue_plus itself throws
+  # UnsupportedError there). Already a transitive dependency of
+  # flutter_blue_plus; pinned here so the test can import it directly.
+  flutter_blue_plus_platform_interface: ^7.0.0
+  # Test-only, same reason: in_app_purchase re-exports only the billing *types*,
+  # not the platform interface, so a test double for the Supporter entitlement
+  # has to swap InAppPurchasePlatform.instance. Already a transitive dependency
+  # of in_app_purchase (resolved to the same 1.4.0); pinned here so the test can
+  # import it directly. dev_dependencies never reach the shipped APK.
+  in_app_purchase_platform_interface: ^1.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/
+    - assets/images/
+    - assets/branding/

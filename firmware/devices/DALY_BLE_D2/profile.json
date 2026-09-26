@@ -1,0 +1,22 @@
+{
+  "id": "DALY_BLE_D2",
+  "manufacturer": "Daly",
+  "model": "Daly Smart BMS (H/K/M/S series, D2/Modbus BLE protocol)",
+  "hardware_revisions": ["all (D2/Modbus BLE protocol family)"],
+  "protocol": "DALY_D2_BLE",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FFF0",
+    "characteristic_uuid": "FFF1",
+    "control_characteristic_uuid": "FFF2",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/DalyD2Decoder.cpp",
+    "client": "src/bms/DalyBmsBleClient.cpp",
+    "tests": ["test/test_daly_d2_decoder/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

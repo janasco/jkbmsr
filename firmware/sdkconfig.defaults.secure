@@ -1,0 +1,33 @@
+# Layered on top of sdkconfig.defaults for env:idf-secure (ESP-IDF 4.4.x).
+# DEVELOPMENT mode only — UART re-flash of plaintext still works.
+# Do NOT enable CONFIG_SECURE_FLASH_ENCRYPTION_MODE_RELEASE here (Phase 3).
+# See docs/phase2-encryption-spec.md (P2-2, P2-3).
+
+# --- Flash encryption (development) ---
+CONFIG_SECURE_FLASH_ENC_ENABLED=y
+CONFIG_SECURE_FLASH_ENCRYPTION_MODE_DEVELOPMENT=y
+
+# --- NVS encryption: disabled for now (2026-08-21 P2-5 bring-up) ---
+# CONFIG_NVS_ENCRYPTION=y requires the app to call nvs_flash_secure_init()
+# with key material loaded from the nvs_keys partition. Nothing in this
+# codebase does that -- Preferences/initArduino() only ever calls the plain
+# nvs_flash_init(), which cannot open an NVS partition it doesn't know is
+# encrypted. Confirmed on real hardware: NVS init failed outright
+# (ESP_ERR_NVS_CORRUPT_KEY_PART), which cascaded into WiFi failing too (WiFi
+# calibration data also lives in NVS). App-partition flash encryption above
+# already covers this repo's actual goal (protect the firmware/app code at
+# rest); encrypting NVS as well is a separate follow-up that needs real
+# secure-init wiring, not a checkbox.
+#
+# Just commenting the line out is NOT enough to disable it -- confirmed on
+# real ESP32-S3 hardware (2026-08-21, env:idf-secure-s3): with the line
+# absent, the compiled sdkconfig.h still had CONFIG_NVS_ENCRYPTION=1 (Kconfig
+# falls back to its own default of "on" once CONFIG_SECURE_FLASH_ENC_ENABLED=y
+# is set, same "absent default silently isn't what you think it is" trap as
+# CONFIG_BT_NIMBLE_USE_ESP_TIMER pin in the shared sdkconfig.defaults). Must
+# be an explicit =n.
+CONFIG_NVS_ENCRYPTION=n
+#
+# (The NimBLE-timer-backend pin that used to live here moved to the shared
+# sdkconfig.defaults -- turns out it wasn't NVS_ENCRYPTION-specific at all,
+# see that file for the real explanation.)

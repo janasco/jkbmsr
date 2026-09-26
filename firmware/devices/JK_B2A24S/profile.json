@@ -1,0 +1,21 @@
+{
+  "id": "JK_B2A24S",
+  "manufacturer": "JK",
+  "model": "JK-B2A24S",
+  "hardware_revisions": ["<11"],
+  "protocol": "JK02_24S",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FFE0",
+    "characteristic_uuid": "FFE1",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/Jk02Decoder.cpp",
+    "client": "src/bms/JkBmsBleClient.cpp",
+    "tests": ["test/test_jk02_decoder/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "protocol-verified"
+}

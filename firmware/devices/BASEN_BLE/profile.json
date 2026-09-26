@@ -1,0 +1,22 @@
+{
+  "id": "BASEN_BLE",
+  "manufacturer": "Basen (also sold under VIP / EE / Mabru / Roamer branding)",
+  "model": "Basen 16S/24S BMS (BLE protocol)",
+  "hardware_revisions": ["all (Basen BLE protocol family, including VIP/EE/Mabru/Roamer rebrands)"],
+  "protocol": "BASEN_BLE",
+  "transport": {
+    "type": "ble",
+    "service_uuid": "FA00",
+    "characteristic_uuid": "FA01",
+    "control_characteristic_uuid": "FA02",
+    "auto_discovery": true
+  },
+  "implementation": {
+    "decoder": "src/bms/BasenBmsDecoder.cpp",
+    "client": "src/bms/BasenBmsBleClient.cpp",
+    "tests": ["test/test_basen_bms_decoder/test_main.cpp"]
+  },
+  "observed_software_versions": [],
+  "access_mode": "read-only",
+  "status": "synthetic-fixture-only"
+}

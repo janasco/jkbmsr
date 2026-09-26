@@ -1,0 +1,45 @@
+name: Firmware bug
+description: Report a bug in the JKBMSR ESP32 firmware
+title: "[Firmware] "
+labels: ["firmware", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If you're not sure whether your BMS model is
+        supported at all, that's a [Discussion](https://github.com/janasco/jkbmsr/discussions),
+        not a bug report — this form is for firmware that isn't behaving as expected.
+  - type: input
+    id: firmware-version
+    attributes:
+      label: Firmware version
+      placeholder: e.g. v0.2.7 (check the gateway's device settings page)
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      placeholder: e.g. ESP32-DevKitC, JK-BMS B2A24S over UART
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant serial log output
+      render: shell
+    validations:
+      required: false

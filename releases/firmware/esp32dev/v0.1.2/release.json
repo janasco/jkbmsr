@@ -1,0 +1,22 @@
+{
+  "version": "0.1.2",
+  "targetHardware": "esp32dev",
+  "releasedAt": "2026-07-05T07:14:03Z",
+  "githubReleaseTag": "firmware-v0.1.2",
+  "artifacts": {
+    "firmware": "./firmware.bin",
+    "checksum": "./firmware.sha256",
+    "metadata": "./firmware-metadata.json",
+    "releaseNotes": "./RELEASE_NOTES.md"
+  },
+  "otaMetadata": {
+    "version": "0.1.2",
+    "targetHardware": "esp32dev",
+    "releasedAt": "2026-07-05T07:14:03Z",
+    "downloadUrl": "/api/v1/ota/firmware",
+    "sha256": "24c0d60d08894d333e954ec226cbed69b80de8729bdcbec57e052bc4cfe2bfe2",
+    "signature": "MEYCIQC1eMljN4zL+D8sppiFLBCosU8sC72LVvvrUhubNsLPbgIhAIjHqLuJuODOuofha+HPyhzLTY4xfjbzCYCihAkY3YU/",
+    "signingKeyId": "jkbmsr-ota-p256-20260705",
+    "signatureAlgorithm": "ecdsa-p256-sha256"
+  }
+}

@@ -1,0 +1,1067 @@
+{
+  "publicBaseUrl": "https://cdn.jkbmsr.com",
+  "releases": [
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-09-22T02:18:20Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-09-22T02:18:20Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "0e964db8142e1f32fd3f9b3f8d49d6a1b8fe8b0ac24ed88962c6a9cd580d5540",
+        "signature": "MEQCID+HSpEh7oBE52mKrSWLbitkf77e3OE5PT3ChA6r1gzKAiBV7YDTeqIxtYkAukLIR7BnApYVCCVgvKrljZy56E1Q1w==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-c6-4mb",
+      "releasedAt": "2026-09-22T02:18:16Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-c6-4mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-c6-4mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-c6-4mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-c6-4mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-c6-4mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-c6-4mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-c6-4mb",
+        "releasedAt": "2026-09-22T02:18:16Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "2bd097630d60d301073d61db2c20ca6841c2875f0656f6ae273ef16d1a2112f5",
+        "signature": "MEUCIQCYub+RIQX+4klnLMN12WSItNX7iu3/ZnUmMs/ZMSl2PwIgW7dpO4+hY3+sqXqQGH3Ade6VFCUymjjBcSlKXWyMCX4=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-09-22T02:18:14Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-09-22T02:18:14Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "9cb40131c6d102aa87007db089858c444b1b99d7c8047be1b16f3662d4fffc5e",
+        "signature": "MEYCIQDa2U6NWvN18IiecCQF24CSLeT6SMG4ZZQhZB/wx+mE+wIhAKN/wt8EDGlPJIoFFwk0KquiEnANrpGdpb0c8TGn1prV",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-09-22T02:18:13Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-09-22T02:18:13Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "78d30441a5856b255ca7b41c7aceb2301893518680f6bea92d6ed15dffe8f1f6",
+        "signature": "MEQCIFdUKOfcoMTU3yz8mh2cRSxVzBD1tfk0CrwGJkymIjnjAiBgXLIguhff+NDo8H78Sz1AUqQsigBf//tj0I5nr796pQ==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-09-22T02:18:12Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-09-22T02:18:12Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "c347e3d964351e40b112d536363d2eeaabdfb8ee9a3ddc93bfc2481c691eec67",
+        "signature": "MEUCIQCUikGxqP+YX90sJ09DTWN8XLOAjcnkqgs7UR7WP7XxPQIgfCw3WoqgoJzvuPZDIcfS5pwsIePAH+Af4rI8xHJCBms=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-09-22T02:18:11Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.9.1/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.9.1/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.9.1/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.9.1/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.1",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-09-22T02:18:11Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "fd2c9c9b0073e137058ef3112710193ccf46d636079a883d76dfc6ddae9fead5",
+        "signature": "MEYCIQCakz5WcZv4RJs5rBamADsJ+zZHYfHlpUy6aNuoK4RexQIhANI7PPCJ3pIs/qKoCYQT9HocARZ+s2nOBrsrnr6nIDn6",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.1",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-09-22T02:18:07Z",
+      "githubReleaseTag": "firmware-v0.9.1",
+      "isLatest": true,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.9.1/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.9.1/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.9.1/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.9.1/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.9.1/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-09-14T01:23:00Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-09-14T01:23:00Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "2bbdb6fc12e428edd6ff7743a36d0e843d117716840d9698928767604e93cee4",
+        "signature": "MEUCIQCgP4HhThdtwUqXBwOhlnGVzsCrRDQKf3rx6ewVXWlliAIgQvZFhJ6/q4NruU8QAw4R1scll9pmTd3qkrTfqn4PE5M=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-09-14T01:22:58Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-09-14T01:22:58Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "3694b9d554d350b83009612106ab8ad94e99f0baea3cfe982fda70c366c16057",
+        "signature": "MEYCIQDB//WRJsUV6a/GOtJtv8XxuekD9WUlzIGSuGirJXSX8AIhAMyEzoQzK/KsLuLA1KN7Rb5S0GyZVgnjM82zqmM2gXrj",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-09-14T01:22:55Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-09-14T01:22:55Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "dd433bd41569a8730cc86d2b0ba9d03d8729b124c467fb4e1bdd67afc1d18bc4",
+        "signature": "MEQCIERzR1Ff437DcG0CC9SR2KubSs+74U1ER6n7M4Z1UTkVAiAlWq/ANLZw9eKTtQUn29fRPhrwJHZqia0Vk6QUSGaA1A==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-09-14T01:22:53Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-09-14T01:22:53Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "150ccf1f00a5670b2bb696a9b34e35684013ca47e6d285be95f97b46b9e319fd",
+        "signature": "MEQCICps8GsJjBSPYdBBCDof6QP32yTYtShR6aDAu9nCpeZqAiB1h++1L5RTr7iNQZobS2OjCq5HWC2lwIEZBjAINfLHcQ==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-c6-4mb",
+      "releasedAt": "2026-09-14T01:22:53Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c6-4mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-c6-4mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-c6-4mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c6-4mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c6-4mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-c6-4mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-c6-4mb",
+        "releasedAt": "2026-09-14T01:22:53Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "d429ddc1ad0545d3716fd979d48a3d68ebf820bbca0d79dc712d7e3564bb8d65",
+        "signature": "MEUCIBplzVNQP4qkYk0YUzBeU5QIHzCIAc07ISgFO0O6GNmPAiEA//+4YR3JsFjBoAbruYCeeYWUoqBvMvh/a1l1P7Xs5D4=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-09-14T01:22:52Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.9.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.9.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.9.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.9.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.9.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-09-14T01:22:52Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "56ebdd58689096005a31539f8fb28a82c761ece75d2cb06e5ebac3b42ae9c375",
+        "signature": "MEUCIEzL6WvyeBt6PMFp6an/+8NxFo0RAaiTzuHta5Hv/9QvAiEAwImFRgMeEoepADEOSfF8HmeMUg30+ohrLZ1331Zb42g=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.9.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-09-14T01:22:43Z",
+      "githubReleaseTag": "firmware-v0.9.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.9.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.9.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.9.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.9.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.9.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-08-11T01:49:32Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-08-11T01:49:32Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "c0c554d35b2a1c3f73209cbe76046826d250518782a546d933f2b41cafdcffce",
+        "signature": "MEYCIQD6MUoVPQoOz7T3/NPxPDy5O6/csDI7plobS23rXGljMwIhAKWuBmNgDMBokr4swxcvbUKr+Ix6GifZHaYVl6q+wsHP",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-08-11T01:49:29Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-08-11T01:49:29Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "05ae497811b4ee389d0842299becf0980d223ce45f82c4c087322e777e2b728c",
+        "signature": "MEQCIFoLgyzaF0V14pr48nv4AVRC0yVPPC+92biHCtkXzPeAAiBbEFaCPIofy8Co9gIVbT71Bc5wv1PXKwJw0JBRwnXZuA==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-c6-4mb",
+      "releasedAt": "2026-08-11T01:49:29Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c6-4mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-c6-4mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-c6-4mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c6-4mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c6-4mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-c6-4mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-c6-4mb",
+        "releasedAt": "2026-08-11T01:49:29Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "52f5cbb1e543e0ff109a0272b8718352fb2050fd6bc4749769e7f851391c7fbe",
+        "signature": "MEUCICP8ywdHH7ViSlY0al9B3+QS9KQg1BHKYq35cDM4ZTlwAiEA/mI6e1+0KDwijfhJRSNfO/mU6HThgxy+rRLnEHfS2GI=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-08-11T01:49:27Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-08-11T01:49:27Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "7a9754732fd715d4d7c66759c4e35a38b44d1d192123249892538c75b7012551",
+        "signature": "MEYCIQDIE2CfNO0vQ+LyAOa118yHYU/2s9zFr5hT0XgtNSLgmgIhAJUE2Pl5RRxjMKuLUV3eogFDDW16Zch1ycZGdWbw9wMO",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-08-11T01:49:24Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-08-11T01:49:24Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "fc888f6829f790331735d298914d4636d09f58b45f118596429b58d3aeecac07",
+        "signature": "MEUCIQDhjVHcBdAADPA+HvxwvIaXl24DdGGdgulbY7hWkZqQ/gIgESLyb6/VZWTAEWox0Tf3PhbJjusYIZiiJs0Qn5HG7SE=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-08-11T01:49:22Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.8.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.8.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.8.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.8.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.8.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-08-11T01:49:22Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "876d52be71317d0ba93b4e59d0d7ecbbbac4046a724c3a55e754dbcb3b0dc40f",
+        "signature": "MEYCIQDkTv63mAmrnQ4XGgfeXW95DY5PIUf+NrDYFsqRiSWL0gIhAJ58cEETW8MeVGcsuwvNj5QT7i1PjkTObjeE74GmV9Ab",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.8.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-08-11T01:49:18Z",
+      "githubReleaseTag": "firmware-v0.8.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.8.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.8.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.8.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.8.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.8.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-08-10T04:20:41Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-08-10T04:20:41Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "d7136e3afb8db2804942cd92be87bd59b29f59e73e758fc4f20f455fe8ed8c3d",
+        "signature": "MEQCIE8fcJq091BP9pSplvIGO0edmhzwTCiQ2nufJXU0ynj9AiAmn2zXuN+XMXXXDEau5NLLCXjHuUWxL09p6fJWz1V4Kw==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-08-10T04:20:40Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-08-10T04:20:40Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "9d78acc507a9bebc6d9377775ea22cf48446270c4837af03cccecb58bf9aa9ec",
+        "signature": "MEUCIDHZlUmoJPK0bAtKrjKwou6bBcQQVPoN7+Lg0no7Y6I6AiEAx4ViTPtzu38rqeB2BhXFbDDQtwC3GO/JI9oRXGC6qwE=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-08-10T04:20:40Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-08-10T04:20:40Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "ece2ce351b961180d677a6d70b1bcb4ece394162ca71d232286c9f8e270407d0",
+        "signature": "MEUCIBmlV0sqMhClbEria3Xm2m+fkOAL+x5GSUC36/elfkrxAiEA6ivfggJrSpT/6GmrPPlMJKF3wnG/evlKrf8tjLyUw24=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-08-10T04:20:38Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-08-10T04:20:38Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "e28beada62df31728d6cc7c5d360f20502fbd97352ff551db214595b8d3275ef",
+        "signature": "MEUCIQDxSs/u4THW72gNodRTPdQytsZx3xeGBlZ/OxrvRZSHlwIgE9uFDw519YjCm8DtIYJHXSA5EzQadM7X9o5H2q8NAjA=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-08-10T04:20:34Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-08-10T04:20:34Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "f4062ab319d44be11336e8a2d52880dca0f75400f82dc6140db0a600681e9521",
+        "signature": "MEUCIGeQS3OCOmSUgfC8IG+/d709madx0jQORxzCKi9wrtbeAiEAk/qgjdNkn6kMkCpB6n5HzjepzQEdBcJJwyc5XQgsl6Y=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp32-c6-4mb",
+      "releasedAt": "2026-08-10T04:20:34Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c6-4mb/v0.7.0/firmware.bin",
+        "checksum": "./esp32-c6-4mb/v0.7.0/firmware.sha256",
+        "metadata": "./esp32-c6-4mb/v0.7.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c6-4mb/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c6-4mb/v0.7.0/release.json",
+        "flashManifest": "./esp32-c6-4mb/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.7.0",
+        "targetHardware": "esp32-c6-4mb",
+        "releasedAt": "2026-08-10T04:20:34Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "788d5708fe78d726012cf6e0760f100a031127ad826ef5bcea7bdc529990dd3c",
+        "signature": "MEYCIQDZ0Xp4qdo9ceHzMVPNLUEaivmWYQjmeWEX03A50aHnlAIhAP5k1ooLhCj7xve3iyN6K/O/uQpWeIcb0R+Vp2VDHkq/",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.7.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-08-10T04:20:24Z",
+      "githubReleaseTag": "firmware-v0.7.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.7.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.7.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.7.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.7.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.7.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-08-08T00:32:01Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-08-08T00:32:01Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "60347b060a270cde6fd33dcc602a68b2c5acbd4bc34d525b191c411e96f3cec7",
+        "signature": "MEYCIQDxdoWnJ9iu8ou3R9GksGPMqMAj0wyR2RPrEYdnD5x4HQIhAI6D6hv6kxlpexATnbv2DvromryJM4BQrjZufokIcWfj",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-08-08T00:31:59Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-08-08T00:31:59Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "12b61311c66bb7d09b867dba63c45b2bdba770c90ee493754ef71e89c993812e",
+        "signature": "MEUCIQCGSfcXWDWbodXuXoo7NAG2VtIdizti5Ocm8znE0pWuiwIgRopnspptV2X3GBKjeeHoZQXRUcLC2vHoe1pk1w51jtU=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-c6-4mb",
+      "releasedAt": "2026-08-08T00:31:59Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c6-4mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-c6-4mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-c6-4mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c6-4mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c6-4mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-c6-4mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-c6-4mb",
+        "releasedAt": "2026-08-08T00:31:59Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "ff766df6e1cdc010d9e2710a9717a16f7582984ab1f6da4f26ea8ecbd614badf",
+        "signature": "MEUCIFg2KCu/gt5BZNYrHWStXriReI1YBp7GUpMfra914IoRAiEAmKOskPmS4i/eYacztgRHabO1oGOu2G44OHxs6Y1OZVw=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-08-08T00:31:56Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-08-08T00:31:56Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "c82f7bb195f25555b1ce042a591047ab63c0eaa2bbab6aef48544832f3e35402",
+        "signature": "MEYCIQDLostU7onF99qLHd9bnmYX6EIkwpD9g/ohWoAWezo8LQIhAKauUImcxstAXb65YRyFKltArlOOZdVV9YqnGA3RiJ2W",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-08-08T00:31:54Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-08-08T00:31:54Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "018471bf9609cc5fad66901258273516f72b8fb199c8762dc79d57b1f46da2cd",
+        "signature": "MEQCICIep2WzfBtQUvoxErGSKRYhjjxMhVFLfkl7AfJUrDaSAiBKLLofhfOocixM5LCOtq2AicoTuzC7SxpiTfLUgn2dNw==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-08-08T00:31:54Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.6.0/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.6.0/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.6.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.6.0/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.6.0",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-08-08T00:31:54Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "36507a8b0379f66f8b90aa616d16be01b7ca8753ac7058f8f90f763330090435",
+        "signature": "MEQCIA7MelreILvyn4a7NC3yTRac914cM1Md4nGUl7AL3p/1AiAFkUZa/AxFk1WXOUsdO1CJl/onATvvVw9EhjyZL0eHuw==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.6.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-08-08T00:31:47Z",
+      "githubReleaseTag": "firmware-v0.6.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.6.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.6.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.6.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.6.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.6.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp32-classic-8mb",
+      "releasedAt": "2026-08-07T13:07:22Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-8mb/v0.5.0/firmware.bin",
+        "checksum": "./esp32-classic-8mb/v0.5.0/firmware.sha256",
+        "metadata": "./esp32-classic-8mb/v0.5.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-8mb/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-8mb/v0.5.0/release.json",
+        "flashManifest": "./esp32-classic-8mb/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.5.0",
+        "targetHardware": "esp32-classic-8mb",
+        "releasedAt": "2026-08-07T13:07:22Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "d54eaec4ad0b2ba7cc4848282431436caa27ffe59a56adfccde937cf5ee118b4",
+        "signature": "MEQCID2NO1Wr/oenDCf0tiqLgcd7F7KndOFqAHoUeNNvF0qzAiAQ68Yz+VoJ5CgN/OFCuaxvbaQ24Mbnsx3ql3WHs08F/A==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp32-s2-4mb",
+      "releasedAt": "2026-08-07T13:07:14Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s2-4mb/v0.5.0/firmware.bin",
+        "checksum": "./esp32-s2-4mb/v0.5.0/firmware.sha256",
+        "metadata": "./esp32-s2-4mb/v0.5.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s2-4mb/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s2-4mb/v0.5.0/release.json",
+        "flashManifest": "./esp32-s2-4mb/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.5.0",
+        "targetHardware": "esp32-s2-4mb",
+        "releasedAt": "2026-08-07T13:07:14Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "5c2cc3363d9f254583eb938af4d46f771f9a22c729b068a04ffe7d451326a037",
+        "signature": "MEUCIQCPbrR+Z/Gb4jGe0j2q9y9+waAz4jCdJmHM0RW6ENaT/QIgH+NB4GygK5KiZFzux3xalLOWKt32TFbVwHPw4CklCL8=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-08-07T13:07:13Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.5.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.5.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.5.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.5.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.5.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-08-07T13:07:13Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "39bf732adc3dd062ed9a46f774498020363845906df48b782791b981e6cfc506",
+        "signature": "MEUCIQCHh39Ct8Ql7OLjSbXK+13LLTMcMPFrb+BLbeQVU60gCwIgdfafhY5REGkSLm4WAnuW++0vyvPgcH/o3loAkRlXIRA=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-08-07T13:07:13Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.5.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.5.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.5.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.5.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.5.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-08-07T13:07:13Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "272fc8b224721b1d8e344007a8710ec055617f8fd93a4631b3b1d3fd1d3474e8",
+        "signature": "MEUCIQCSUcFEglFO70dE9qMc9WrZR/Ic0/cG5+29SnK7oAn/ngIgAM2nVX9+6tJlMSAJbFC523PSfRJQaIeQkyfgCbjnpKs=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-08-07T13:07:10Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.5.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.5.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.5.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.5.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.5.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-08-07T13:07:10Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "321bb61805e0dd11aaeddfa1101d56a3a13cb672170299f433a86164bccc8b2b",
+        "signature": "MEQCIHqD/2359IJMkfELgKN7cMrFUPLYZUzWISOz1R6W80hzAiATpmmNUdMHKb52HX/p9XzYdLqFj0FQDRRyuh3TELR0Xw==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-08-07T13:07:03Z",
+      "githubReleaseTag": "firmware-v0.5.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.5.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.5.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.5.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.5.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.5.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    },
+    {
+      "version": "0.4.0",
+      "targetHardware": "esp32-classic-4mb",
+      "releasedAt": "2026-08-07T11:07:38Z",
+      "githubReleaseTag": "firmware-v0.4.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-classic-4mb/v0.4.0/firmware.bin",
+        "checksum": "./esp32-classic-4mb/v0.4.0/firmware.sha256",
+        "metadata": "./esp32-classic-4mb/v0.4.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-classic-4mb/v0.4.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-classic-4mb/v0.4.0/release.json",
+        "flashManifest": "./esp32-classic-4mb/v0.4.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.4.0",
+        "targetHardware": "esp32-classic-4mb",
+        "releasedAt": "2026-08-07T11:07:38Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "f2185ba20634c268e6f2922ce013f3decc0702da1762c7b0b5fb3953f9b1306d",
+        "signature": "MEQCIAeYaQBXvcyh2f08xFhuDeO6kO88kuqtFL7B7ww2hroVAiBoAXgd8Qrv5b64QqB1HkVZK66J3CxTdmRiSwqhe7PldA==",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.4.0",
+      "targetHardware": "esp32-c3-4mb",
+      "releasedAt": "2026-08-07T11:07:33Z",
+      "githubReleaseTag": "firmware-v0.4.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-c3-4mb/v0.4.0/firmware.bin",
+        "checksum": "./esp32-c3-4mb/v0.4.0/firmware.sha256",
+        "metadata": "./esp32-c3-4mb/v0.4.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-c3-4mb/v0.4.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-c3-4mb/v0.4.0/release.json",
+        "flashManifest": "./esp32-c3-4mb/v0.4.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.4.0",
+        "targetHardware": "esp32-c3-4mb",
+        "releasedAt": "2026-08-07T11:07:33Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "0c34a420c562a9dad627a642bfd5cf2191412b32896c5f82342f13dfd3bff993",
+        "signature": "MEYCIQDaMHj4xCacM8QXPoH8QiarG6t34msILcGjMd+eigTAYQIhAMGhQ29aj67Lu0tA141eZz5SV0I7Wb1zgtQ8cAR4CaoR",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.4.0",
+      "targetHardware": "esp32-s3-4mb",
+      "releasedAt": "2026-08-07T11:07:29Z",
+      "githubReleaseTag": "firmware-v0.4.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp32-s3-4mb/v0.4.0/firmware.bin",
+        "checksum": "./esp32-s3-4mb/v0.4.0/firmware.sha256",
+        "metadata": "./esp32-s3-4mb/v0.4.0/firmware-metadata.json",
+        "releaseNotes": "./esp32-s3-4mb/v0.4.0/RELEASE_NOTES.md",
+        "manifest": "./esp32-s3-4mb/v0.4.0/release.json",
+        "flashManifest": "./esp32-s3-4mb/v0.4.0/flash-manifest.json"
+      },
+      "otaMetadata": {
+        "version": "0.4.0",
+        "targetHardware": "esp32-s3-4mb",
+        "releasedAt": "2026-08-07T11:07:29Z",
+        "downloadUrl": "/api/v1/ota/firmware",
+        "sha256": "efa440864fb6507c4e9e97e39ffa46261c7198400bacd4342adb81784b1bb26b",
+        "signature": "MEUCIQCjcfRvi/US2ojzeXjFq9VYLX24XHThTjFounhybKIQ6QIgBZrQ1HtFTxICoIHzJKkrmFT83HZ2sakYKeRYGl6eGqw=",
+        "signingKeyId": "jkbmsr-ota-p256-20260705",
+        "signatureAlgorithm": "ecdsa-p256-sha256"
+      }
+    },
+    {
+      "version": "0.4.0",
+      "targetHardware": "esp8266-uart-lite",
+      "releasedAt": "2026-08-07T11:07:23Z",
+      "githubReleaseTag": "firmware-v0.4.0",
+      "isLatest": false,
+      "artifacts": {
+        "firmware": "./esp8266-uart-lite/v0.4.0/firmware.bin",
+        "checksum": "./esp8266-uart-lite/v0.4.0/firmware.sha256",
+        "metadata": null,
+        "releaseNotes": "./esp8266-uart-lite/v0.4.0/RELEASE_NOTES.md",
+        "manifest": "./esp8266-uart-lite/v0.4.0/release.json",
+        "flashManifest": "./esp8266-uart-lite/v0.4.0/flash-manifest.json"
+      },
+      "otaMetadata": null
+    }
+  ]
+}

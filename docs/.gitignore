@@ -1,0 +1,33 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+site/
+.docusaurus/
+.vitepress/cache/
+docs/.vitepress/dist/
+
+# Temporary files
+tmp/
+temp/

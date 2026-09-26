@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Is my BMS model compatible?
+    url: https://github.com/janasco/jkbmsr/discussions
+    about: Ask or confirm BMS model compatibility in Discussions, organized by JK-BMS model family — Issues are for actual bugs, not compatibility questions.

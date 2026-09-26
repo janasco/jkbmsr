@@ -1,0 +1,38 @@
+name: Web app / dashboard bug
+description: Report a bug in the JKBMSR web app or dashboard (jkbmsr.com)
+title: "[Web] "
+labels: ["web-app", "bug"]
+body:
+  - type: input
+    id: page-url
+    attributes:
+      label: Page URL
+      placeholder: e.g. jkbmsr.com/devices
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: false
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / device
+      placeholder: e.g. Chrome 128 on Android, Safari on iOS 18
+    validations:
+      required: false
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or console error (if any)
+    validations:
+      required: false

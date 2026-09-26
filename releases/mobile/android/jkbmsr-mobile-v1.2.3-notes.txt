@@ -1,0 +1,1 @@
+JKBMSR Mobile App v1.2.3 Release: Battery cell animations, simplified bottom nav, relocated OTA settings, and improved alerts tab

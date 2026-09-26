@@ -1,0 +1,11 @@
+# Layered after sdkconfig.defaults for espidf envs targeting chips with no
+# Bluetooth radio at all (ESP32-S2 today -- env:idf-s2 and its secure
+# variants). Overrides the shared defaults' CONFIG_BT_ENABLED=y: without
+# this, the base config tries to build the NimBLE/bt stack on silicon that
+# has no BT hardware, which cannot work. Mirrors the plain-Arduino
+# env:esp32-s2-4mb's JKBMSR_HAS_BLE=0 + build_src_filter BLE-client
+# exclusion -- see src/CMakeLists.txt's `if(CONFIG_BT_ENABLED)` guard for
+# the IDF-side equivalent.
+
+CONFIG_BT_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=n

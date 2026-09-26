@@ -1,0 +1,11 @@
+Release: v1.2.7
+Built: Sat Aug  1 07:47:15 UTC 2026
+APK SHA256: f9d8e8f4e7dd1cd36afa0c317062e0064bdcfe9dcf1a61f0cbb5c707dc1204ec
+AAB SHA256: 5420ff3a26b3bf3371c53fd52c44b6a461747566319737f1934c91386d887ff5
+
+The .apk is for direct/sideload installs. The .aab is what gets
+uploaded to Google Play Console — it is not directly installable.
+
+Highlights:
+- Fixed "Sign in with Google" on Android: now uses native sign-in
+  instead of opening a browser tab with no way back into the app.

@@ -1,0 +1,14 @@
+{
+  "version": "0.7.0",
+  "targetHardware": "esp8266-uart-lite",
+  "releasedAt": "2026-08-10T04:20:24Z",
+  "githubReleaseTag": "firmware-v0.7.0",
+  "artifacts": {
+    "firmware": "./firmware.bin",
+    "checksum": "./firmware.sha256",
+    "metadata": null,
+    "releaseNotes": "./RELEASE_NOTES.md",
+    "flashManifest": "./flash-manifest.json"
+  },
+  "otaMetadata": null
+}

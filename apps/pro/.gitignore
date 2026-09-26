@@ -1,0 +1,47 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+Pods/
+
+# Build output
+build/
+dist/
+android/app/build/
+ios/build/
+.expo/
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+.dart_tool/
+.flutter-plugins-dependencies
+
+# Local release artifacts (produced by scripts/publish-release.sh, never committed)
+/jkbmsr-pro-v*.apk
+/jkbmsr-pro-v*.aab
+/jkbmsr-pro-v*.apk.sha256
+/jkbmsr-pro-v*.aab.sha256
+/notes.txt
+/whatsnew-en-US.txt
+/.wrangler/

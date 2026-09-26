@@ -1,0 +1,10 @@
+{
+  "version": "0.2.7",
+  "targetHardware": "esp32dev",
+  "releasedAt": "2026-07-26T16:33:51Z",
+  "downloadUrl": "/api/v1/ota/firmware",
+  "sha256": "b0e70d0b362680d066f2dd2b42ef24756beb0e766cfc01f973991da4646a05ab",
+  "signature": "MEYCIQC/iHdSbuduHwDF1V6ALhhN3/xHHkTdmvOhAXjrFDnU8wIhAKGWwTgc14aFkwbk4XUmJJNPKOb86zNLD/XGTAzeSU7T",
+  "signingKeyId": "jkbmsr-ota-p256-20260705",
+  "signatureAlgorithm": "ecdsa-p256-sha256"
+}

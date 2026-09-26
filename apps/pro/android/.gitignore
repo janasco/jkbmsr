@@ -1,0 +1,28 @@
+gradle-wrapper.jar
+/.gradle
+/captures/
+/gradlew
+/gradlew.bat
+/local.properties
+GeneratedPluginRegistrant.java
+.cxx/
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+key.properties
+**/*.keystore
+**/*.jks
+
+# Signing material stays out of version control. Provision your own upload
+# keystore locally and point android/key.properties at it (see
+# key.properties.example); release builds fall back to debug signing with a
+# warning until you do.
+
+# Firebase project config: supplied locally, never committed.
+app/google-services.json
+
+# Firebase Admin SDK service account key (server-side push-notification
+# credential for jkbmsr-api, not part of the Android app itself — its
+# values are set as FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY GitHub
+# secrets on jkbmsr-api instead). Never commit this.
+*firebase-adminsdk*.json

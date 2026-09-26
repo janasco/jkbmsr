@@ -1,0 +1,23 @@
+{
+  "version": "0.1.6",
+  "targetHardware": "esp32dev",
+  "releasedAt": "2026-07-12T17:14:34Z",
+  "githubReleaseTag": "firmware-v0.1.6",
+  "artifacts": {
+    "firmware": "./firmware.bin",
+    "checksum": "./firmware.sha256",
+    "metadata": "./firmware-metadata.json",
+    "releaseNotes": "./RELEASE_NOTES.md",
+    "flashManifest": "./flash-manifest.json"
+  },
+  "otaMetadata": {
+    "version": "0.1.6",
+    "targetHardware": "esp32dev",
+    "releasedAt": "2026-07-12T17:14:34Z",
+    "downloadUrl": "/api/v1/ota/firmware",
+    "sha256": "da3187e310a22a730826919a513bc397ef9025e1f6bfe179878b3e6ce6046819",
+    "signature": "MEUCIBBGXEJ+Q5++3W/24MuXFwl58WERU7sw8UPImAPbyr9OAiEAvooylaVCHGpKe0njSIwQZX9Hqv8y+Yw/2v+EKx0R2qk=",
+    "signingKeyId": "jkbmsr-ota-p256-20260705",
+    "signatureAlgorithm": "ecdsa-p256-sha256"
+  }
+}
