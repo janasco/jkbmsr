@@ -68,7 +68,7 @@ export CLOUDFLARE_API_TOKEN='...'      # never commit, never paste into an issue
 
 | Credential | Needed for | Where it comes from | Permissions |
 | :--- | :--- | :--- | :--- |
-| `CLOUDFLARE_API_TOKEN` | every `--deploy` | Cloudflare dashboard → Profile → API Tokens. On the build host a working copy lives in `repos/jkbmsr-web/.env`. Roll at <https://dash.cloudflare.com/profile/api-tokens> | Account → Cloudflare Pages: Edit; plus Workers R2 Storage: Edit and D1: Edit for firmware |
+| `CLOUDFLARE_API_TOKEN` | every `--deploy` | Cloudflare dashboard → Profile → API Tokens. On the build host a working copy lives in `jkbmsr-private/backend/.env` (mode 0600, `jkbmsr`-owned). **Source it, never copy it.** Roll at <https://dash.cloudflare.com/profile/api-tokens> | Account → Cloudflare Pages: Edit; plus Workers R2 Storage: Edit and D1: Edit for firmware |
 | `CLOUDFLARE_ACCOUNT_ID` | every `--deploy` | Cloudflare dashboard → account overview | — |
 | `OTA_SIGNING_PRIVATE_KEY_B64` | firmware release only | **Offline escrow. Not in this repository, not in any repository.** Base64 of the ECDSA P-256 PEM | anyone holding it can sign firmware your devices will trust |
 | `OTA_SIGNING_KEY_ID` | firmware release only | published alongside the signed metadata; currently `jkbmsr-ota-p256-20260705` | — |

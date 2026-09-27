@@ -144,8 +144,10 @@ if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
   Source: Cloudflare dashboard -> Profile -> API Tokens.
   Needs:  Account > Cloudflare Pages:Edit (Workers R2 Storage:Edit and D1:Edit
           as well if you also publish firmware from the same shell).
-  Never put it in a committed file. `repos/jkbmsr-web/.env` holds a working copy
-  on the build host; see DEPLOY.md.
+  Never put it in a committed file. On the build host a working copy lives in
+  the private repository at `jkbmsr-private/backend/.env` (gitignored, mode
+  0600, owned by the user you are logged in as). Source it, or export the
+  variables; do not copy the file. See DEPLOY.md.
 MSG
 elif case "$CLOUDFLARE_API_TOKEN" in ghp_*|gho_*|ghu_*|ghs_*|ghr_*|github_pat_*) true ;; *) false ;; esac; then
   # Not a wrong-account bug, but the same class of mistake: a GitHub token in a

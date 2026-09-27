@@ -373,7 +373,7 @@ assert_cloudflare_env() {
 
       export CLOUDFLARE_ACCOUNT_ID=${JKBMSR_CLOUDFLARE_ACCOUNT_ID}
 
-  Provenance: repos/jkbmsr-web/.env on the release host (CLOUDFLARE_ACCOUNT_ID).
+  Provenance: jkbmsr-private/backend/.env on the release host (CLOUDFLARE_ACCOUNT_ID).
 MSG
     return 1
   fi
