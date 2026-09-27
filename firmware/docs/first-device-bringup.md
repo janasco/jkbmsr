@@ -15,7 +15,7 @@ Public runbook (keep this in sync): https://docs.jkbmsr.com/getting-started/firs
 ## Option B — Local flash tomorrow (works before the CDN release)
 
 ```bash
-cd ~/repos/jkbmsr-firmware
+cd ~/jkbmsr/firmware
 pio run -e dev -t upload
 pio device monitor -b 115200
 ```
