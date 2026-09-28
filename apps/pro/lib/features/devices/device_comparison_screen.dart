@@ -116,6 +116,7 @@ class _DeviceComparisonScreenState extends State<DeviceComparisonScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: context.colors.textSecondary),
+            tooltip: 'Refresh devices',
             onPressed: () {
               JKBMSRHaptics.lightImpact();
               _loadDevices();

@@ -81,9 +81,10 @@ void main() {
     testWidgets('Cell Voltages section does not overflow', (tester) async {
       _phoneViewport(tester);
       await tester.pumpWidget(_wrapScaled(CellVoltagesSection(cells: _cells())));
-      // The MIN/MAX badges use PulseGlow, a perpetual breathing glow (and it
-      // deliberately ignores reduced-motion), so pumpAndSettle would time
-      // out. Two frames are enough for layout + the finite entrance tweens.
+      // The MIN/MAX badges use PulseGlow, a perpetual breathing glow, so
+      // pumpAndSettle would time out (reduced motion is off in this test, so
+      // the glow animates). Two frames are enough for layout + the finite
+      // entrance tweens.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(tester.takeException(), isNull);

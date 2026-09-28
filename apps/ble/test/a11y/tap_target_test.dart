@@ -118,4 +118,31 @@ void main() {
       );
     });
   });
+
+  group('screens', () {
+    testWidgets('Devices screen controls expose >=48dp targets', (tester) async {
+      // Deliberately wide: the devices scan header is a spaceBetween Row whose
+      // fallback test font is ~2x too wide at 400dp, which produces a phantom
+      // RenderFlex overflow that has nothing to do with hit areas. The width
+      // does not change any control's minimum size.
+      _setSize(tester, const Size(900, 900));
+
+      await tester.pumpWidget(const JkbmsrBleApp());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // Dismiss the first-run welcome overlay so the main scaffold is live.
+      final start = find.text('START SCANNING');
+      if (start.evaluate().isNotEmpty) {
+        await tester.tap(start);
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+      final devicesTab = find.text('DEVICES');
+      if (devicesTab.evaluate().isNotEmpty) {
+        await tester.tap(devicesTab.last);
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      await expectTapTargetsAtLeast(tester, minSize: 48, where: 'Devices screen');
+    });
+  });
 }

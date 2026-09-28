@@ -120,15 +120,20 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ),
                   onPressed: _isScanning ? null : _triggerScan,
                   child: _isScanning
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      ? Semantics(
+                          label: 'Scanning for devices',
+                          child: const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                          ),
                         )
                       : const Icon(
                           Icons.refresh_rounded,
                           size: 18,
                           color: Colors.black,
+                          // Icon-only button: without this it announces nothing.
+                          semanticLabel: 'Scan for devices',
                         ),
                 ),
               ],
