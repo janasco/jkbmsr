@@ -121,9 +121,17 @@ export default defineConfig({
       .replace(/^\/+|\/+$/g, "");
     // A 404 page has no canonical: it is not content, and pointing one at a
     // supposed canonical URL tells a crawler that URL is the real version of a
-    // page that does not exist.
-    if (rel === "404" || rel === "") return [];
-    return [["link", { rel: "canonical", href: `https://jkbmsr.com/docs/${rel}` }]];
+    // page that does not exist. Tested on the SOURCE name, not on `rel` --
+    // testing `rel === "404" || rel === ""` silently removed the canonical from
+    // the HOMEPAGE too, because `index.md` collapses to an empty path. The most
+    // important page on the site had no canonical and nothing complained: the
+    // staging script copies faithfully, so a missing head tag looks exactly like
+    // a head tag that was never written.
+    if (page === "404.md") return [];
+    // The homepage collapses to the directory, and its canonical is the directory
+    // with the trailing slash, which is the URL that is actually served.
+    const href = rel === "" ? "https://jkbmsr.com/docs/" : `https://jkbmsr.com/docs/${rel}`;
+    return [["link", { rel: "canonical", href }]];
   },
   head: [
     [
