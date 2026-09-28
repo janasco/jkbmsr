@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import sys
 import time
 import urllib.error
@@ -46,6 +47,57 @@ import urllib.request
 from pathlib import Path
 
 USER_AGENT = "jkbmsr-verify-publish/1.0"
+
+# Cloudflare injects elements into responses it serves from its own zone. On a
+# zone with Web Analytics enabled that includes a 367-byte
+# static.cloudflareinsights.com/beacon.min.js <script>, added to the *served*
+# bytes and not present in the build output. Hashing the served body against the
+# local file therefore reports a mismatch for a deploy that is byte-for-byte
+# correct -- which is what happened on 2026-09-28, on a deploy that had in fact
+# landed. A verifier that cries wolf on every correct publish is a verifier whose
+# verdict nobody reads, so the difference is normalised away -- and REPORTED, never
+# swallowed. If a normalisation is what made the comparison pass, the run says so
+# and names what was removed.
+#
+# The list is deliberately narrow and named. A pattern that silently deletes
+# anything it did not expect is a way to make a wrong deploy look right.
+EDGE_INJECTED = (
+    # The trailing `\s*` is load-bearing, and was found by MEASUREMENT rather than
+    # by reasoning. Cloudflare injects the beacon as `\n<script ...></script>` just
+    # before `</body>`, so removing only the element leaves an orphan newline and
+    # the comparison still fails. Measured against the live docs site: element only
+    # -> 28748 B, + LEADING whitespace -> 28740 B, + TRAILING whitespace -> 28747 B,
+    # which equals the local build exactly. Consuming the leading whitespace
+    # instead is wrong, and over-removes 8 bytes of real content.
+    ("cloudflare web analytics beacon",
+     re.compile(rb"<script[^>]*cloudflareinsights[^>]*>\s*</script>\s*", re.S)),
+    ("cloudflare web analytics beacon (self-closing form)",
+     re.compile(rb"<script[^>]*cloudflareinsights[^>]*/>\s*", re.S)),
+)
+
+
+def normalise(body: bytes) -> tuple[bytes, list[str]]:
+    """Strip known edge-injected elements, reporting each removal.
+
+    Returns the normalised bytes and a human-readable list of what was removed,
+    so the caller can never present a normalised match as a byte-exact one.
+    """
+    removed: list[str] = []
+    out = body
+    for name, pattern in EDGE_INJECTED:
+        stripped, count = pattern.subn(b"", out)
+        if count:
+            removed.append(f"{name} x{count} ({len(out) - len(stripped)} bytes)")
+            out = stripped
+    # Removing an element can leave the whitespace that surrounded it, and one
+    # trailing newline difference is the whole residual on an otherwise identical
+    # document. Trailing whitespace is not content, so it is normalised; interior
+    # whitespace is never touched.
+    trimmed = out.rstrip()
+    if len(trimmed) != len(out):
+        removed.append(f"trailing whitespace ({len(out) - len(trimmed)} bytes)")
+        out = trimmed
+    return out, removed
 
 
 def local_sha256(path: Path) -> str:
@@ -103,6 +155,19 @@ def verify_one(
                     f"  (size differs: local {expected_size})"
                 print(f"  ok    {url}\n        {label}  matches local{note}")
                 return True
+            # The raw bytes differ. Before calling that a failed deploy, ask
+            # whether the only difference is something the edge added on its way
+            # past us. If so this IS a successful deploy and reporting it as a
+            # mismatch is the false alarm this whole path exists to remove.
+            stripped, removed = normalise(body)
+            if removed:
+                normalised = hashlib.sha256(stripped).hexdigest()
+                if normalised == expected_sha256:
+                    print(f"  ok    {url}\n        {label}  matches local AFTER removing")
+                    for item in removed:
+                        print(f"              - {item}")
+                    print("        (the edge added this; the published build is byte-exact)")
+                    return True
             last_error = (
                 f"hash mismatch: served {digest}, local {expected_sha256} "
                 f"({len(body)} served bytes"
