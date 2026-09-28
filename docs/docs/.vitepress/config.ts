@@ -28,6 +28,23 @@ export default defineConfig({
   // OS; seeding it to "light" on first visit before paint overrides that. Runs
   // regardless of order vs VitePress's own appearance script — it only acts when
   // no preference is stored, so the toggle and later choices are untouched.
+  // Every href here must name a file that exists in `docs/docs/public/`, which
+  // is the directory VitePress copies into the build output.
+  //
+  // It was NOT `.vitepress/public/`, which is where these files sat until
+  // 2026-09-28. VitePress copies `path.resolve(srcDir, "public")` and nothing
+  // else — `srcDir` is the directory passed to the CLI, here `docs`. So the
+  // assets sat in a directory the build never reads, were silently absent from
+  // every build, and each of the URLs below 404'd in production while the
+  // declarations that named them looked perfectly correct. Nothing in the build
+  // fails on a missing static asset, so the omission was invisible: the build
+  // reported success and the site reported success.
+  //
+  // `sizes` is the measured pixel size of the file it names, not the name. The
+  // apple-touch-icon used to point at a 1024x1024 store icon, which is not what
+  // iOS wants; it now points at a real 180x180. Both are declared so a
+  // high-density device gets the large one. This mirrors the icon block already
+  // corrected on web-app and admin — same files, same bytes, same sizes.
   head: [
     [
       "link",
@@ -35,7 +52,15 @@ export default defineConfig({
     ],
     [
       "link",
-      { rel: "apple-touch-icon", href: "/logos/app-icon-1024.png" },
+      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon.png" },
+    ],
+    [
+      "link",
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+    ],
+    [
+      "link",
+      { rel: "apple-touch-icon", sizes: "1024x1024", href: "/logos/app-icon-1024.png" },
     ],
     [
       "script",
