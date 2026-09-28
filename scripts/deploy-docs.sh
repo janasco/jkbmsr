@@ -205,6 +205,45 @@ else
   [ "$page_count" -gt 0 ] || die "build produced no HTML in $VITEPRESS_OUT"
   ok "built $page_count HTML pages into docs/docs/.vitepress/dist"
 
+  step "verify declared static assets reached the build output"
+  # VitePress does not fail a build over a missing static asset, and a
+  # `<link rel="icon" href="/favicon.svg">` that resolves to nothing looks
+  # exactly like one that works when you are editing the config. That is the
+  # whole reason four icon files sat in docs/docs/.vitepress/public/ — a
+  # directory the build never reads — for the site's entire life: tracked,
+  # committed, referenced by the config, absent from every build, and 404ing in
+  # production, behind a green build and a 200 on every page.
+  #
+  # So assert it. Every root-absolute href in the VitePress config that names a
+  # file must exist in the build output. Route links ("/api/index") carry no
+  # extension and are skipped on purpose: VitePress renders those as .html
+  # pages and already dies on a dead internal link, so re-checking them here
+  # would add a second, weaker instrument for a failure mode that cannot happen.
+  assets=$(grep -oE '(href|logo): *"/[^"]*\.[A-Za-z0-9]+"' \
+             "$VITEPRESS_SRC/.vitepress/config.ts" \
+           | grep -oE '"/[^"]*"' | tr -d '"' | sort -u || true)
+  asset_count=$(printf '%s\n' "$assets" | grep -c . || true)
+  # Guard the guard. A checker that finds nothing to check passes, and "all
+  # declared assets are present" printed next to a count of zero is a false
+  # reassurance of exactly the kind this script exists to prevent.
+  [ "$asset_count" -gt 0 ] \
+    || die "extracted 0 asset references from the VitePress config, so the check below could only pass vacuously — treat this as the bug, not as a pass"
+  missing=0
+  while IFS= read -r asset; do
+    [ -n "$asset" ] || continue
+    if [ -f "$VITEPRESS_OUT$asset" ]; then
+      ok "$(printf '%-30s %9s B' "$asset" "$(wc -c <"$VITEPRESS_OUT$asset" | tr -d ' ')")"
+    else
+      warn "DECLARED IN CONFIG BUT NOT IN THE BUILD: $asset"
+      missing=$((missing + 1))
+    fi
+  done <<EOF
+$assets
+EOF
+  [ "$missing" -eq 0 ] \
+    || die "$missing declared asset(s) are absent from the build output — publishing now would reproduce the 404s this check exists to catch"
+  ok "all $asset_count declared asset(s) present in the build output"
+
   step "stage the deploy directory (docs/dist)"
   # Cleared first on purpose. The old pipeline got a fresh checkout for every
   # run, so `dist` could only ever contain the current build; a local working
