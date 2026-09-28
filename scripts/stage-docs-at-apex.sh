@@ -173,7 +173,7 @@ say "   Next, in this order. Steps 3 and 4 are NOT interchangeable:"
 say "     cd /home/jkbmsr/jkbmsr-site"
 say "     npm run preview            # browse http://localhost:4321/docs/  (binds [::1] only)"
 say "     # stop preview, and only then strip:"
-say "     rm -f  dist/client/wrangler.json && rm -rf dist/client/.wrangler"
+say "     rm -f  dist/client/wrangler.json && rm -rf dist/client/.wrangler && rm -rf ./.wrangler"
     # There are TWO .wrangler directories and the deploy fails if either survives.
   # `dist/client/.wrangler` is the Astro adapter's; `./.wrangler` is written by
   # wrangler itself at the cwd you invoke it from, and it holds a

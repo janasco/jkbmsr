@@ -1185,7 +1185,7 @@ function main() {
   process.stdout.write(
     '     astro preview                       # browse http://localhost:4321/docs/  (IPv6 [::1] only)\n' +
       '     # then stop preview, and only then:\n' +
-      "     rm -f  dist/client/wrangler.json && rm -rf dist/client/.wrangler\n" +
+      "     rm -f  dist/client/wrangler.json && rm -rf dist/client/.wrangler && rm -rf ./.wrangler\n" +
       '     # Pages rejects that shape; astro preview needs wrangler.json to know a build exists.\n' +
       '     npx wrangler@4.118.0 pages deploy dist/client --project-name jkbmsr-marketing --branch main\n'
   );

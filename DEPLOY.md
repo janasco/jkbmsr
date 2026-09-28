@@ -160,7 +160,7 @@ scripts/stage-docs-at-apex.sh --test             # 2. stages + verifies (publish
 cd /home/jkbmsr/jkbmsr-site
 npm run preview                                  # 3. browse http://localhost:4321/docs/
 #    ... stop preview ...
-rm -f dist/client/wrangler.json && rm -rf dist/client/.wrangler   # 4
+rm -f dist/client/wrangler.json && rm -rf dist/client/.wrangler && rm -rf ./.wrangler   # 4
     # There are TWO .wrangler directories and the deploy fails if either survives.
   # `dist/client/.wrangler` is the Astro adapter's; `./.wrangler` is written by
   # wrangler itself at the cwd you invoke it from, and it holds a
