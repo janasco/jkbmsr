@@ -161,6 +161,14 @@ cd /home/jkbmsr/jkbmsr-site
 npm run preview                                  # 3. browse http://localhost:4321/docs/
 #    ... stop preview ...
 rm -f dist/client/wrangler.json && rm -rf dist/client/.wrangler   # 4
+    # There are TWO .wrangler directories and the deploy fails if either survives.
+  # `dist/client/.wrangler` is the Astro adapter's; `./.wrangler` is written by
+  # wrangler itself at the cwd you invoke it from, and it holds a
+  # `deploy/config.json` naming `dist/client/wrangler.json` as the config path.
+  # Deleting only the former leaves that pointer dangling and the deploy dies with
+  # "There is a deploy configuration at .wrangler/deploy/config.json" — which is
+  # exactly the confusing half of an otherwise obvious error. Measured 2026-09-28.
+
 scripts/preflight.sh --project jkbmsr-marketing                   # 5
 npx wrangler@4.118.0 pages deploy dist/client \
   --project-name jkbmsr-marketing --branch main                   # 6
