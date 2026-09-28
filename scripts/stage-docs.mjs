@@ -854,20 +854,44 @@ function main() {
   // merge could quietly cost something.
   const apexIndex = parseSitemap(fs.readFileSync(path.join(apexDist, 'sitemap.xml'), 'utf8'));
   if (apexIndex.kind !== 'index') refuse(2, `${apexDist}/sitemap.xml is not a <sitemapindex>`);
-  const apexLocs = new Set();
-  for (const child of apexIndex.locs) {
-    const childPath = child.replace(SITE_ORIGIN, '');
-    const cp = path.join(apexDist, path.relative('/', childPath));
-    if (isFile(cp)) {
-      const p = parseSitemap(fs.readFileSync(cp, 'utf8'));
-      for (const l of p.locs) apexLocs.add(l);
-    } else {
-      warn(`apex sitemap index names ${childPath}, which is not in the build output; not compared`);
+    const apexLocs = new Set();
+    // The docs' OWN child is excluded, and the reason is worth stating because the
+    // symptom looks exactly like a real finding.
+    //
+    // This set is built by reading every child the index names. Once the marketing
+    // site lists `${BASE}sitemap.xml` as a child -- which it now does, and should,
+    // because the docs are served from this host -- that child IS this sitemap, so
+    // the comparison below puts the docs' URLs into a set and then checks the docs'
+    // URLs against it. Every one is reported as a duplicate of itself:
+    //
+    //     stage-docs: REFUSED (FAILED) -- 34 docs URL(s) are already in an apex
+    //     child sitemap
+    //
+    // A check comparing a list to itself is not a finding. Measured 2026-09-28; the
+    // fix was proved against a patched copy before being applied here.
+    //
+    // Concatenated rather than joined: BASE already ends in a slash, so a join-based
+    // form is one refactor away from a doubled slash and a path matching nothing.
+    const docsOwnChild = `${BASE}sitemap.xml`;
+    let skippedDocsChild = false;
+    for (const child of apexIndex.locs) {
+      const childPath = child.replace(SITE_ORIGIN, '');
+      if (childPath === docsOwnChild) { skippedDocsChild = true; continue; }
+      const cp = path.join(apexDist, path.relative('/', childPath));
+      if (isFile(cp)) {
+        const p = parseSitemap(fs.readFileSync(cp, 'utf8'));
+        for (const l of p.locs) apexLocs.add(l);
+      } else {
+        warn(`apex sitemap index names ${childPath}, which is not in the build output; not compared`);
+      }
     }
-  }
-  const dupes = parsed.locs.filter((l) => apexLocs.has(l));
-  if (dupes.length) refuse(1, `${dupes.length} docs URL(s) are already in an apex child sitemap: ${dupes.slice(0, 5).join(', ')}`);
-  ok(`${apexLocs.size} URL(s) across the apex's ${apexIndex.locs.length} child sitemaps compared: 0 overlap with the docs sitemap`);
+    const dupes = parsed.locs.filter((l) => apexLocs.has(l));
+    if (dupes.length) refuse(1, `${dupes.length} docs URL(s) are already in an apex child sitemap: ${dupes.slice(0, 5).join(', ')}`);
+    // The number of children COMPARED, not the number named. Claiming coverage of a
+    // child that was deliberately skipped would be a reassuring constant -- the exact
+    // defect class this script was hardened against elsewhere.
+    const comparedChildren = apexIndex.locs.length - (skippedDocsChild ? 1 : 0);
+    ok(`${apexLocs.size} URL(s) across ${comparedChildren} apex child sitemap(s) compared: 0 overlap with the docs sitemap` + (skippedDocsChild ? ` (excluding the docs' own child, ${docsOwnChild})` : ''));
 
   const docsReferenced = apexIndex.locs.some((l) => l.startsWith(`${SITE_ORIGIN}${BASE}`));
   if (!docsReferenced) {
