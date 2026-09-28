@@ -1,8 +1,46 @@
 import { defineConfig } from "vitepress";
 
+/**
+ * The published path, supplied at BUILD time rather than written here.
+ *
+ * ONE SOURCE, TWO PLACES, AND ONE BUILD CANNOT SERVE BOTH. These files are
+ * published twice:
+ *
+ *   - the apex, at `https://jkbmsr.com/docs/` — staged by
+ *     `scripts/stage-docs-at-apex.sh` into the marketing site's Pages output,
+ *     so every URL the build emits must be prefixed `/docs/`;
+ *   - the subdomain, at `https://docs.jkbmsr.com/` — deployed by
+ *     `scripts/deploy-docs.sh`, where the same files are served at the ROOT and
+ *     every URL must be prefixed `/`.
+ *
+ * A static host cannot serve one build at both a root and a sub-path, so `base`
+ * is read from the environment and **defaults to `/`**.
+ *
+ * Baking in `/docs/` looks like the obvious fix and is the opposite of one. It
+ * makes the subdomain deployment reference `/docs/assets/…` on a host that has
+ * no `/docs/` prefix, so every stylesheet, the theme, the fonts and the icons
+ * 404 there — behind a build that reports success and a site that answers 200 on
+ * every page. That is the same shape as the icon bug described further down, and
+ * it was caught here by staging `docs/dist` and reading where its asset URLs
+ * actually point.
+ *
+ * So the default is the one that leaves `docs.jkbmsr.com` byte-identical to what
+ * it serves today, and the apex path is opted into explicitly:
+ * `scripts/stage-docs-at-apex.sh` exports `DOCS_BASE=/docs/` and refuses to run
+ * with any other value. If it is ever forgotten the build still succeeds, and
+ * `stage-docs.mjs` then REFUSES on the root-absolute references that escape
+ * `/docs/` — 1,704 of them, measured. The failure is loud, which is why the
+ * reference check exists rather than the variable being trusted.
+ */
+const BASE = process.env.DOCS_BASE ?? '/';
+if (!BASE.startsWith('/') || !BASE.endsWith('/')) {
+  throw new Error(`DOCS_BASE must begin and end with "/", got ${JSON.stringify(BASE)}`);
+}
+
 export default defineConfig({
   title: "JK BMS Remote Docs",
   description: "Documentation for JK BMS Remote, an independent remote monitoring solution for JK-BMS products.",
+  base: BASE,
   cleanUrls: true,
   lastUpdated: true,
   // docs/internal/*.md are engineering notes (deployment state, release
@@ -40,6 +78,13 @@ export default defineConfig({
   // fails on a missing static asset, so the omission was invisible: the build
   // reported success and the site reported success.
   //
+  // Each href is `${BASE}…`, not a literal. VitePress emits `head` entries
+  // VERBATIM — it does not prepend `base` to them — so under the apex build
+  // (BASE=/docs/) a literal `/favicon.svg` would resolve to the marketing site's
+  // homepage, and under the subdomain build (BASE=/) the same literal is correct.
+  // Interpolating the one variable keeps both right, and keeps them right for
+  // the same reason rather than by coincidence.
+  //
   // `sizes` is the measured pixel size of the file it names, not the name. The
   // apple-touch-icon used to point at a 1024x1024 store icon, which is not what
   // iOS wants; it now points at a real 180x180. Both are declared so a
@@ -48,19 +93,19 @@ export default defineConfig({
   head: [
     [
       "link",
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: `${BASE}favicon.svg` },
     ],
     [
       "link",
-      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon.png" },
+      { rel: "icon", type: "image/png", sizes: "64x64", href: `${BASE}favicon.png` },
     ],
     [
       "link",
-      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: `${BASE}apple-touch-icon.png` },
     ],
     [
       "link",
-      { rel: "apple-touch-icon", sizes: "1024x1024", href: "/logos/app-icon-1024.png" },
+      { rel: "apple-touch-icon", sizes: "1024x1024", href: `${BASE}logos/app-icon-1024.png` },
     ],
     [
       "script",
@@ -69,6 +114,26 @@ export default defineConfig({
     ],
   ],
   themeConfig: {
+    // DELIBERATELY NOT `${BASE}favicon.svg` — do not "fix" this.
+    //
+    // `head` and `themeConfig.logo` are handled differently by VitePress, and
+    // the difference is invisible in the output if you only read one of them:
+    //
+    //   - `head` is emitted VERBATIM. `resolveSiteDataHead()` in
+    //     vitepress/dist/node returns `userConfig?.head ?? []` and pushes onto
+    //     it; nothing in that path prepends `base`. Which is why the four icon
+    //     hrefs above interpolate BASE and this one does not.
+    //   - `themeConfig.logo` is rendered through `VPImage.vue`, which calls
+    //     `withBase()` on it explicitly. A literal `/favicon.svg` correctly
+    //     becomes `/docs/favicon.svg` under the apex build and `/favicon.svg`
+    //     under the subdomain build, with no interpolation needed.
+    //
+    // Writing `${BASE}` here was tried and produced `/docs/docs/favicon.svg`,
+    // because base is applied twice. It was caught by the resolution check in
+    // stage-docs.mjs — a file-EXISTENCE check, not a prefix check, since
+    // `/docs/docs/favicon.svg` is *under* `/docs/` and a prefix assertion would
+    // have passed it. The prefix check is necessary but not sufficient, which is
+    // why that script does both.
     logo: "/favicon.svg",
     siteTitle: "JK BMS Remote Docs",
     nav: [

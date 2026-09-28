@@ -13,6 +13,13 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Python bytecode. `scripts/` holds .py tools, and importing one leaves a
+# __pycache__ beside it — untracked, invisible in a diff, and one `git add -A`
+# away from a public repository. Ignore the directory, not the loose pattern, so
+# a stray copy anywhere in the tree is covered too.
+__pycache__/
+*.py[co]
+
 # ---- Secrets. None of these belong in this repository. ----
 .env
 .env.*

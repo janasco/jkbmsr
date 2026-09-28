@@ -124,6 +124,143 @@ What that does, in order:
 
 Useful flags: `--skip-install` (assume `node_modules` is current), `--no-verify`.
 
+## Publishing the docs on the apex, at `jkbmsr.com/docs/`
+
+The same documentation build is published in **two** places, and they are not
+the same deployment:
+
+| Where | Path | Pages project | Built and staged by |
+|---|---|---|---|
+| `https://docs.jkbmsr.com` | `/` | `jkbmsr-docs` | `scripts/deploy-docs.sh` (above) |
+| `https://jkbmsr.com/docs/` | `/docs/` | `jkbmsr-marketing` (the apex) | `scripts/stage-docs-at-apex.sh` (below) |
+
+One VitePress build serves both, so `docs/docs/.vitepress/config.ts` sets
+`base: '/docs/'`. That value is the whole risk in this arrangement: with no
+`base`, VitePress defaults to `/` and every asset URL it emits is
+root-absolute, so a copy placed under `/docs/` resolves every stylesheet, the
+theme and every internal link against the **apex root** instead. Nothing throws.
+The pages render unstyled and the links go to the marketing site.
+
+**`docs.jkbmsr.com` is unaffected by any of this.** It deploys the same files at
+their own root, where the same `/assets/…` URLs are correct, and it keeps
+working whether or not the apex copy is deployed. Retiring it is a separate
+decision; nothing here depends on it.
+
+### The two checkouts, and why that matters
+
+The marketing site is **not** in this repository. It is a separate checkout at
+`/home/jkbmsr/jkbmsr-site` with its own git history, and its build output is
+`dist/client`, which is what gets uploaded to Pages. So this procedure spans two
+directories and two repositories, and the order is load-bearing:
+
+```bash
+cd /home/jkbmsr/jkbmsr-site && npm run build     # 1. empties dist/client
+cd /home/jkbmsr/jkbmsr
+scripts/stage-docs-at-apex.sh --test             # 2. stages + verifies (publishes nothing)
+cd /home/jkbmsr/jkbmsr-site
+npm run preview                                  # 3. browse http://localhost:4321/docs/
+#    ... stop preview ...
+rm -f dist/client/wrangler.json && rm -rf dist/client/.wrangler   # 4
+scripts/preflight.sh --project jkbmsr-marketing                   # 5
+npx wrangler@4.118.0 pages deploy dist/client \
+  --project-name jkbmsr-marketing --branch main                   # 6
+```
+
+Step 1 **must** precede step 2. `astro build` empties `dist/client` on every
+run, so a stage performed first is deleted without a word. Step 4 **must**
+follow step 3: the Astro Cloudflare adapter writes `dist/client/wrangler.json`,
+and Pages rejects the deployment with it present, but `astro preview` needs that
+file to know a build exists. Those two facts pull in opposite directions and
+that is the whole reason the ordering is written down here rather than left to
+memory.
+
+`wrangler` is pinned at **4.118.0** deliberately. A bare `npx wrangler` floats
+to the newest published version, and 4.141.0 broke a run on 2026-09-26 when
+4.118.0 was known-good.
+
+### What step 2 verifies
+
+`scripts/stage-docs-at-apex.sh` runs `scripts/stage-docs.mjs`, which stages the
+build into `dist/client/docs/` and then checks nine things. It publishes nothing
+and needs no credentials. The ones that are easy to get wrong:
+
+- **Every URL the staged pages reference is resolved against the merged tree**,
+  not against the docs tree, and not merely for the `/docs/` prefix. A prefix
+  check alone passes `/docs/docs/favicon.svg` — a URL this change actually
+  produced, because `themeConfig.logo` is base-prefixed by the theme while `head`
+  entries are emitted verbatim — and it was the existence check that caught it.
+- **The extractor proves itself first**, and a run that extracts nothing is a
+  failure rather than a pass.
+- **The copy is compared by sha256**, not by existence.
+- **A wrong `base` is fatal.** With `base` disabled the run refuses with 1,704
+  escaping references. Measured, not assumed.
+- **`_headers` and `_redirects` are accounted for, rule pair by rule pair.** The
+  staged tree adds neither, so `/docs/` is governed by the rules that already
+  govern the rest of the site. All 36 rule pairs in the apex `_headers` are
+  checked for two rules that could set the same header on the same path; the
+  answer is zero, so there is nothing for Pages' append behaviour to append.
+- **The marketing site's own files are compared before and after** and must be
+  byte-identical.
+- **`/docs/sitemap.xml` is generated from the files that exist**, not from a
+  list, and every `<loc>` in it is resolved and checked against the apex's own
+  child sitemaps for overlap.
+
+`scripts/stage-docs.test.mjs` (run by `--test`) shows every one of those guards
+failing on input that should make it fail. A negative result from a check that
+cannot fail reads as assurance, which is the failure mode this project has hit
+three times in one session.
+
+Two warnings are expected and are not defects. Both are decisions that belong to
+the marketing repository, and the script says so rather than making them:
+
+1. The apex `sitemap.xml` index does not reference `/docs/sitemap.xml`, and
+   `robots.txt` advertises only `/sitemap.xml`. Add `/docs/sitemap.xml` to
+   `CHILD_SITEMAPS` in `src/lib/sitemap.ts`, or a `Sitemap:` line to
+   `src/pages/robots.txt.ts` — otherwise the docs sitemap exists and nothing
+   points a crawler at it.
+2. Nothing on the apex links to `/docs/`, and 147 links point at
+   `https://docs.jkbmsr.com` instead. Until they are repointed, `/docs/` is an
+   orphan *and* a byte-for-byte duplicate of the subdomain, with no canonical
+   declared on either.
+
+### Two things about the apex's headers worth knowing before you touch them
+
+- The apex's `/*` CSP reaches `/docs/**`. It has no `'unsafe-inline'` and no
+  nonce, and VitePress emits four inline `<script>` elements per page — one of
+  which, `check-mac-os`, is pushed unconditionally by VitePress with no config
+  switch to suppress it. So the docs cannot be made CSP-clean by configuration.
+  The staging step resolves that by moving each unique inline body to a
+  same-origin file under `/docs/assets/`, which `script-src 'self'` already
+  permits, and the apex's CSP is **not** changed. The alternative — a `/docs/*`
+  rule relaxing `script-src` for the docs — would put a second
+  `'unsafe-inline'` into a file whose own comment says there is exactly one.
+- **Do not verify header behaviour on `astro preview`.** Measured on this host: a
+  `/docs/*` rule setting a header the `/*` rule also set produced 14 headers with
+  no duplication, and the preview reported parsing 10 header rules. The local
+  emulator picks the most specific match; the production edge appends. The check
+  that matters is the rule-pair check in `stage-docs.mjs`, and the observation
+  that matters is over a raw TLS socket with `scripts/raw-headers.mjs` — HTTP
+  joins repeated header fields with `", "`, so a client library cannot see a
+  duplicate at all. That is how the two-media-type `content-type` survived here.
+
+### Verifying it from the serving layer, not the build
+
+```bash
+node scripts/resolve-over-http.mjs http://localhost:4321   # against a preview
+node scripts/resolve-over-http.mjs https://jkbmsr.com       # after publishing
+node scripts/raw-headers.mjs --self-test                   # prove the instrument first
+node scripts/raw-headers.mjs --scheme https jkbmsr.com / /docs/ /feed/ /feed/atom/
+```
+
+`resolve-over-http.mjs` crawls `/docs/` by link, requests every URL the pages
+and the stylesheets reference, and reports the **status** — 3xx included and
+never followed silently, because a link that works only after a redirect is a
+different thing from a link that works. It also reports pages that exist but
+that nothing links to: there is currently one,
+`/docs/ui_ux_design_system_guide`, which the derived sitemap lists and no page
+links to.
+
+
 ## Deploying the release CDN
 
 ```bash
