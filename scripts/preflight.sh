@@ -10,10 +10,18 @@
 #
 # The three things that have actually gone wrong on this platform:
 #
-#   1. A Pages deploy aimed at the apex `jkbmsr.com`. The apex is WordPress.
-#      Deploying a Pages build there is what caused the 2026-09-12 outage.
-#      A Pages project name is load-bearing: do not "fix" one of these to
-#      something that sounds more correct.
+#   1. A Pages deploy aimed at the WRONG project. The apex moved from WordPress to
+#      Cloudflare Pages on 2026-09-27; it is now Pages project `jkbmsr-marketing`.
+#      This check used to refuse any target equal to the apex hostname, on the
+#      premise that the apex was WordPress. That premise expired and the rule with
+#      it — and following it would now block every fix to the marketing site,
+#      because the apex IS a Pages project.
+#      The hazard was never "the apex" in the abstract, it was the 2026-09-12
+#      outage: a *static export deployed into `jkbmsr-web`*, which is the
+#      customer product app, not the marketing site. So the protection that
+#      matters is that each hostname has exactly ONE Pages project and the target
+#      is in the known list. A Pages project name is load-bearing: do not "fix"
+#      one of these to something that sounds more correct.
 #   2. `CLOUDFLARE_ACCOUNT_ID` unset. The API token can see BOTH the old and
 #      the new Cloudflare account, and both accounts have same-named buckets
 #      and same-named Pages projects. With the account id missing, wrangler
@@ -55,12 +63,20 @@ set -euo pipefail
 # environment. Cloudflare zone for jkbmsr.com: 98bf528fbb8bcb1722ae080ecd7f05d0.
 EXPECTED_ACCOUNT_ID="9c686ab673caa0f69af5bee930392670"
 
-# The apex. WordPress serves it. It must never be a Pages deploy target.
+# The apex. Since 2026-09-27 it is a Cloudflare Pages deployment, not WordPress.
+# The hostname still resolves to Cloudflare, and `www` still redirects to it.
 APEX="jkbmsr.com"
 
-# Every Pages project on the platform. A deploy target outside this list is a
-# mistake, not a new feature.
-KNOWN_PAGES_PROJECTS="jkbmsr-admin jkbmsr-docs jkbmsr-releases jkbmsr-web"
+# The Pages project that serves the apex. Named separately because it is the one
+# target where "wrong project" and "the marketing site" look identical until it
+# is far too late: the product app (`jkbmsr-web`) is a completely different site.
+APEX_PAGES_PROJECT="jkbmsr-marketing"
+
+# Every Pages project that is ours on the platform. A deploy target outside this
+# list is a mistake, not a new feature. `jkbmsr-marketing` is the apex; it was
+# absent from this list until 2026-09-28, which would have refused the correct
+# target for the marketing site — a guard blocking the thing it exists to protect.
+KNOWN_PAGES_PROJECTS="jkbmsr-admin jkbmsr-docs jkbmsr-marketing jkbmsr-releases jkbmsr-web"
 
 # `wrangler pages deploy --project-name ... --branch ...` needs wrangler 3+;
 # require 4 to keep the CLI surface stable across the flags used below.
@@ -80,20 +96,23 @@ die()  { printf 'preflight: %s\n' "$*" >&2; exit 2; }
 usage() { sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; $d'; }
 
 # The host map, printed on every failure. A wrong deploy target is obvious once
-# you can see that the apex is WordPress and each subdomain has exactly one home.
+# you can see which Pages project serves each hostname.
 print_host_map() {
   cat >&2 <<'HOSTMAP'
 
-  Host map — the apex is WordPress; every subdomain below has exactly one home:
-    jkbmsr.com        = WordPress (jkbmsr-wp)   NEVER a Pages deploy target
-    www.jkbmsr.com    = WordPress (jkbmsr-wp)   NEVER a Pages deploy target
-    web.jkbmsr.com    = Pages project jkbmsr-web
-    docs.jkbmsr.com   = Pages project jkbmsr-docs
-    cdn.jkbmsr.com    = Pages project jkbmsr-releases
-    api.jkbmsr.com    = Cloudflare Worker (jkbmsr-api) — not Pages at all
-    admin.jkbmsr.com  = Pages project jkbmsr-admin
+    Host map — each hostname has exactly ONE Pages project:
+      jkbmsr.com        = Pages project jkbmsr-marketing  (marketing site; was WordPress until 2026-09-27)
+      www.jkbmsr.com    = the same deployment, 301s to the apex
+      web.jkbmsr.com    = Pages project jkbmsr-web        the customer product app
+      docs.jkbmsr.com   = Pages project jkbmsr-docs
+      cdn.jkbmsr.com    = Pages project jkbmsr-releases
+      api.jkbmsr.com    = Cloudflare Worker (jkbmsr-api) — not Pages at all
+      admin.jkbmsr.com  = Pages project jkbmsr-admin
 
-  Deploying a Pages build to the apex is what caused the 2026-09-12 outage.
+    The 2026-09-12 outage was a static export deployed into jkbmsr-web, which is
+    the product app, not the marketing site. The TARGET is what matters: the apex
+    is a Pages project too, so shipping the wrong build to it is the failure this
+    check exists to catch.
 HOSTMAP
 }
 
@@ -116,10 +135,14 @@ say "----------------------------------------------------------------------"
 # ---------------------------------------------------------------------------
 # 1. Target project
 # ---------------------------------------------------------------------------
-# The apex is refused outright, before anything else, so a mistyped target can
+  # A bare hostname is refused outright, before anything else, so a mistyped target
+  # can never reach the network. This is NOT a refusal to deploy to the apex —
+  # the apex is Pages project jkbmsr-marketing and deploying there is correct.
+  # It is a refusal to treat a HOSTNAME as a PROJECT NAME, which is the shape
+  # the 2026-09-12 outage came from.
 # never reach the network.
 if [ "$PROJECT" = "$APEX" ] || [ "$PROJECT" = "www.$APEX" ]; then
-  bad "refusing to deploy to the apex '$PROJECT' — the apex is WordPress."
+    bad "'$PROJECT' is a hostname, not a Pages project. The apex is served by '$APEX_PAGES_PROJECT' — deploy to that, or the project is wrong."
   print_host_map
   say "" >&2
   say "preflight: FAILED (${FAILURES} check(s))" >&2
