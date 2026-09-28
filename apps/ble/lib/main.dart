@@ -291,6 +291,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                                     Icons.menu_rounded,
                                     color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
                                     size: 20,
+                                    // The InkWell carries no label of its own;
+                                    // this is what a screen reader announces.
+                                    semanticLabel: 'Open menu',
                                   ),
                                 ),
                               ),
@@ -369,6 +372,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                           ),
                           const SizedBox(width: 4),
                           IconButton(
+                            tooltip: 'More options',
                             icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF64748B)),
                             onPressed: () => _switchTab(NavTab.devices),
                           ),

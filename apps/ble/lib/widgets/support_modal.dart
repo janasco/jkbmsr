@@ -89,6 +89,7 @@ class SupportModal extends StatelessWidget {
                       child: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 26),
                     ),
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
                       onPressed: onClose,
                     ),

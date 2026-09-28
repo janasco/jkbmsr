@@ -716,6 +716,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           icon: Icon(Icons.clear, color: context.colors.textMuted),
+                          tooltip: 'Clear search',
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');

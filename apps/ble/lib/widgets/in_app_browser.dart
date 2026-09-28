@@ -129,6 +129,7 @@ class _InAppBrowserModalState extends State<InAppBrowserModal> {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: _canGoBack ? 'Back' : 'Close',
                     icon: Icon(
                       _canGoBack ? Icons.arrow_back_rounded : Icons.close_rounded,
                       color: const Color(0xFF94A3B8),
@@ -179,6 +180,7 @@ class _InAppBrowserModalState extends State<InAppBrowserModal> {
                   ),
                   if (_canGoBack)
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close_rounded,
                           color: Color(0xFF64748B), size: 20),
                       onPressed: () => Navigator.of(context).pop(),

@@ -574,7 +574,13 @@ class _PulseGlowState extends State<PulseGlow>
       vsync: this,
       duration: const Duration(milliseconds: 2600),
     );
-    if (widget.enabled) _controller.repeat(reverse: true);
+    // Unlike every sibling primitive here, this one used to start its loop
+    // unconditionally, so the breathing glow kept animating for users who had
+    // asked the OS to disable animations. didUpdateWidget already consulted
+    // _reducedMotion(); initState now matches it.
+    if (widget.enabled && !_reducedMotion()) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override
