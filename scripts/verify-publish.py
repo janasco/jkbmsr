@@ -89,14 +89,26 @@ def normalise(body: bytes) -> tuple[bytes, list[str]]:
         if count:
             removed.append(f"{name} x{count} ({len(out) - len(stripped)} bytes)")
             out = stripped
-    # Removing an element can leave the whitespace that surrounded it, and one
-    # trailing newline difference is the whole residual on an otherwise identical
-    # document. Trailing whitespace is not content, so it is normalised; interior
-    # whitespace is never touched.
-    trimmed = out.rstrip()
-    if len(trimmed) != len(out):
-        removed.append(f"trailing whitespace ({len(out) - len(trimmed)} bytes)")
-        out = trimmed
+    # NO trailing-whitespace normalisation. There was one, and it was a defect.
+    #
+    # It was added as a "safety net" and never once fired on the case it was
+    # written for -- the beacon pattern's trailing `\s*` already removes the
+    # whitespace the injection brings, and with it the served body is byte-equal
+    # to local. What it DID do was create a path where a deploy that genuinely
+    # differs passes: a served body with three extra trailing bytes, and nothing
+    # establishing that the EDGE added them rather than the deploy, was reported
+    #
+    #     ok  … matches local AFTER removing
+    #           - trailing whitespace (3 bytes)
+    #       (the edge added this; the published build is byte-exact)
+    #
+    # which is false on both counts -- they are not equal, and the attribution was
+    # invented. This tool verifies firmware on cdn.jkbmsr.com, so a wrong artifact
+    # reported as byte-exact is the worst thing it could do.
+    #
+    # The rule this encodes: every normalisation must name WHAT it removes and be
+    # attributable to the edge. A difference we cannot attribute is a difference
+    # we must report.
     return out, removed
 
 
@@ -166,7 +178,8 @@ def verify_one(
                     print(f"  ok    {url}\n        {label}  matches local AFTER removing")
                     for item in removed:
                         print(f"              - {item}")
-                    print("        (the edge added this; the published build is byte-exact)")
+                    print("        (the edge added exactly this and nothing else; the published")
+                    print("         build is byte-equal to local once it is removed)")
                     return True
             last_error = (
                 f"hash mismatch: served {digest}, local {expected_sha256} "
