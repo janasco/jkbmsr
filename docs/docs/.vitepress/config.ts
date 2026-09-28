@@ -90,6 +90,41 @@ export default defineConfig({
   // iOS wants; it now points at a real 180x180. Both are declared so a
   // high-density device gets the large one. This mirrors the icon block already
   // corrected on web-app and admin — same files, same bytes, same sizes.
+  // ONE canonical URL, declared by BOTH deployments.
+  //
+  // Serving the same pages at `docs.jkbmsr.com` and at `jkbmsr.com/docs/` makes
+  // them byte-for-byte identical, and two identical pages with no canonical is
+  // the worst of both worlds: a search engine has to guess, and the guess is
+  // whichever one it crawled first. So the canonical is the apex path, and it is
+  // emitted here rather than at deploy time so that the subdomain build and the
+  // apex build cannot disagree — the subdomain canonicalises onward on its own,
+  // with no DNS change and no redirect.
+  //
+  // Deliberately NOT derived from BASE. Deriving it would give the subdomain a
+  // self-referencing canonical and the apex one as well, which is two canonicals
+  // for one body of content — the exact thing this is here to prevent. The
+  // canonical is a constant decision about which URL is the real one; BASE is a
+  // deployment detail about where the assets happen to be rooted.
+  transformHead({ page }: { page: string }) {
+    // `page` is the SOURCE-relative path -- `api/authentication.md`, not the
+    // served URL. My first attempt stripped `.html`, which produced canonicals
+    // like https://jkbmsr.com/docs/api/authentication.md: a URL that does not
+    // exist, pointing at a page that does. And my check for it tested only for
+    // a literal ".html" and for the apex prefix, both of which a `.md` path
+    // passes -- so the assertion confirmed the bug rather than catching it.
+    //
+    // This mirrors what VitePress itself does under `cleanUrls`: `index.md`
+    // collapses to the directory, and any other `.md` loses the extension.
+    const rel = page
+      .replace(/(^|\/)index\.md$/, "$1")
+      .replace(/\.md$/, "")
+      .replace(/^\/+|\/+$/g, "");
+    // A 404 page has no canonical: it is not content, and pointing one at a
+    // supposed canonical URL tells a crawler that URL is the real version of a
+    // page that does not exist.
+    if (rel === "404" || rel === "") return [];
+    return [["link", { rel: "canonical", href: `https://jkbmsr.com/docs/${rel}` }]];
+  },
   head: [
     [
       "link",
