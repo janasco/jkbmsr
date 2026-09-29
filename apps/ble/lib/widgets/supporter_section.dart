@@ -9,7 +9,7 @@ import '../services/entitlement_service.dart';
 /// Shown only in a Google Play install — a sideloaded copy is already ad-free
 /// and has no Play account to bill, so there is nothing to sell it. The
 /// install channel comes from [EntitlementService], the same single source of
-/// truth the ad seam and the GCash/QR gate read.
+/// truth the ad seam reads.
 class SupporterSection extends StatefulWidget {
   const SupporterSection({super.key, this.entitlementService});
 
@@ -231,8 +231,7 @@ class _SupporterSectionState extends State<SupporterSection> {
           'account needed.';
     }
     // A Supporter unlock grants a real in-app benefit (no ads), so it is a
-    // digital purchase and must be paid for through Google Play — the same
-    // reason the QRPh/GCash option is hidden in a Play build.
+    // digital purchase and must be paid for through Google Play Billing.
     return 'One payment, not a subscription. Removing ads is a one-time '
         'Supporter purchase and it follows your Google Play account to any '
         'device this app is installed on.';

@@ -5,28 +5,20 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 /// Sandboxed in-app browser used by the modals.
 ///
-/// Links (jkbmsr.com, Polar checkout) open inside our own chrome — header,
-/// progress bar, footer — instead of bouncing the user to the system browser
-/// where they lose all app context. Navigation is restricted to the host (and
-/// subdomains) of the initially opened URL, so a link inside the checkout
-/// page can never silently steer the user somewhere else. Escaping to the
-/// real browser stays available as an explicit footer action.
+/// External links (jkbmsr.com, docs and support pages) open inside our own
+/// chrome — header, progress bar, footer — instead of bouncing the user to the
+/// system browser where they lose all app context. Navigation is restricted to
+/// the host (and subdomains) of the initially opened URL, so a link on the page
+/// can never silently steer the user somewhere else. Escaping to the real
+/// browser stays available as an explicit footer action.
 class InAppBrowserModal extends StatefulWidget {
   final String initialUrl;
   final String title;
-
-  /// Optional interception hook: called for every navigation request. Return
-  /// a non-null result string to pop the browser immediately with that value
-  /// (the navigation itself is prevented); return null to load normally.
-  /// Used by the donation flow to catch the embed page's success/closed
-  /// hand-off URLs and turn them into a typed dialog result.
-  final String? Function(String requestUrl)? onIntercept;
 
   const InAppBrowserModal({
     super.key,
     required this.initialUrl,
     required this.title,
-    this.onIntercept,
   });
 
   static Route<T> route<T>({required String initialUrl, required String title}) {
@@ -70,7 +62,7 @@ class _InAppBrowserModalState extends State<InAppBrowserModal> {
         onNavigationRequest: _gateNavigation,
         onWebResourceError: (error) {
           // Only surface failures for the initial page load; a blocked asset
-          // inside the checkout flow shouldn't alarm the user.
+          // inside a page shouldn't alarm the user.
           if (!_loadedOnce && mounted) {
             setState(() => _error = error.description);
           }
@@ -80,18 +72,8 @@ class _InAppBrowserModalState extends State<InAppBrowserModal> {
   }
 
   /// Allow only https on the initial host (or its subdomains). about:blank is
-  /// permitted since checkout flows use it as an intermediate frame target.
+  /// permitted since some pages use it as an intermediate frame target.
   NavigationDecision _gateNavigation(NavigationRequest request) {
-    // Same-origin result hand-off (donation success/closed, etc.) — pop with
-    // the typed result instead of navigating.
-    final intercept = widget.onIntercept;
-    if (intercept != null) {
-      final result = intercept(request.url);
-      if (result != null) {
-        Navigator.of(context).pop(result);
-        return NavigationDecision.prevent;
-      }
-    }
     final uri = Uri.tryParse(request.url);
     final initialHost = _initialUri.host.toLowerCase();
     final host = uri?.host.toLowerCase();

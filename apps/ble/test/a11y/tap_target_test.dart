@@ -97,8 +97,8 @@ void main() {
       _setSize(tester, const Size(400, 900));
 
       // Mounted on its own (rather than through SupportModal) so the sweep
-      // measures the two controls this change adds, not the pre-existing
-      // donation buttons in the same sheet.
+      // measures the two controls this change adds, not the Support sheet's
+      // own chrome.
       installFakePlayBilling(
         installedByPlay: true,
         products: [supporterProduct()],
