@@ -1,10 +1,11 @@
 // The ad seam: exactly one place decides whether an ad may show, and exactly
 // one widget renders one.
 //
-// Today `AdsConfig.current.isConfigured` is false — there is no AdMob app id
-// and no ad SDK — so every case below that matters today must render NOTHING,
-// for both an unentitled and an entitled user. The configured cases exist to
-// prove the seam is wired in the right order, not to ship an ad.
+// Under the shipped config (`AdsConfig.current`, no --dart-define) the first
+// block must render NOTHING and the SDK must never be touched, for both an
+// unentitled and an entitled user. The configured cases use an injected fake
+// builder, so they prove the gate order without ever loading the real SDK in a
+// test; a Supporter must short-circuit before that fake is reached at all.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,12 +35,26 @@ const EntitlementState _supporter = EntitlementState(
 void main() {
   tearDown(() => EntitlementService.instance.debugResetState());
 
-  Future<void> pumpSlot(WidgetTester tester, {AdsConfig config = AdsConfig.current}) async {
+  /// Counts how many times the ad widget was actually built, and renders a
+  /// recognisable stand-in instead of a real SDK banner.
+  int builtCount = 0;
+  Widget fakeAd(BuildContext context, AdsConfig config, EntitlementState e) {
+    builtCount++;
+    return Text('fake-ad:${config.bannerAdUnitId}');
+  }
+
+  setUp(() => builtCount = 0);
+
+  Future<void> pumpSlot(
+    WidgetTester tester, {
+    AdsConfig config = AdsConfig.current,
+    AdSlotAdBuilder? builder,
+  }) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         // Center, not a tight SizedBox: a slot must size itself to its child,
         // and a disabled one must be 0x0 rather than filling the screen.
-        body: Center(child: AdSlot(config: config)),
+        body: Center(child: AdSlot(config: config, adBuilder: builder)),
       ),
     ));
     await tester.pump();
@@ -75,15 +90,25 @@ void main() {
       );
       expect(switchedOff.mayShowAds(_playUser), isFalse);
     });
+
+    test('defaults to Google test ad units, never a real id', () {
+      expect(AdsConfig.current.bannerAdUnitId,
+          AdsConfig.googleTestBannerAdUnitId);
+      expect(_configuredAds.bannerAdUnitId,
+          AdsConfig.googleTestBannerAdUnitId);
+      expect(_configuredAds.usesTestAdUnits, isTrue);
+    });
   });
 
   group('AdSlot', () {
     testWidgets('renders nothing in the shipped configuration', (tester) async {
       EntitlementService.instance.debugOverrideState(_playUser);
-      await pumpSlot(tester);
+      await pumpSlot(tester, builder: fakeAd);
 
       expect(find.byType(AdSlot), findsOneWidget);
-      expect(find.textContaining('Ad slot'), findsNothing);
+      expect(find.textContaining('fake-ad'), findsNothing);
+      expect(builtCount, 0,
+          reason: 'the real ad path must not be reached without dart-defines');
       expect(tester.getSize(find.byType(AdSlot)), Size.zero,
           reason: 'a disabled ad must not reserve any layout space');
       expect(tester.takeException(), isNull);
@@ -92,18 +117,21 @@ void main() {
     testWidgets('renders nothing for a Supporter even when configured',
         (tester) async {
       EntitlementService.instance.debugOverrideState(_supporter);
-      await pumpSlot(tester, config: _configuredAds);
+      await pumpSlot(tester, config: _configuredAds, builder: fakeAd);
 
-      expect(find.textContaining('Ad slot'), findsNothing);
+      expect(find.textContaining('fake-ad'), findsNothing);
+      expect(builtCount, 0,
+          reason: 'a Supporter must short-circuit before an ad is built');
       expect(tester.getSize(find.byType(AdSlot)), Size.zero);
     });
 
-    testWidgets('renders a slot for an unentitled user once configured',
+    testWidgets('renders an ad for an unentitled user once configured',
         (tester) async {
       EntitlementService.instance.debugOverrideState(_playUser);
-      await pumpSlot(tester, config: _configuredAds);
+      await pumpSlot(tester, config: _configuredAds, builder: fakeAd);
 
-      expect(find.textContaining('Ad slot'), findsOneWidget);
+      expect(find.textContaining('fake-ad'), findsOneWidget);
+      expect(builtCount, 1);
     });
 
     testWidgets('follows the entitlement when it resolves after mount',
@@ -111,8 +139,8 @@ void main() {
       EntitlementService.instance.debugOverrideState(
         const EntitlementState(installKind: InstallKind.play),
       );
-      await pumpSlot(tester, config: _configuredAds);
-      expect(find.textContaining('Ad slot'), findsOneWidget);
+      await pumpSlot(tester, config: _configuredAds, builder: fakeAd);
+      expect(find.textContaining('fake-ad'), findsOneWidget);
 
       // The entitlement lands after the first frame (a restore, or a purchase
       // completing) and the slot has to disappear without a rebuild of the
@@ -120,7 +148,7 @@ void main() {
       EntitlementService.instance.debugOverrideState(_supporter);
       await tester.pump();
 
-      expect(find.textContaining('Ad slot'), findsNothing);
+      expect(find.textContaining('fake-ad'), findsNothing);
     });
   });
 }
