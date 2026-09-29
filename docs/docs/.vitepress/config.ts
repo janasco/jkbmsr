@@ -90,7 +90,7 @@ export default defineConfig({
   // iOS wants; it now points at a real 180x180. Both are declared so a
   // high-density device gets the large one. This mirrors the icon block already
   // corrected on web-app and admin — same files, same bytes, same sizes.
-  // ONE canonical URL, declared by BOTH deployments.
+  // ONE canonical URL, declared by BOTH deployments' builds.
   //
   // Serving the same pages at `docs.jkbmsr.com` and at `jkbmsr.com/docs/` makes
   // them byte-for-byte identical, and two identical pages with no canonical is
@@ -99,6 +99,14 @@ export default defineConfig({
   // emitted here rather than at deploy time so that the subdomain build and the
   // apex build cannot disagree — the subdomain canonicalises onward on its own,
   // with no DNS change and no redirect.
+  //
+  // MEASURED 2026-09-29: only ONE deployment declares it today. The apex
+  // `jkbmsr.com/docs/` emits this canonical; `docs.jkbmsr.com` emits NO
+  // canonical on any page and still serves the pre-`a83ffc7` build (4 inline
+  // `<script>` blocks), because the subdomain was never redeployed after this
+  // block landed. So the design intent above is not yet true of live
+  // production: the subdomain does not canonicalise onward until `jkbmsr-docs`
+  // is redeployed. That redeploy is a production change and has not been made.
   //
   // Deliberately NOT derived from BASE. Deriving it would give the subdomain a
   // self-referencing canonical and the apex one as well, which is two canonicals

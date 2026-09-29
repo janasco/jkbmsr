@@ -188,8 +188,11 @@ deliberate step:
 
 - `jkbmsr-releases` → `cdn.jkbmsr.com` — this is the one for firmware artifacts.
 - `jkbmsr-docs` → `docs.jkbmsr.com`.
-- The apex `jkbmsr.com` is a **WordPress** site. Deploying a Pages export to the
-  apex caused the 2026-09-12 outage. Never target it.
+- The apex `jkbmsr.com` is **Pages project `jkbmsr-marketing`** (the Astro
+  marketing site since 2026-09-27; WordPress deliberately still runs behind the
+  tunnel for a crawl cycle only). This release deploy targets `jkbmsr-releases`
+  only. The 2026-09-12 outage was a static export deployed into `jkbmsr-web`,
+  the product app — never target that, or the apex, from here.
 
 Then verify what a client would actually download:
 

@@ -1331,7 +1331,7 @@ fi
 info ""
 info "Next, by hand:"
 info "  1. deploy releases/ to Cloudflare Pages project 'jkbmsr-releases' (serves cdn.jkbmsr.com)"
-info "     -- NEVER to the apex jkbmsr.com: that is WordPress, and deploying to it caused the 2026-09-12 outage"
+info "     -- NEVER to the apex or jkbmsr-web: the apex is Pages project jkbmsr-marketing (Astro), and the 2026-09-12 outage was a static export deployed into jkbmsr-web"
 info "  2. ./scripts/release.sh ${VERSION} --skip-build --no-publish --verify-cdn --yes"
 info "  3. ./scripts/test-production-ota.sh    (signature + checksum against the live API)"
 if [ "$DRY_RUN" -eq 1 ]; then
