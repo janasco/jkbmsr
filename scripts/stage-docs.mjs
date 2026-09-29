@@ -478,8 +478,10 @@ export function analyseCsp(csp, stagedHtmlFiles, stagedCssFiles) {
  * already permits.
  *
  * This is the second option. It changes the apex's headers not at all, and it
- * runs only on the STAGED copy, so the `jkbmsr-docs` build and
- * `docs.jkbmsr.com` keep the bytes they have today, byte for byte.
+ * runs only on the STAGED copy, so the `jkbmsr-docs` build keeps the bytes it
+ * has today, byte for byte. (docs.jkbmsr.com is retired as a browsable copy
+ * since 2026-09-29 — it 301s to the apex — but the `jkbmsr-docs` project is
+ * still the custom-domain origin and the rollback, so its bytes still matter.)
  *
  * The `src` is added in place and the body removed, so execution order is
  * unchanged: a classic external script in <head> is parser-blocking exactly
@@ -957,9 +959,11 @@ function main() {
       }
       if (!resolveInMerged(apexDist, urlPath)) unresolved.push(`${rel} (via ${via}): ${url} -> ${urlPath}`);
       // A docs page that resolves only because of something the APEX happens to
-      // serve would 404 on docs.jkbmsr.com, which deploys these same files at
-      // their root. So self-containment is checked separately, against the docs
-      // tree alone: the subdomain must keep working.
+      // serve would 404 on the `jkbmsr-docs` origin, which deploys these same
+      // files at their root. So self-containment is checked separately, against
+      // the docs tree alone: that origin must keep working as the rollback.
+      // (docs.jkbmsr.com itself is retired and 301s to the apex since
+      // 2026-09-29, but the Pages project it points at is not.)
       //
       // The base prefix is stripped, because `siteRoot` here is the docs tree
       // while `urlPath` is a public URL. Passing both unstripped would look for
@@ -991,9 +995,9 @@ function main() {
   ok(`0 references resolve to nothing in the merged output — the existence check, which is strictly stronger than the prefix check above`);
   if (outsideDocs.length) {
     for (const u of outsideDocs.slice(0, 15)) bad(`resolves only because of the apex, not from the docs build: ${u}`);
-    refuse(1, `${outsideDocs.length} reference(s) resolve outside the docs tree. They would work on the apex and 404 on docs.jkbmsr.com, which deploys these same files at their own root.`);
+    refuse(1, `${outsideDocs.length} reference(s) resolve outside the docs tree. They would work on the apex and 404 on the jkbmsr-docs origin, which deploys these same files at their own root for rollback.`);
   }
-  ok(`0 references depend on an apex file: the docs tree is self-contained, so docs.jkbmsr.com keeps serving the same build unchanged`);
+  ok(`0 references depend on an apex file: the docs tree is self-contained, so the jkbmsr-docs origin keeps serving the same build unchanged`);
 
   // ── PHASE 7 ────────────────────────────────────────────────────────────────
   head(7, "account for every apex header and redirect rule, and say which reach /docs/");
@@ -1110,6 +1114,9 @@ function main() {
   // that decays. It is reported, not enforced: repointing the links was the
   // owner's call, in the other repository, and it has been done — measured
   // live 2026-09-29 as 0 links from the apex to https://docs.jkbmsr.com.
+  // The subdomain is retired and 301s to BASE, so a stray link is a one-hop
+  // detour rather than a dead end; the warning below is about BASE being an
+  // orphan, not about duplicate content.
   const apexHtml = walk(apexDist).filter((f) => f.endsWith('.html') && !f.startsWith('docs/'));
   let toDocsPath = 0;
   let toDocsHost = 0;
@@ -1126,11 +1133,11 @@ function main() {
   if (toDocsPath === 0) {
     warn(
       `nothing on the apex links to ${BASE}, and ${toDocsHost} link(s) point at https://docs.jkbmsr.com instead.\n` +
-        `       So once published, ${BASE} would be an orphan AND a byte-for-byte duplicate of the subdomain.\n` +
-        `       One decision, in the MARKETING repository, the owner's: repoint those ${toDocsHost} link(s)\n` +
-        `       at ${BASE} so the copy on the apex is reachable from its own site.\n` +
+        `       That subdomain is retired (301 → ${BASE}), so those links still work with one hop — but\n` +
+        `       ${BASE} would be an orphan reachable only through a redirect. One decision, in the MARKETING\n` +
+        `       repository, the owner's: repoint those ${toDocsHost} link(s) at ${BASE} directly.\n` +
         `       (The other half of this warning used to be "declare a canonical for the docs". That was\n` +
-        `       done, in docs/docs/.vitepress/config.ts, and BOTH deployments now emit\n` +
+        `       done, in docs/docs/.vitepress/config.ts, and BOTH deployments emit\n` +
         `       https://jkbmsr.com/docs/… as canonical — measured live 2026-09-29 — so it is no longer a\n` +
         `       decision and is not repeated here as one.)`
     );

@@ -3,34 +3,37 @@ import { defineConfig } from "vitepress";
 /**
  * The published path, supplied at BUILD time rather than written here.
  *
- * ONE SOURCE, TWO PLACES, AND ONE BUILD CANNOT SERVE BOTH. These files are
- * published twice:
+ * ONE SOURCE, TWO PAGES PROJECTS, AND ONE BUILD CANNOT SERVE BOTH PATHS. These
+ * files are built twice:
  *
  *   - the apex, at `https://jkbmsr.com/docs/` — staged by
- *     `scripts/stage-docs-at-apex.sh` into the marketing site's Pages output,
- *     so every URL the build emits must be prefixed `/docs/`;
- *   - the subdomain, at `https://docs.jkbmsr.com/` — deployed by
- *     `scripts/deploy-docs.sh`, where the same files are served at the ROOT and
- *     every URL must be prefixed `/`.
+ *     `scripts/stage-docs-at-apex.sh` into the marketing site's Pages output.
+ *     This is **the one browsable copy**; every URL the build emits must be
+ *     prefixed `/docs/`;
+ *   - the `jkbmsr-docs` Pages project, at its own root (`base '/'`) — deployed
+ *     by `scripts/deploy-docs.sh`. `docs.jkbmsr.com` is **retired as a
+ *     browsable copy** (2026-09-29): a Worker 301s it to the apex. The root
+ *     build is kept because that project is the custom-domain origin and the
+ *     rollback, so every URL there must be prefixed `/`.
  *
  * A static host cannot serve one build at both a root and a sub-path, so `base`
  * is read from the environment and **defaults to `/`**.
  *
  * Baking in `/docs/` looks like the obvious fix and is the opposite of one. It
- * makes the subdomain deployment reference `/docs/assets/…` on a host that has
- * no `/docs/` prefix, so every stylesheet, the theme, the fonts and the icons
- * 404 there — behind a build that reports success and a site that answers 200 on
+ * makes the root deployment reference `/docs/assets/…` on a host that has no
+ * `/docs/` prefix, so every stylesheet, the theme, the fonts and the icons 404
+ * there — behind a build that reports success and a site that answers 200 on
  * every page. That is the same shape as the icon bug described further down, and
  * it was caught here by staging `docs/dist` and reading where its asset URLs
  * actually point.
  *
- * So the default is the one that leaves `docs.jkbmsr.com` byte-identical to what
- * it serves today, and the apex path is opted into explicitly:
- * `scripts/stage-docs-at-apex.sh` exports `DOCS_BASE=/docs/` and refuses to run
- * with any other value. If it is ever forgotten the build still succeeds, and
- * `stage-docs.mjs` then REFUSES on the root-absolute references that escape
- * `/docs/` — 1,704 of them, measured. The failure is loud, which is why the
- * reference check exists rather than the variable being trusted.
+ * So the default is the one that leaves the `jkbmsr-docs` deployment
+ * byte-identical to what it serves today, and the apex path is opted into
+ * explicitly: `scripts/stage-docs-at-apex.sh` exports `DOCS_BASE=/docs/` and
+ * refuses to run with any other value. If it is ever forgotten the build still
+ * succeeds, and `stage-docs.mjs` then REFUSES on the root-absolute references
+ * that escape `/docs/` — 1,704 of them, measured. The failure is loud, which is
+ * why the reference check exists rather than the variable being trusted.
  */
 const BASE = process.env.DOCS_BASE ?? '/';
 if (!BASE.startsWith('/') || !BASE.endsWith('/')) {
@@ -90,25 +93,28 @@ export default defineConfig({
   // iOS wants; it now points at a real 180x180. Both are declared so a
   // high-density device gets the large one. This mirrors the icon block already
   // corrected on web-app and admin — same files, same bytes, same sizes.
-  // ONE canonical URL, declared by BOTH deployments' builds.
+  // ONE canonical URL, declared by BOTH builds.
   //
-  // Serving the same pages at `docs.jkbmsr.com` and at `jkbmsr.com/docs/` makes
-  // them byte-for-byte identical, and two identical pages with no canonical is
-  // the worst of both worlds: a search engine has to guess, and the guess is
-  // whichever one it crawled first. So the canonical is the apex path, and it is
-  // emitted here rather than at deploy time so that the subdomain build and the
-  // apex build cannot disagree — the subdomain canonicalises onward on its own,
-  // with no DNS change and no redirect.
+  // The pages are served at `jkbmsr.com/docs/` and — until 2026-09-29 —
+  // byte-for-byte identically at `docs.jkbmsr.com`. Two identical pages with no
+  // canonical is the worst of both worlds: a search engine has to guess, and the
+  // guess is whichever one it crawled first. So the canonical is the apex path,
+  // and it is emitted here rather than at deploy time so that the root build and
+  // the apex build cannot disagree.
   //
-  // MEASURED 2026-09-29, before and after the redeploy: both deployments now
-  // declare it. The apex `jkbmsr.com/docs/` emitted it first; `docs.jkbmsr.com`
-  // served a pre-`a83ffc7` build with NO canonical until `jkbmsr-docs` was
-  // redeployed on 2026-09-29, and now emits it on every page (verified on the
-  // homepage and content pages). The design intent above is therefore true of
-  // live production, not aspirational: the subdomain canonicalises onward on
-  // its own, with no DNS change and no redirect.
+  // STATE 2026-09-29: the subdomain is now RETIRED as a browsable copy — a
+  // Worker 301s it to the apex — so the canonical and the redirect agree on which
+  // URL is the real one. The canonical is still declared by BOTH builds, because
+  // the `jkbmsr-docs` project remains the custom-domain origin and the rollback:
+  // if the route is deleted, the subdomain becomes browsable again with its
+  // canonical already correct, and no DNS change is needed to get back here.
   //
-  // Deliberately NOT derived from BASE. Deriving it would give the subdomain a
+  // MEASURED 2026-09-29: the apex `jkbmsr.com/docs/` emitted the canonical
+  // first; `docs.jkbmsr.com` served a pre-`a83ffc7` build with NO canonical until
+  // `jkbmsr-docs` was redeployed, and that build now emits it on every page
+  // (verified on the homepage and content pages, and across the sitemap).
+  //
+  // Deliberately NOT derived from BASE. Deriving it would give the root build a
   // self-referencing canonical and the apex one as well, which is two canonicals
   // for one body of content — the exact thing this is here to prevent. The
   // canonical is a constant decision about which URL is the real one; BASE is a

@@ -3,7 +3,7 @@
 Checklist for the first physical ESP32 once it arrives. Assumes `main` already
 has Phase 1 provisioning.
 
-Public runbook (keep this in sync): https://docs.jkbmsr.com/getting-started/first-device-setup
+Public runbook (keep this in sync): https://jkbmsr.com/docs/getting-started/first-device-setup
 
 ## Option A — CDN browser flash (`0.1.5+`)
 

@@ -83,11 +83,14 @@ the firmware, `npm run docs:build` for the documentation site, and
 `python3 scripts/validate_release_index.py` for the release index. Run it with no
 arguments to see the plan without executing anything.
 
-Publishing is manual as well. `scripts/deploy-docs.sh` and
-`scripts/deploy-releases.sh` build and publish `docs.jkbmsr.com` and
-`cdn.jkbmsr.com`; with no arguments they only print what they would do. The
-operator procedure, the host map, and the traps that have bitten this project
-are in [DEPLOY.md](DEPLOY.md).
+Publishing is manual as well. `scripts/stage-docs-at-apex.sh` stages the docs
+into the marketing build at `jkbmsr.com/docs/` (the one browsable copy);
+`scripts/deploy-docs.sh` keeps the `jkbmsr-docs` Pages project — the
+custom-domain origin for the now-retired `docs.jkbmsr.com`, which 301s to the
+apex — and `scripts/deploy-releases.sh` builds and publishes `cdn.jkbmsr.com`;
+with no arguments they only print what they would do. The operator procedure,
+the host map, and the traps that have bitten this project are in
+[DEPLOY.md](DEPLOY.md).
 
 ## Support scope
 

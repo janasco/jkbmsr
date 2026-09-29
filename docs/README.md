@@ -1,17 +1,22 @@
-# jkbmsr-docs
+# Documentation
 
-> **Archived — superseded by `jkbmsr-web`.** The `docs.jkbmsr.com` site this
-> repository built has moved to `jkbmsr.com/docs`, served from the
-> `documentation/` folder in `jkbmsr-web` (VitePress, same as here) as part
-> of the same domain consolidation that already absorbed `jkbmsr-site`. This
-> repo's content is no longer the live source — **new docs work should go in
-> `jkbmsr-web`'s `documentation/` folder, not here.**
+> **The live source is `docs/` in the public repository `janasco/jkbmsr`.** This
+> README is retained from the pre-consolidation `jkbmsr-docs` repository and is
+> partly historical. The documentation is built from `docs/` by VitePress and
+> published to the apex at `https://jkbmsr.com/docs/` by
+> `scripts/stage-docs-at-apex.sh` — **the one browsable copy**. The
+> `jkbmsr-docs` Pages project is still deployed by `scripts/deploy-docs.sh`, but
+> `docs.jkbmsr.com` is **retired as a browsable copy**: since 2026-09-29 a Worker
+> (`jkbmsr-docs-redirect`) 301s every path to the apex. The earlier note claiming
+> the site "moved to `jkbmsr-web`'s `documentation/` folder" was wrong about both
+> the source and the destination.
 
 Documentation hub for JKBMSR, the JK Battery Management System Remote platform.
 
 This repository tracks product, user, developer, deployment, troubleshooting, firmware, cloud, OTA, and safety documentation for the full JKBMSR ecosystem.
 
-It now also contains the static documentation site source for `docs.jkbmsr.com`.
+The `docs/` directory is the static documentation site source, published to the
+apex at `https://jkbmsr.com/docs/`.
 
 ## Project Status
 
@@ -148,4 +153,4 @@ docs/
 - Add an end-to-end setup guide from ESP32 flashing to web dashboard login.
 - Add first-release verification notes after the initial production OTA tag.
 - Add customer-facing OTA rollback communication guidance.
-- Keep the docs custom domain `docs.jkbmsr.com` attached and DNS-backed in Cloudflare Pages.
+- Keep the `jkbmsr-docs` Pages project as the `docs.jkbmsr.com` custom-domain origin (do not rename); the hostname itself is retired as a browsable copy and 301s to `jkbmsr.com/docs/` via the `jkbmsr-docs-redirect` Worker.
