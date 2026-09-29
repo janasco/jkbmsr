@@ -14,6 +14,10 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.30
+
+- Updated the app's logo to match the current JK BMS Remote branding, with versions that adapt automatically to light and dark themes.
+
 ## v1.3.21
 
 - Larger tap target on the inline "Acknowledge" button; animations now respect your device's reduced-motion setting.
