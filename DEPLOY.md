@@ -220,18 +220,26 @@ failing on input that should make it fail. A negative result from a check that
 cannot fail reads as assurance, which is the failure mode this project has hit
 three times in one session.
 
-Two warnings are expected and are not defects. Both are decisions that belong to
-the marketing repository, and the script says so rather than making them:
+The staging script raises two warnings when the docs are not yet wired in. Both
+were RESOLVED and measured live on 2026-09-29; they remain in the script because
+each guards against the condition being reintroduced, and the decisions belonged
+to the marketing repository:
 
 1. The apex `sitemap.xml` index does not reference `/docs/sitemap.xml`, and
-   `robots.txt` advertises only `/sitemap.xml`. Add `/docs/sitemap.xml` to
-   `CHILD_SITEMAPS` in `src/lib/sitemap.ts`, or a `Sitemap:` line to
-   `src/pages/robots.txt.ts` — otherwise the docs sitemap exists and nothing
-   points a crawler at it.
-2. Nothing on the apex links to `/docs/`, and 147 links point at
-   `https://docs.jkbmsr.com` instead. Until they are repointed, `/docs/` is an
-   orphan *and* a byte-for-byte duplicate of the subdomain, with no canonical
-   declared on either.
+   `robots.txt` advertises only `/sitemap.xml`. RESOLVED: `CHILD_SITEMAPS` in
+   `src/lib/sitemap.ts` names `/docs/sitemap.xml`, and `src/pages/robots.txt.ts`
+   emits a second `Sitemap:` line. Measured live 2026-09-29: the index has 5
+   children including `https://jkbmsr.com/docs/sitemap.xml`, and `robots.txt`
+   carries 2 `Sitemap:` lines. The warning fires only if one is removed again,
+   which would leave the docs sitemap existing while nothing points a crawler at
+   it.
+2. Nothing on the apex links to `/docs/`, and the docs links point at
+   `https://docs.jkbmsr.com` instead. RESOLVED: every rendered docs link now
+   points at `/docs/`, emitted by the one footer line in
+   `src/lib/links.ts`. Measured live 2026-09-29: the homepage emits
+   `href="/docs/"` and ZERO `docs.jkbmsr.com` references. The warning fires only
+   if that is undone, because `/docs/` would then be an orphan *and* a duplicate
+   of the subdomain.
 
 ### Two things about the apex's headers worth knowing before you touch them
 

@@ -100,13 +100,13 @@ export default defineConfig({
   // apex build cannot disagree — the subdomain canonicalises onward on its own,
   // with no DNS change and no redirect.
   //
-  // MEASURED 2026-09-29: only ONE deployment declares it today. The apex
-  // `jkbmsr.com/docs/` emits this canonical; `docs.jkbmsr.com` emits NO
-  // canonical on any page and still serves the pre-`a83ffc7` build (4 inline
-  // `<script>` blocks), because the subdomain was never redeployed after this
-  // block landed. So the design intent above is not yet true of live
-  // production: the subdomain does not canonicalise onward until `jkbmsr-docs`
-  // is redeployed. That redeploy is a production change and has not been made.
+  // MEASURED 2026-09-29, before and after the redeploy: both deployments now
+  // declare it. The apex `jkbmsr.com/docs/` emitted it first; `docs.jkbmsr.com`
+  // served a pre-`a83ffc7` build with NO canonical until `jkbmsr-docs` was
+  // redeployed on 2026-09-29, and now emits it on every page (verified on the
+  // homepage and content pages). The design intent above is therefore true of
+  // live production, not aspirational: the subdomain canonicalises onward on
+  // its own, with no DNS change and no redirect.
   //
   // Deliberately NOT derived from BASE. Deriving it would give the subdomain a
   // self-referencing canonical and the apex one as well, which is two canonicals
