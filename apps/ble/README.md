@@ -113,6 +113,49 @@ the reasoning behind brand detection and capability gating.
 
 ---
 
+## Enabling real AdMob ads
+
+Ads are **off by default**. With no `--dart-define` the app makes no AdMob
+SDK call and requests no ad (`lib/services/ads_config.dart`,
+`lib/services/ad_sdk.dart`, `lib/widgets/ad_slot.dart`). The shipped
+`AndroidManifest.xml` carries Google's **test** application id, and the banner
+ad unit defaults to Google's **test** unit, so a dev/test build can be switched
+on without ever serving a live ad.
+
+To enable ads, three things are needed:
+
+1. **The AdMob application id, in two places.** The native SDK reads it from
+   `android/app/src/main/AndroidManifest.xml`
+   (`com.google.android.gms.ads.APPLICATION_ID`); the app's gate reads it from a
+   compile-time define. Replace the placeholder in the manifest with the real
+   app id, and pass the same id at build time.
+2. **The real banner ad unit id**, passed as `ADMOB_BANNER_AD_UNIT_ID`.
+   Omitting it serves Google's test banner — intentional, so nobody ships a
+   real creative by accident.
+3. **`ADS_ENABLED=true`**, the deliberate kill switch.
+
+```bash
+flutter build appbundle --release \
+  --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+  --dart-define=ADS_ENABLED=true \
+  --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
+```
+
+Rules that hold whatever is passed:
+
+- **The entitlement wins.** A Supporter (`remove_ads_lifetime`) short-circuits
+  before the SDK is initialised or an ad requested; `AdsConfig.mayShowAds` is
+  the single ad decision, and `AdSdk.ensureInitialised` re-checks it.
+- **The SDK is initialised lazily, at most once per app run**, on the first
+  permitted ad — never at import time and never in a test.
+- **No ad may render while a BLE connection is being established**, on the
+  Connect/Scanning flow, the Control screen, or the PIN dialog. Ads belong on
+  the read-only status/history surfaces only.
+- **Do not disable a test that asserts inertness.** `test/ad_slot_test.dart`
+  and `test/ad_sdk_test.dart` exist to prove a default build stays silent.
+
+---
+
 ## 📄 Contributing
 
 Author commits as `janasco <janasco@duck.com>`. Do not add tool attribution or
