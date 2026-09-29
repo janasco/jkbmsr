@@ -187,7 +187,7 @@ deliberate step:
 **Project names are load-bearing.**
 
 - `jkbmsr-releases` → `cdn.jkbmsr.com` — this is the one for firmware artifacts.
-- `jkbmsr-docs` → `docs.jkbmsr.com`.
+- `jkbmsr-docs` → the custom-domain origin for `docs.jkbmsr.com`, which is retired as a browsable copy and 301s to the apex `jkbmsr.com/docs/`.
 - The apex `jkbmsr.com` is **Pages project `jkbmsr-marketing`** (the Astro
   marketing site since 2026-09-27; WordPress deliberately still runs behind the
   tunnel for a crawl cycle only). This release deploy targets `jkbmsr-releases`

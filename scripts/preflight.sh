@@ -104,7 +104,8 @@ print_host_map() {
       jkbmsr.com        = Pages project jkbmsr-marketing  (marketing site; was WordPress until 2026-09-27)
       www.jkbmsr.com    = the same deployment, 301s to the apex
       web.jkbmsr.com    = Pages project jkbmsr-web        the customer product app
-      docs.jkbmsr.com   = Pages project jkbmsr-docs
+      docs.jkbmsr.com   = Worker jkbmsr-docs-redirect -> 301 to jkbmsr.com/docs/
+                          (custom-domain origin: Pages project jkbmsr-docs)
       cdn.jkbmsr.com    = Pages project jkbmsr-releases
       api.jkbmsr.com    = Cloudflare Worker (jkbmsr-api) — not Pages at all
       admin.jkbmsr.com  = Pages project jkbmsr-admin

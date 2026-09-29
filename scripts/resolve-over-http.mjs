@@ -166,7 +166,7 @@ if (canonicalisations.length) {
     `   ..    ${canonicalisations.length} link(s) point at a spelling the server redirects: ${canonicalisations.map((p) => `${p} -> ${pages.find((x) => new URL(x.url).pathname === p).finalUrl.replace(base, '')}`).join(', ')}\n` +
       `         Each is a working link with one extra hop. Reported, not fixed: these come from VitePress's own\n` +
       `         \`link: "/api/index"\` sidebar entries, and rewording them to a trailing slash would change what\n` +
-      `         docs.jkbmsr.com serves on its next deploy, which is out of scope here.\n`
+      `         the jkbmsr-docs origin serves on its next deploy, which is out of scope here.\n`
   );
 }
 if (orphans.length) {

@@ -14,7 +14,7 @@ before you open a pull request.
 | Check every component | `scripts/check-all.sh --run` | no |
 | Check one component | `scripts/check-all.sh --run --only firmware` | no |
 | Build the docs, publish nothing | `scripts/deploy-docs.sh --build-only` | no |
-| Publish the docs site | `scripts/deploy-docs.sh --deploy` | `docs.jkbmsr.com` |
+| Publish the docs origin (retired subdomain) | `scripts/deploy-docs.sh --deploy` | `jkbmsr-docs.pages.dev` — `docs.jkbmsr.com` now 301s to the apex |
 | Package the release CDN, publish nothing | `scripts/deploy-releases.sh --build-only` | no |
 | Publish the release CDN | `scripts/deploy-releases.sh --deploy` | `cdn.jkbmsr.com` |
 | Environment check on its own | `scripts/preflight.sh --project jkbmsr-docs` | no |
@@ -38,7 +38,7 @@ deploy aimed at the wrong one publishes nothing at best.
 | `jkbmsr.com` | Pages project `jkbmsr-marketing` | the marketing site (Astro build). Was WordPress until 2026-09-27. **Not `jkbmsr-web`.** |
 | `www.jkbmsr.com` | Pages project `jkbmsr-marketing` (301 → apex) | custom domain on the same project |
 | `web.jkbmsr.com` | Pages project `jkbmsr-web` | not this repository |
-| `docs.jkbmsr.com` | Pages project `jkbmsr-docs` | `scripts/deploy-docs.sh` |
+| `docs.jkbmsr.com` | Worker `jkbmsr-docs-redirect` → 301 to `jkbmsr.com/docs/` (Pages project `jkbmsr-docs` kept as the custom-domain origin) | see "Publishing the docs" below |
 | `cdn.jkbmsr.com` | Pages project `jkbmsr-releases` | `scripts/deploy-releases.sh` |
 | `api.jkbmsr.com` | Cloudflare Worker (`jkbmsr-api`) | not Pages at all |
 | `admin.jkbmsr.com` | Pages project `jkbmsr-admin` | not this repository |
@@ -128,25 +128,41 @@ Useful flags: `--skip-install` (assume `node_modules` is current), `--no-verify`
 
 ## Publishing the docs on the apex, at `jkbmsr.com/docs/`
 
-The same documentation build is published in **two** places, and they are not
-the same deployment:
+The same documentation build is published to **two** Pages projects, and only
+one of them is browsable:
 
-| Where | Path | Pages project | Built and staged by |
+| Where | Status | Pages project | Built and staged by |
 |---|---|---|---|
-| `https://docs.jkbmsr.com` | `/` | `jkbmsr-docs` | `scripts/deploy-docs.sh` (above) |
-| `https://jkbmsr.com/docs/` | `/docs/` | `jkbmsr-marketing` (the apex) | `scripts/stage-docs-at-apex.sh` (below) |
+| `https://jkbmsr.com/docs/` | **the one browsable copy** | `jkbmsr-marketing` (the apex) | `scripts/stage-docs-at-apex.sh` (below) |
+| `https://docs.jkbmsr.com` | **retired 2026-09-29: 301 → the apex `/docs/`** | `jkbmsr-docs` (custom-domain origin, kept for rollback) | `scripts/deploy-docs.sh` (above) |
 
-One VitePress build serves both, so `docs/docs/.vitepress/config.ts` sets
-`base: '/docs/'`. That value is the whole risk in this arrangement: with no
-`base`, VitePress defaults to `/` and every asset URL it emits is
-root-absolute, so a copy placed under `/docs/` resolves every stylesheet, the
-theme and every internal link against the **apex root** instead. Nothing throws.
-The pages render unstyled and the links go to the marketing site.
+One VitePress build serves both. `base` is supplied at build time and **defaults
+to `/`** in `docs/docs/.vitepress/config.ts`; `scripts/stage-docs-at-apex.sh`
+exports `DOCS_BASE=/docs/` for the apex copy and refuses any other value. That
+value is the whole risk in this arrangement: with the wrong `base`, every asset
+URL is root-absolute and a copy placed under `/docs/` resolves every stylesheet,
+the theme and every internal link against the **apex root** instead. Nothing
+throws; the pages render unstyled and the links go to the marketing site.
+`stage-docs.mjs` refuses the ~1,700 escaping references that result.
 
-**`docs.jkbmsr.com` is unaffected by any of this.** It deploys the same files at
-their own root, where the same `/assets/…` URLs are correct, and it keeps
-working whether or not the apex copy is deployed. Retiring it is a separate
-decision; nothing here depends on it.
+**`docs.jkbmsr.com` is retired as a browsable copy.** A Worker
+(`jkbmsr-docs-redirect`, route `docs.jkbmsr.com/*` — see
+`jkbmsr-private/ops/deploys/jkbmsr-docs-redirect.md`) 301s every path to the
+matching `https://jkbmsr.com/docs/<path>`. It exists because neither edge option
+can prefix-preserve on this Free-plan zone: Single Redirects cannot capture a
+path (`${1}` is stored but not evaluated), and `stage-docs.mjs` deliberately
+refuses any `_redirects`/`_headers` in the docs build. The apex `/docs/` is now
+the canonical, one browsable address.
+
+**Should `scripts/deploy-docs.sh` keep running? Yes — but it verifies a
+different hostname.** The `jkbmsr-docs` Pages project must not be renamed: the
+`docs.jkbmsr.com` custom domain points at it, and it is what makes the rollback
+(delete the Worker route) a one-command revert to a browsable subdomain. Keep it
+current. Its post-deploy HTTP verification now reads
+`https://jkbmsr-docs.pages.dev`, **not** the custom domain: the custom domain
+301s to the apex `/docs/` build, which is a *different* build on a *different*
+project, so hashing that against this project's output would fail on a healthy
+deploy. The script says so in its own header.
 
 ### The two checkouts, and why that matters
 
@@ -380,9 +396,10 @@ this automatically via `scripts/verify-publish.py`, retrying a few times for
 edge propagation. To check by hand:
 
 ```bash
-# docs
+# docs origin (docs.jkbmsr.com is retired and 301s to the apex, so verify the
+# project's own hostname, not the custom domain — see "Publishing the docs")
 python3 scripts/verify-publish.py \
-  --url https://docs.jkbmsr.com/index.html \
+  --url https://jkbmsr-docs.pages.dev/index.html \
   --file docs/dist/index.html
 
 # release CDN: index, the index the flasher reads, and every target's binary

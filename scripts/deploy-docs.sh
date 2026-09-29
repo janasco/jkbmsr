@@ -17,6 +17,13 @@
 # anywhere else publishes nothing, and deploying to the apex jkbmsr.com is what
 # caused the 2026-09-12 outage. See DEPLOY.md.
 #
+# RETIRED SUBDOMAIN, 2026-09-29: docs.jkbmsr.com is no longer a browsable copy.
+# A Worker route (jkbmsr-docs-redirect) 301s it to jkbmsr.com/docs/, which is a
+# DIFFERENT build on a DIFFERENT Pages project. This script still publishes this
+# project because it is the custom-domain origin and the one-command rollback,
+# but it verifies the readback against the PROJECT's own hostname — see the note
+# on VERIFY_URL below. See ops/deploys/jkbmsr-docs-redirect.md.
+#
 # Usage:
 #   scripts/deploy-docs.sh                  # dry run: validate + print the plan
 #   scripts/deploy-docs.sh --build-only     # validate + build, publish nothing
@@ -48,6 +55,14 @@ VERIFY="$SCRIPT_DIR/verify-publish.py"
 PAGES_PROJECT="jkbmsr-docs"
 PAGES_BRANCH="main"
 PUBLIC_URL="https://docs.jkbmsr.com"
+# The readback target is the PROJECT's own hostname, not the custom domain, and
+# the reason is a 2026-09-29 state change: docs.jkbmsr.com is retired as a
+# browsable copy and 301s to jkbmsr.com/docs/, which is a DIFFERENT build
+# (base /docs/) on a DIFFERENT Pages project. Following that redirect and hashing
+# the result against this project's root-based output would fail on a perfectly
+# healthy deploy — a verification that measures the wrong thing. The
+# `<project>.pages.dev` hostname serves THIS deployment.
+VERIFY_URL="https://jkbmsr-docs.pages.dev"
 
 # The VitePress source directory inside the component is itself called `docs`,
 # so the doubled path below is correct, not a typo. The original workflow ran
@@ -183,7 +198,7 @@ if [ "$MODE" = "dry-run" ]; then
            _headers/_redirects files are not involved for docs)
    ..    cd docs && npx wrangler pages deploy dist \\
              --project-name $PAGES_PROJECT --branch $PAGES_BRANCH
-   ..    python3 scripts/verify-publish.py --url $PUBLIC_URL/index.html \\
+   ..    python3 scripts/verify-publish.py --url $VERIFY_URL/index.html \\
              --file docs/dist/index.html
 PLAN
 else
@@ -281,10 +296,10 @@ fi
 # that can see two accounts it can read the wrong one and still report a match.
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "deploy" ] && [ "$NO_VERIFY" -eq 0 ]; then
-  step "verify the published site ($PUBLIC_URL)"
-  python3 "$VERIFY" --url "$PUBLIC_URL/index.html" --file "$DEPLOY_DIST/index.html" \
-    || die "verification failed — the deploy landed but the public URL does not serve these bytes"
-  ok "public URL serves the bytes that were deployed"
+  step "verify the published project ($VERIFY_URL)"
+  python3 "$VERIFY" --url "$VERIFY_URL/index.html" --file "$DEPLOY_DIST/index.html" \
+    || die "verification failed — the deploy landed but the project hostname does not serve these bytes"
+  ok "$VERIFY_URL serves the bytes that were deployed (the public docs.jkbmsr.com is retired and 301s to the apex)"
 elif [ "$MODE" = "deploy" ]; then
   warn "--no-verify: skipping the HTTP read. Verify by hand before calling this done."
 fi
@@ -296,7 +311,8 @@ step "summary"
 say "   mode             $MODE"
 say "   pages project    $PAGES_PROJECT   (do not rename)"
 say "   branch           $PAGES_BRANCH"
-say "   public url       $PUBLIC_URL"
+say "   public url       $PUBLIC_URL   (retired as a browsable copy; 301s to https://jkbmsr.com/docs/)"
+say "   verify url       $VERIFY_URL   (serves this project's own deployment)"
 say "   build output     ${DEPLOY_DIST#$REPO_ROOT/}"
 say "   published        $([ "$MODE" = deploy ] && echo yes || echo no)"
 say ""

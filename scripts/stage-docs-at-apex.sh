@@ -125,8 +125,8 @@ if [ -n "${DOCS_BASE:-}" ] && [ "$DOCS_BASE" != "$APEX_DOCS_BASE" ]; then
   die "DOCS_BASE is set to '$DOCS_BASE' but this script stages into '$APEX_DOCS_BASE'.
        Unset it, or set it to '$APEX_DOCS_BASE'. Refusing to overwrite it silently."
 fi
-ok "DOCS_BASE=$APEX_DOCS_BASE — the apex copy must live under /docs/; the subdomain build uses /"
-info "The subdomain build (scripts/deploy-docs.sh) deliberately uses base '/', so docs.jkbmsr.com is unaffected."
+ok "DOCS_BASE=$APEX_DOCS_BASE — the apex copy must live under /docs/; the retired-subdomain build uses /"
+info "docs.jkbmsr.com is retired (301 → the apex). scripts/deploy-docs.sh still builds at base '/' for the jkbmsr-docs custom-domain origin, which is kept for rollback."
 
 # ── Build the docs ────────────────────────────────────────────────────────────
 if [ "$CHECK_ONLY" -eq 0 ]; then
