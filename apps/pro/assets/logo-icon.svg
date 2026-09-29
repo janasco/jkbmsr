@@ -8,6 +8,6 @@
       <stop offset="0" stop-color="#0E1726"/><stop offset="1" stop-color="#060B14"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="115" fill="bg"/>
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
   <ellipse cx="256" cy="256" rx="196" ry="150" fill="none" stroke="url(#fg)" stroke-width="17" opacity="0.30" transform="rotate(-28 256 256)"/><g transform="translate(7,-26) translate(133,288) scale(1.12) translate(-133,-288)"><path d="M92 322 a30 30 0 0 1 3-60 a42 42 0 0 1 78-11 a28 28 0 0 1 12 51 a28 28 0 0 1 -27 28 H92 z" fill="url(#fg)"/></g><rect x="250" y="238" width="42" height="124" rx="16.2" fill="url(#fg)" opacity="1"/><rect x="310" y="204" width="42" height="158" rx="16.2" fill="url(#fg)" opacity="0.86"/><rect x="370" y="170" width="42" height="192" rx="16.2" fill="url(#fg)" opacity="0.72"/>
 </svg>
