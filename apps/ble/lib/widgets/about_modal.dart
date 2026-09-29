@@ -33,7 +33,12 @@ class AboutModal extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.asset(
-                'assets/icon/app_icon.png',
+                // The mark is a dark tile on dark surfaces and a white tile
+                // with a dark-on-white mark on light surfaces, so it reads
+                // against whichever theme the app is currently using.
+                AppColors.isDark(context)
+                    ? 'assets/icon/app_icon.png'
+                    : 'assets/icon/app_icon_light.png',
                 width: 64,
                 height: 64,
                 fit: BoxFit.cover,

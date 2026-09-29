@@ -205,7 +205,12 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Image.asset(
-          'assets/icon/icon.png',
+          // Dark tile in dark mode, white tile with a dark-on-white mark in
+          // light mode: the logo sits on a tile that matches the app theme
+          // instead of always being the fixed dark navy tile.
+          Theme.of(context).brightness == Brightness.dark
+              ? 'assets/icon/icon.png'
+              : 'assets/icon/icon_light.png',
           height: 64,
           width: 64,
         ),

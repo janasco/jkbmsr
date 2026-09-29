@@ -37,7 +37,12 @@ class BmsDrawer extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
-                      'assets/icon/app_icon.png',
+                      // Dark tile in dark mode, white tile with a dark mark
+                      // in light mode, so the logo always sits on a surface
+                      // that matches the app theme.
+                      isDark
+                          ? 'assets/icon/app_icon.png'
+                          : 'assets/icon/app_icon_light.png',
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,
