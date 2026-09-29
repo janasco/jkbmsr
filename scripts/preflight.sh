@@ -140,7 +140,6 @@ say "----------------------------------------------------------------------"
   # the apex is Pages project jkbmsr-marketing and deploying there is correct.
   # It is a refusal to treat a HOSTNAME as a PROJECT NAME, which is the shape
   # the 2026-09-12 outage came from.
-# never reach the network.
 if [ "$PROJECT" = "$APEX" ] || [ "$PROJECT" = "www.$APEX" ]; then
     bad "'$PROJECT' is a hostname, not a Pages project. The apex is served by '$APEX_PAGES_PROJECT' — deploy to that, or the project is wrong."
   print_host_map

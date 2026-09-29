@@ -12,8 +12,10 @@
 #
 # The Pages project name `jkbmsr-releases` and the branch `main` are
 # load-bearing. Do not rename them. cdn.jkbmsr.com points at this project.
-# The apex jkbmsr.com is WordPress and must never receive a Pages deploy —
-# that mistake is the 2026-09-12 outage. See DEPLOY.md.
+# Never point this deploy at the apex: jkbmsr.com is a *different* Pages
+# project (`jkbmsr-marketing`, the Astro marketing site since 2026-09-27).
+# The 2026-09-12 outage was a static export deployed into `jkbmsr-web`, the
+# product app — so target `jkbmsr-releases` and nothing else. See DEPLOY.md.
 #
 # Usage:
 #   scripts/deploy-releases.sh                  # dry run: validate + print the plan

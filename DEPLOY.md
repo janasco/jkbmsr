@@ -35,19 +35,21 @@ deploy aimed at the wrong one publishes nothing at best.
 
 | Host | What serves it | Notes |
 | :--- | :--- | :--- |
-| `jkbmsr.com` | **WordPress** (`jkbmsr-wp`) | **Never a Pages deploy target.** |
-| `www.jkbmsr.com` | **WordPress** (`jkbmsr-wp`) | **Never a Pages deploy target.** |
+| `jkbmsr.com` | Pages project `jkbmsr-marketing` | the marketing site (Astro build). Was WordPress until 2026-09-27. **Not `jkbmsr-web`.** |
+| `www.jkbmsr.com` | Pages project `jkbmsr-marketing` (301 → apex) | custom domain on the same project |
 | `web.jkbmsr.com` | Pages project `jkbmsr-web` | not this repository |
 | `docs.jkbmsr.com` | Pages project `jkbmsr-docs` | `scripts/deploy-docs.sh` |
 | `cdn.jkbmsr.com` | Pages project `jkbmsr-releases` | `scripts/deploy-releases.sh` |
 | `api.jkbmsr.com` | Cloudflare Worker (`jkbmsr-api`) | not Pages at all |
 | `admin.jkbmsr.com` | Pages project `jkbmsr-admin` | not this repository |
 
-The apex is the one that hurts. Deploying a Pages build to `jkbmsr.com` is what
-caused the **2026-09-12 outage**, and the host map was wrong in several
-internal documents for months before that, which is what made it easy to get
-wrong. `scripts/preflight.sh` refuses the apex outright and prints this table
-on every failure.
+The 2026-09-12 outage came from a **static export deployed into `jkbmsr-web`** —
+the customer product app — not from "the apex" in the abstract, and the host map
+above was wrong in several internal documents for months before that, which is
+what made it easy to get wrong. The rule that replaces it: each hostname has
+exactly one Pages project, and a bare hostname is not a project name.
+`scripts/preflight.sh` refuses a hostname passed as `--project` and prints this
+table on every failure; `jkbmsr-marketing` is the correct target for the apex.
 
 The other half of the rule: **do not rename a Pages project.** `jkbmsr-docs`
 and `jkbmsr-releases` are the names the custom domains point at. Renaming one
