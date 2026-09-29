@@ -1107,8 +1107,9 @@ function main() {
 
   // An inbound-link count, so "the apex links to the docs subdomain, not to
   // /docs/" is a number this run prints rather than a sentence in a document
-  // that decays. It is reported, not enforced: repointing 147 links is the
-  // owner's call, in the other repository.
+  // that decays. It is reported, not enforced: repointing the links was the
+  // owner's call, in the other repository, and it has been done — measured
+  // live 2026-09-29 as 0 links from the apex to https://docs.jkbmsr.com.
   const apexHtml = walk(apexDist).filter((f) => f.endsWith('.html') && !f.startsWith('docs/'));
   let toDocsPath = 0;
   let toDocsHost = 0;
@@ -1125,12 +1126,13 @@ function main() {
   if (toDocsPath === 0) {
     warn(
       `nothing on the apex links to ${BASE}, and ${toDocsHost} link(s) point at https://docs.jkbmsr.com instead.\n` +
-        `       So once published, ${BASE} would be an orphan AND a byte-for-byte duplicate of the subdomain, with no canonical on either.\n` +
-        `       Two decisions, both in the MARKETING repository, both the owner's:\n` +
-        `         (a) repoint those ${toDocsHost} link(s) at ${BASE} so the copy on the apex is reachable from its own site;\n` +
-        `         (b) declare a canonical for the docs. Adding <link rel="canonical"> via a VitePress\n` +
-        `             transformHead is a few lines in docs/docs/.vitepress/config.ts and would apply to BOTH\n` +
-        `             deployments, telling search engines the apex is canonical and the subdomain is not.`
+        `       So once published, ${BASE} would be an orphan AND a byte-for-byte duplicate of the subdomain.\n` +
+        `       One decision, in the MARKETING repository, the owner's: repoint those ${toDocsHost} link(s)\n` +
+        `       at ${BASE} so the copy on the apex is reachable from its own site.\n` +
+        `       (The other half of this warning used to be "declare a canonical for the docs". That was\n` +
+        `       done, in docs/docs/.vitepress/config.ts, and BOTH deployments now emit\n` +
+        `       https://jkbmsr.com/docs/… as canonical — measured live 2026-09-29 — so it is no longer a\n` +
+        `       decision and is not repeated here as one.)`
     );
   }
   summary.inboundDocsPathLinks = toDocsPath;
