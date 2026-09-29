@@ -102,7 +102,7 @@ print_host_map() {
 
     Host map — each hostname has exactly ONE Pages project:
       jkbmsr.com        = Pages project jkbmsr-marketing  (marketing site; was WordPress until 2026-09-27)
-      www.jkbmsr.com    = the same deployment, 301s to the apex
+      www.jkbmsr.com    = Worker jkbmsr-www-redirect -> 301 to jkbmsr.com/<same path> (custom domain on Pages jkbmsr-marketing)
       web.jkbmsr.com    = Pages project jkbmsr-web        the customer product app
       docs.jkbmsr.com   = Worker jkbmsr-docs-redirect -> 301 to jkbmsr.com/docs/
                           (custom-domain origin: Pages project jkbmsr-docs)

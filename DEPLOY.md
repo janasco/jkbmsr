@@ -36,7 +36,7 @@ deploy aimed at the wrong one publishes nothing at best.
 | Host | What serves it | Notes |
 | :--- | :--- | :--- |
 | `jkbmsr.com` | Pages project `jkbmsr-marketing` | the marketing site (Astro build). Was WordPress until 2026-09-27. **Not `jkbmsr-web`.** |
-| `www.jkbmsr.com` | Pages project `jkbmsr-marketing` (301 → apex) | custom domain on the same project |
+| `www.jkbmsr.com` | Worker `jkbmsr-www-redirect` → single 301 to the apex, path + query preserved | the `www` custom domain is on `jkbmsr-marketing`; the Worker retires it (2026-09-29) |
 | `web.jkbmsr.com` | Pages project `jkbmsr-web` | not this repository |
 | `docs.jkbmsr.com` | Worker `jkbmsr-docs-redirect` → 301 to `jkbmsr.com/docs/` (Pages project `jkbmsr-docs` kept as the custom-domain origin) | see "Publishing the docs" below |
 | `cdn.jkbmsr.com` | Pages project `jkbmsr-releases` | `scripts/deploy-releases.sh` |
