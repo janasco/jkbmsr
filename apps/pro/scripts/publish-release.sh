@@ -94,11 +94,16 @@ echo "==> Publishing v${VERSION} to api.jkbmsr.com/mobile/latest.apk"
 # Raw body upload (not multipart): version/sha256 travel in the query string and
 # the APK is streamed straight through the Worker into R2, so Worker memory
 # stays flat for 55MB+ APKs (multipart parsing buffered the whole file).
-curl --fail-with-body -sS \
-  -X POST "https://api.jkbmsr.com/mobile/release?version=${VERSION_NUMBER}&sha256=${APK_SHA}" \
-  -H "Authorization: Bearer ${MOBILE_RELEASE_UPLOAD_SECRET}" \
-  -H "Content-Type: application/vnd.android.package-archive" \
-  --data-binary "@${APK_NAME}"
+# Uses the shared Python uploader instead of curl, which is broken on some
+# build hosts (the secret is read from the environment, never passed as an
+# argument, so it cannot leak into the process list).
+REPO_ROOT="$(cd ../.. && pwd)"
+python3 "${REPO_ROOT}/scripts/upload-release.py" \
+  --url "https://api.jkbmsr.com/mobile/release" \
+  --version "${VERSION_NUMBER}" \
+  --sha256 "${APK_SHA}" \
+  --file "${APK_NAME}" \
+  --secret-env MOBILE_RELEASE_UPLOAD_SECRET
 
 echo
 echo "==> Done. Download: https://api.jkbmsr.com/mobile/latest.apk"
