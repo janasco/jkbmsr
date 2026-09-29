@@ -34,13 +34,6 @@ enum InstallKind {
   /// not be shown on the strength of an unproven assumption.
   unknown;
 
-  /// Google Play's Payments policy forbids leading a Play-distributed app to a
-  /// payment method other than Play Billing, so external payment methods
-  /// (GCash / QRPh) are only ever offered in a sideloaded copy. `unknown`
-  /// deliberately answers `false` — an unproven install channel is not a
-  /// licence to show one.
-  bool get allowsExternalPayments => this == InstallKind.sideload;
-
   /// True only once Google Play is positively known to be the distributor.
   bool get isPlayManaged => this == InstallKind.play;
 }

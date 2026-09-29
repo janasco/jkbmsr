@@ -3,19 +3,25 @@ import 'package:flutter/foundation.dart';
 import 'entitlement_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// ADS ARE OFF. They must stay off until an AdMob application id exists.
+/// ADS ARE OFF until an AdMob application id exists. They must stay off until
+/// then.
 ///
-/// There is no AdMob account for `com.jkbmsr.ble` and therefore no app id, no
-/// ad-unit id and no ad SDK in `pubspec.yaml`. A real SDK cannot be added
-/// without an app id (it fails to initialise and the app is rejected if the id
-/// is a placeholder), so nothing here is wired to Google Mobile Ads — by
-/// design, not by omission.
+/// There is no AdMob account for `com.jkbmsr.ble` and therefore no app id and
+/// no ad-unit id. A real SDK cannot be used without an app id (it fails to
+/// initialise and the app is rejected if the id is a placeholder), so nothing
+/// here is wired to Google Mobile Ads — by design, not by omission.
 ///
 /// What ships instead is the seam, so that turning ads on later is ONE
-/// deliberate change rather than a hunt through the UI:
-///   1. add the SDK dependency and put the real ids in [AdsConfig.current];
-///   2. flip [AdsConfig.isConfigured] / [enabledInThisBuild];
-///   3. replace the placeholder in `AdSlot` with the SDK's widget.
+/// deliberate build invocation with no code edit:
+///
+///   flutter build apk \
+///     --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+///     --dart-define=ADS_ENABLED=true
+///
+/// [admobAppIdFromEnvironment] and [adsEnabledInBuild] are read at compile
+/// time, so [current] stays `isConfigured: false` / `enabledInThisBuild:
+/// false` / `admobAppId: null` in any build that does not pass them: no ad
+/// request is ever made and the app behaves exactly as it does today.
 ///
 /// The entitlement that suppresses ads already ships and is already honoured
 /// here ([mayShowAds]) — it just has nothing to suppress yet.
@@ -40,13 +46,28 @@ class AdsConfig {
     this.admobAppId,
   });
 
-  /// What ships today. `isConfigured: false` means there is no AdMob app id,
-  /// so [mayShowAds] is false for every user on every build and no ad is ever
-  /// requested from the network.
+  /// The AdMob application id for `com.jkbmsr.ble`, supplied at build time
+  /// with `--dart-define=ADMOB_APP_ID=ca-app-pub-…`. Empty when the define is
+  /// absent, which is the shipped default and means "not configured".
+  static const String admobAppIdFromEnvironment =
+      String.fromEnvironment('ADMOB_APP_ID');
+
+  /// The deliberate ads kill switch, supplied at build time with
+  /// `--dart-define=ADS_ENABLED=true`. It defaults to off, so even a build
+  /// carrying a real id does not show ads until this is turned on (a Play
+  /// review build, or a rollout held back while the Supporter entitlement is
+  /// being verified).
+  static const bool adsEnabledInBuild =
+      bool.fromEnvironment('ADS_ENABLED');
+
+  /// What ships today. With no `--dart-define` this is `isConfigured: false`,
+  /// `enabledInThisBuild: false`, `admobAppId: null`, so [mayShowAds] is false
+  /// for every user on every build and no ad is ever requested.
   static const AdsConfig current = AdsConfig(
-    isConfigured: false,
-    enabledInThisBuild: false,
-    admobAppId: null,
+    isConfigured: admobAppIdFromEnvironment != '',
+    enabledInThisBuild: adsEnabledInBuild,
+    admobAppId:
+        admobAppIdFromEnvironment == '' ? null : admobAppIdFromEnvironment,
   );
 
   /// True once a real AdMob application id exists and the SDK is present.
@@ -58,9 +79,9 @@ class AdsConfig {
   /// while the Supporter entitlement is being verified).
   final bool enabledInThisBuild;
 
-  /// The AdMob application id for `com.jkbmsr.ble`. Deliberately `null`: it
-  /// must not be invented, and an AdMob SDK initialises with a *malformed*
-  /// placeholder id rather than failing loudly.
+  /// The AdMob application id for `com.jkbmsr.ble`. `null` unless a real id
+  /// was supplied at build time: it must not be invented, and an AdMob SDK
+  /// initialises with a *malformed* placeholder id rather than failing loudly.
   final String? admobAppId;
 
   /// THE ad decision.

@@ -94,78 +94,45 @@ Implementation, for reference when editing:
 | Google Play            | no                         | no      |
 | Google Play, Play down | unknown                    | no      |
 
-## 4. Sideload-only payment methods (GCash / QRPh)
+## 4. Turning ads on later (not now)
 
-`lib/widgets/support_modal.dart` shows a QRPh "Send Support" card **only in a
-sideloaded build**. In a Play-managed build the card is not rendered at all.
+Ads stay off until an AdMob application id exists for `com.jkbmsr.ble`. The
+Google Mobile Ads dependency is already present, and both the AdMob app id and
+the ads kill switch are **build-time constants** in
+`lib/services/ads_config.dart` (`String.fromEnvironment('ADMOB_APP_ID')` and
+`bool.fromEnvironment('ADS_ENABLED')`), so turning ads on is a build invocation
+rather than a code edit:
 
-That is a hard policy constraint, not a preference:
+```sh
+flutter build apk \
+  --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+  --dart-define=ADS_ENABLED=true
+```
 
-- **[Payments policy](https://support.google.com/googleplay/android-developer/answer/9858738)** —
-  "Play-distributed apps requiring or accepting payment for access to in-app
-  features or services … must use Google Play's billing system for those
-  transactions", and an app "may not lead users to a payment method other than
-  Google Play's billing system", explicitly including via "in-app promotions",
-  "buttons, links, messaging" and any other "calls to action".
-- **[Understanding Google Play's Payments policy](https://support.google.com/googleplay/android-developer/answer/10281818)** —
-  the same prohibition restated, and it also covers "directly linking to a
-  webpage that could lead to a payment method prohibited by the Payments
-  policy".
-
-The peer-to-peer / tax-exempt-donation carve-out does exist, and it is the
-reason a *pure tip* can be argued about at all — but it is unavailable to this
-app's Play build:
-
-- `remove_ads_lifetime` grants a digital benefit inside the app, so it is not a
-  peer-to-peer payment. Selling *that* through an external QR would be
-  precisely the prohibited case.
-- The only alternative-billing routes are opt-in, regional programs —
-  [alternative billing in the EEA](https://support.google.com/googleplay/android-developer/answer/12348241),
-  the [external payments program (Japan)](https://support.google.com/googleplay/android-developer/answer/16787536),
-  and the US programmes announced for December 2025. They require enrolment,
-  user-facing disclosures, transaction reporting, Play Billing 8.3+ APIs and
-  service fees. **This app is not enrolled in any of them**, so none of them
-  apply and the default rule stands.
-
-Consequences to keep in mind when editing:
-
-- The gate reads `EntitlementService.installKind`, whose Play-vs-sideload
-  decision is `SelfUpdate.isPlayManagedInstall` — one definition, shared with
-  the in-app self-update. Do not re-test `'com.android.vending'` anywhere else.
-- An unresolved install channel (`InstallKind.unknown`) is treated as *not*
-  sideloaded, so the QR card stays hidden until Play-managed-ness is actually
-  established. Showing an external payment method on an unproven channel is the
-  risky direction.
-- The donors-wall link (`https://jkbmsr.com/donations`) is a read-only page
-  listing public credits and remains available in every build. It takes no
-  payment, so it is not a call to action to an alternative payment method.
-  Keep it that way: adding a "pay at checkout" link to that flow would change
-  its status.
-
-## 5. Turning ads on later (not now)
-
-Ads stay off until an AdMob application id exists for `com.jkbmsr.ble`. There
-is deliberately no placeholder id — an AdMob SDK initialises against a
-malformed id rather than failing loudly, so a fake value would ship as a
-silent runtime failure.
+Without those defines, `AdsConfig.current` is `isConfigured: false`,
+`enabledInThisBuild: false`, `admobAppId: null`, and no ad is ever requested.
+There is deliberately no fake id in `AdsConfig`: an AdMob SDK initialises
+against a malformed id rather than failing loudly, so a placeholder there would
+ship as a silent runtime failure. The Android manifest does carry **Google's
+official test app id** as a placeholder, only so a release build cannot crash
+for a missing `APPLICATION_ID`; it must be replaced with the real id before ads
+ship.
 
 To enable, in this order:
 
 1. Create the AdMob app for `com.jkbmsr.ble` and a banner ad unit.
-2. Add the Google Mobile Ads dependency and put the real ids in
-   `AdsConfig.current` (`admobAppId`, plus an ad-unit id).
-3. Flip `AdsConfig.isConfigured` and `AdsConfig.enabledInThisBuild`.
-4. Replace the placeholder in `AdSlot._buildAd` with the SDK's widget.
-5. Re-check §4: the GCash/QRPh gate and this change are independent, and the
-   Support sheet's "free and ad-free" copy switches branches on
-   `AdsConfig.current.isConfigured`.
+2. Pass the real app id at build time (`ADMOB_APP_ID=…`) and set
+   `ADS_ENABLED=true`.
+3. Replace the test `APPLICATION_ID` in the Android manifest with the real one.
+4. Add the ad-unit id to `AdsConfig` and replace the placeholder in
+   `AdSlot._buildAd` with the SDK's widget.
 
 `AdSlot` is the only widget allowed to render an ad, and it is currently
 placed on exactly two read-only surfaces (`StatusScreen`, `CellsScreen`). It
 must not be added to the Connect/Scanning flow, the Control screen, the PIN
 dialog, or anything shown while a BLE connection is being established.
 
-## 6. Test purchases
+## 5. Test purchases
 
 The entitlement is exercised by pure Dart/widget tests, never a device test —
 see `test/entitlement_service_test.dart`, `test/ad_slot_test.dart` and

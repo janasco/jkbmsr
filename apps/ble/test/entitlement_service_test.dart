@@ -40,14 +40,6 @@ void main() {
       expect(billing().madeNoBillingCalls, isTrue,
           reason: 'a sideloaded copy has no Play account; it must not call it');
     });
-
-    test('is the only build allowed to offer an external payment method',
-        () async {
-      final entitlements = installFakePlayBilling(installedByPlay: false);
-      await entitlements.resolve();
-
-      expect(entitlements.installKind.allowsExternalPayments, isTrue);
-    });
   });
 
   group('Google Play build', () {
@@ -135,13 +127,6 @@ void main() {
           reason: 'startup must not be blocked indefinitely');
       expect(entitlements.state.resolved, isTrue);
     }, timeout: const Timeout(Duration(seconds: 30)));
-
-    test('never offers an external payment method', () async {
-      final entitlements = installFakePlayBilling(installedByPlay: true);
-      await entitlements.resolve();
-
-      expect(entitlements.installKind.allowsExternalPayments, isFalse);
-    });
   });
 
   group('resolve()', () {

@@ -65,6 +65,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- AdMob application id. THIS IS A PLACEHOLDER, NOT A REAL ID: it is
+             Google's official TEST app id. Ads stay off until AdsConfig is
+             given a real id at build time (see lib/services/ads_config.dart);
+             this entry only exists so a future release build cannot crash for
+             a missing APPLICATION_ID. REPLACE with the real AdMob app id
+             (ca-app-pub-…~…) before shipping ads. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
     </application>
 
     <queries>
@@ -73,8 +83,8 @@
             <data android:mimeType="text/plain"/>
         </intent>
         <!-- Required on Android 11+ so url_launcher can find a browser to
-             open the Polar.sh donation checkout (and any other https link)
-             despite package-visibility restrictions. -->
+             open https links (docs and other public pages) despite
+             package-visibility restrictions. -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>

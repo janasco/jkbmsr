@@ -1,12 +1,11 @@
-// The GCash / QRPh "Send Support" card is an external payment method, and
-// Google Play's Payments policy forbids a Play-distributed app from leading a
-// user to anything other than Play Billing. So the card is sideload-only, and
-// this is the guard that keeps it that way: the app is "JKBMSR BLE" (not a
-// Supporter edition), the app id is "com.jkbmsr.ble", and the card is hidden
-// entirely — not disabled, not greyed out — in a Play build.
+// The Support sheet sells exactly one thing: the one-time Google Play
+// non-consumable (`remove_ads_lifetime`) that removes ads, plus its restore
+// action. Donations were removed, so this guard pins two things:
+//   * a Play build shows the Supporter unlock and no purchase otherwise;
+//   * a sideloaded copy (or an unresolved channel) shows no purchase at all;
+//   * nothing in the sheet sells, links to, or names a donation.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:jkbmsr_ble/services/entitlement_service.dart';
 import 'package:jkbmsr_ble/widgets/support_modal.dart';
@@ -44,47 +43,41 @@ Future<void> _pumpSupportSheet(WidgetTester tester) async {
   await tester.pump();
 }
 
+/// Walks every rendered string and fails if any of them sells, links to, or
+/// even names a donation (or the retired Polar checkout). Case-insensitive so
+/// a differently-cased reintroduction cannot slip past.
+void _expectNoDonationSurface(WidgetTester tester) {
+  final texts = find
+      .byType(Text)
+      .evaluate()
+      .map((e) => ((e.widget as Text).data ?? '').toLowerCase());
+  for (final text in texts) {
+    for (final needle in const ['donate', 'donation', 'polar', 'support us']) {
+      expect(text, isNot(contains(needle)),
+          reason: 'the Support sheet must not reference "$needle" '
+              '(found: "$text")');
+    }
+  }
+}
+
 void main() {
   tearDown(() => EntitlementService.instance.debugResetState());
 
   group('Google Play build', () {
-    testWidgets('hides the GCash/QRPh card entirely', (tester) async {
-      _pinInstallChannel(InstallKind.play);
-      await _pumpSupportSheet(tester);
-
-      expect(find.byType(QrImageView), findsNothing,
-          reason: 'an external payment method must not appear in a Play build');
-      expect(find.text('Send Support'), findsNothing);
-      expect(find.textContaining('QRPh'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('offers the Play Supporter unlock instead', (tester) async {
+    testWidgets('offers the Play Supporter unlock, and no donation surface',
+        (tester) async {
       _pinInstallChannel(InstallKind.play);
       await _pumpSupportSheet(tester);
 
       expect(find.byType(SupporterSection), findsOneWidget);
       expect(find.text('SUPPORTER'), findsOneWidget);
       expect(find.text('RESTORE PURCHASE'), findsOneWidget);
-      // The public donation route is unchanged in a Play build.
-      expect(find.text('Donate via Google Play'), findsOneWidget);
-      expect(find.text('View donation wall'), findsOneWidget);
+      _expectNoDonationSurface(tester);
+      expect(tester.takeException(), isNull);
     });
   });
 
   group('sideloaded build', () {
-    testWidgets('hides the card when no payment details were supplied',
-        (tester) async {
-      _pinInstallChannel(InstallKind.sideload);
-      await _pumpSupportSheet(tester);
-
-      expect(SupportModal.hasQrPhDetails, isFalse,
-          reason: 'a default build must not carry payment details');
-      expect(find.byType(QrImageView), findsNothing);
-      expect(find.text('Send Support'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
     testWidgets('offers no Play purchase, because there is no Play account',
         (tester) async {
       _pinInstallChannel(InstallKind.sideload);
@@ -92,19 +85,20 @@ void main() {
 
       expect(find.byType(SupporterSection), findsNothing);
       expect(find.text('RESTORE PURCHASE'), findsNothing);
-      expect(find.text('Donate via Google Play'), findsOneWidget);
-      expect(find.text('View donation wall'), findsOneWidget);
+      expect(find.textContaining('already ad-free'), findsOneWidget);
+      _expectNoDonationSurface(tester);
+      expect(tester.takeException(), isNull);
     });
   });
 
   group('unresolved install channel', () {
-    testWidgets('hides the external payment method until it is proven safe',
+    testWidgets('offers no purchase until the channel is proven',
         (tester) async {
       EntitlementService.instance.debugOverrideState(const EntitlementState());
       await _pumpSupportSheet(tester);
 
-      expect(find.byType(QrImageView), findsNothing);
       expect(find.byType(SupporterSection), findsNothing);
+      _expectNoDonationSurface(tester);
     });
   });
 
