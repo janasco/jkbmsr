@@ -58,9 +58,17 @@ flutter:
     - assets/icon/
 
 # Generates android/app/src/main/res/mipmap-*/ic_launcher.png and
-# ios/Runner/Assets.xcassets/AppIcon.appiconset from the JKBMSR mark (the
-# cloud+battery glyph shared with the web app), replacing the default Flutter
-# template icon. Run: dart run flutter_launcher_icons
+# ios/Runner/Assets.xcassets/AppIcon.appiconset from the JKBMSR mark,
+# replacing the default Flutter template icon. Run: dart run flutter_launcher_icons
+#
+# image_path is assets/icon/icon.png, which is also the in-app login logo and
+# now carries the canonical "cells in an orbit ring" mark. The launcher rasters
+# already committed under android/ and ios/ are still the retired cloud+battery
+# glyph, and adaptive_icon_foreground (icon_foreground.png) is still the retired
+# glyph too: the launcher migration is a separate, deferred change for the
+# already-published apps. Running this tool now would therefore migrate the
+# legacy launcher icon to the canonical mark but leave the adaptive foreground
+# on the old one - do the two together, deliberately.
 flutter_launcher_icons:
   android: true
   ios: true
