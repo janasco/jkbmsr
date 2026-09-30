@@ -23,6 +23,7 @@ import '../../widgets/shared/design_system/dashboard_templates/mosaic_grid_templ
 import '../../widgets/shared/design_system/dashboard_templates/at_a_glance_strip_template.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
+import 'widgets/bms_link_banner.dart';
 
 // All 8 of jkbmsr-web's dashboard templates are now ported, plus the
 // mobile-only hero 'Energy Flow' renderer used for the 'default' key. A
@@ -331,6 +332,7 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
   @override
   Widget build(BuildContext context) {
     final devName = _device?.name ?? 'Main Solar Bank';
+    final linkDown = _telemetry?.linkDiagnostics.isDown ?? false;
 
     return Scaffold(
       backgroundColor: context.colors.canvas,
@@ -401,6 +403,14 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
               ),
               const SizedBox(height: JKBMSRTokens.space16),
 
+              // Only renders when the gateway explicitly reports its BMS link
+              // down — the healthy/unknown case contributes nothing, so there
+              // is no permanent banner on a working gateway.
+              if (linkDown) ...[
+                BmsLinkBanner(telemetry: _telemetry),
+                const SizedBox(height: JKBMSRTokens.space16),
+              ],
+
               if (_hasTelemetry(_telemetry)) ...[
                 _buildDashboardTemplate(devName),
                 const SizedBox(height: JKBMSRTokens.space16),
@@ -414,11 +424,15 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                 // render a full "dead battery" dashboard for a gateway
                 // that's simply Online and waiting for its first poll.
                 JKBMSREmptyState(
-                  icon: Icons.hourglass_empty,
-                  title: 'Waiting for telemetry',
-                  description: 'This gateway is online but hasn\'t reported any BMS data yet. '
-                      'This is normal right after pairing or a reconnect — '
-                      'pull to refresh in a moment.',
+                  icon: linkDown ? Icons.link_off : Icons.hourglass_empty,
+                  title: linkDown ? 'No data from the BMS' : 'Waiting for telemetry',
+                  description: linkDown
+                      ? 'The gateway is online but is not receiving battery '
+                          'data. See the note above for what to check — '
+                          'readings return on their own once the link is back.'
+                      : 'This gateway is online but hasn\'t reported any BMS data yet. '
+                          'This is normal right after pairing or a reconnect — '
+                          'pull to refresh in a moment.',
                 ),
               ],
               const SizedBox(height: JKBMSRTokens.space16),

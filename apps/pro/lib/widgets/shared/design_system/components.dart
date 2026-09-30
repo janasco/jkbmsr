@@ -1083,6 +1083,102 @@ class JKBMSRDatePicker extends StatelessWidget {
 }
 
 // ==========================================
+// 18b. ALERT BANNER
+// ==========================================
+/// Semantic tone for [JKBMSRAlertBanner]. [warning] is the calm "something
+/// needs your attention but the app still works" case (e.g. the gateway is
+/// online but its BMS link is down); [critical] is for a hard failure.
+enum JKBMSRAlertTone { warning, critical, accent, signal }
+
+/// Inline alert banner — a calm, non-blocking explanation of a condition the
+/// user should know about. It carries no show/hide logic: callers decide when
+/// to render it, so the healthy state shows no permanent chrome. Mirrors the
+/// warning banner already used on the gateways list, factored out so the two
+/// stay visually identical.
+class JKBMSRAlertBanner extends StatelessWidget {
+  final JKBMSRAlertTone tone;
+  final IconData icon;
+  final String title;
+  final String message;
+
+  /// Optional supporting facts, one per line (e.g. "Last error: …").
+  final List<String> details;
+
+  final Widget? action;
+
+  const JKBMSRAlertBanner({
+    Key? key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.tone = JKBMSRAlertTone.warning,
+    this.details = const [],
+    this.action,
+  }) : super(key: key);
+
+  Color _toneColor(BuildContext context) {
+    switch (tone) {
+      case JKBMSRAlertTone.warning:
+        return context.colors.warning;
+      case JKBMSRAlertTone.critical:
+        return context.colors.critical;
+      case JKBMSRAlertTone.accent:
+        return context.colors.accent;
+      case JKBMSRAlertTone.signal:
+        return context.colors.signal;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _toneColor(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: JKBMSRTokens.space16,
+        vertical: JKBMSRTokens.space12,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(JKBMSRTokens.radius12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: JKBMSRTokens.space12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: JKBMSRTypography.cardHeading.copyWith(color: color),
+                ),
+                const SizedBox(height: JKBMSRTokens.space4),
+                Text(message, style: JKBMSRTypography.bodySecondary),
+                for (final detail in details) ...[
+                  const SizedBox(height: JKBMSRTokens.space4),
+                  Text(
+                    detail,
+                    style: JKBMSRTypography.label
+                        .copyWith(color: context.colors.textMuted),
+                  ),
+                ],
+                if (action != null) ...[
+                  const SizedBox(height: JKBMSRTokens.space8),
+                  action!,
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
 // 19. STATUS BADGE
 // ==========================================
 enum JKBMSRStatus {
