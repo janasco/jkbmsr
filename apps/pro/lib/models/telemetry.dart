@@ -111,6 +111,58 @@ class BmsExtras {
   }
 }
 
+/// Whether the gateway currently has a working link to the battery, plus the
+/// BLE details that explain a broken one. This is read out of the `diagnostics`
+/// object the API already returns from the latest telemetry payload — the
+/// gateway uploads `bmsLinkUp` / `parser` / `ble` in every telemetry POST
+/// (`parseDiagnostics` in jkbmsr-api/src/routes/dashboard.ts), but the dashboard
+/// never surfaced them, so a gateway that was online with a dead BMS link looked
+/// like an empty battery with no explanation.
+class BmsLinkDiagnostics {
+  /// Null means "the payload did not say", which is deliberately distinct from
+  /// false: older firmware, or a gateway with no telemetry row yet, must not be
+  /// reported as a down link.
+  final bool? bmsLinkUp;
+
+  /// Raw firmware BLE state, e.g. "connected", "connection_failed", "scanning".
+  final String bleState;
+
+  /// Last BLE error the gateway recorded; empty when there is none.
+  final String lastError;
+
+  /// BLE RSSI in dBm, or -128 when the gateway did not report one.
+  final int rssi;
+
+  /// Bytes the JK-BMS parser has received; 0 with a down link is expected.
+  final int bytesReceived;
+
+  const BmsLinkDiagnostics({
+    required this.bmsLinkUp,
+    required this.bleState,
+    required this.lastError,
+    required this.rssi,
+    required this.bytesReceived,
+  });
+
+  factory BmsLinkDiagnostics.fromDiagnostics(Map<String, dynamic> diagnostics) {
+    final bleValue = diagnostics['ble'];
+    final ble = bleValue is Map ? bleValue : const <dynamic, dynamic>{};
+    final rssi = ble['rssi'];
+    final bytesReceived = diagnostics['bytesReceived'];
+    return BmsLinkDiagnostics(
+      bmsLinkUp: diagnostics['bmsLinkUp'] is bool ? diagnostics['bmsLinkUp'] as bool : null,
+      bleState: ble['state'] is String ? ble['state'] as String : '',
+      lastError: ble['lastError'] is String ? ble['lastError'] as String : '',
+      rssi: rssi is num ? rssi.toInt() : -128,
+      bytesReceived: bytesReceived is num ? bytesReceived.toInt() : 0,
+    );
+  }
+
+  /// True only when the gateway explicitly reported the link down. An absent
+  /// field stays "unknown" and must not raise the banner.
+  bool get isDown => bmsLinkUp == false;
+}
+
 /// Represents real-time battery diagnostics and telemetry data.
 /// Maps exactly to the `/api/v1/dashboard/devices/:deviceId` response schema.
 class Telemetry {
@@ -135,6 +187,9 @@ class Telemetry {
     required this.bms,
     required this.diagnostics,
   });
+
+  /// BMS-link health parsed out of [diagnostics]; see [BmsLinkDiagnostics].
+  BmsLinkDiagnostics get linkDiagnostics => BmsLinkDiagnostics.fromDiagnostics(diagnostics);
 
   factory Telemetry.fromJson(Map<String, dynamic> json) {
     final cellsList = json['cells'] as List<dynamic>? ?? [];
