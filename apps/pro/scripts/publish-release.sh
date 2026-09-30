@@ -12,8 +12,10 @@ set -euo pipefail
 #   - `gh` authenticated against jkbmsr/jkbmsr-pro
 #
 # Usage: scripts/publish-release.sh [version]
-#   version defaults to the value in pubspec.yaml (e.g. "1.3.1"). The GitHub
-#   tag is prefixed with "v".
+#   version defaults to the value in pubspec.yaml (e.g. "1.3.31"). Any "+build"
+#   suffix in pubspec.yaml is the Android versionCode and is stripped, because
+#   Pro's GitHub tag and artifact names carry the marketing version only
+#   (v1.3.31, not v1.3.31+63). The GitHub tag is prefixed with "v".
 
 cd "$(dirname "$0")/.."
 
@@ -40,7 +42,11 @@ if [[ -z "${MOBILE_RELEASE_UPLOAD_SECRET:-}" ]]; then
 fi
 
 VERSION="${1:-$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')}"
-VERSION_NUMBER="${VERSION%+*}"
+# Strip the "+63" Android versionCode: Pro's tag and artifact names use the
+# marketing version only. Without this a bare `publish-release.sh` creates
+# v1.3.31+63 while the changelog and every previous Pro release say v1.3.31.
+VERSION="${VERSION%%+*}"
+VERSION_NUMBER="${VERSION}"
 TAG="v${VERSION}"
 
 echo "==> Building signed release APK + AAB ($VERSION)"
