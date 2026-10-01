@@ -190,7 +190,7 @@ class BmsDrawer extends StatelessWidget {
               padding: EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'JKBMSR 4.17.20 | BUILD 40',
+                  'JKBMSR 4.17.21 | BUILD 41',
                   style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
