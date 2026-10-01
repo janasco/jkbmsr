@@ -14,6 +14,10 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.33
+
+- Push notifications are now enabled, so gateway alerts can reach your phone even when the app is closed.
+
 ## v1.3.32
 
 - The app is now named JK BMS Remote, matching the rest of the product. Same app, same data — only the name on your home screen changed.
