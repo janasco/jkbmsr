@@ -1,6 +1,6 @@
 # Mobile App Roadmap
 
-JKBMSR Pro is a Flutter app for Android and iOS. The MVP, device
+JK BMS Remote is a Flutter app for Android and iOS. The MVP, device
 claim/onboarding, alert history, firmware release visibility, and real push
 notifications are implemented; the remaining roadmap is the credentialed
 steps in Phase 4 that this environment can't complete on its own (see

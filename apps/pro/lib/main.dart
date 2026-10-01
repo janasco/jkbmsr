@@ -97,7 +97,7 @@ class _JKBMSRAppState extends State<JKBMSRApp> with WidgetsBindingObserver {
       builder: (ctx) => AlertDialog(
         title: const Text('Update available'),
         content: Text(
-            'JKBMSR Pro $latest is available. Update for the latest fixes and features.'),
+            'JK BMS Remote $latest is available. Update for the latest fixes and features.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
@@ -159,7 +159,7 @@ class _JKBMSRAppState extends State<JKBMSRApp> with WidgetsBindingObserver {
       valueListenable: themeController,
       builder: (context, mode, _) {
         return MaterialApp.router(
-          title: 'JKBMSR Pro',
+          title: 'JK BMS Remote',
           theme: JKBMSRTheme.lightTheme,
           darkTheme: JKBMSRTheme.darkTheme,
           themeMode: mode,

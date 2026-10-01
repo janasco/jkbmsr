@@ -985,7 +985,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: JKBMSRTokens.space8),
             Text(
-              'After a session times out, unlock JKBMSR with your fingerprint or face instead of re-entering your password. Your password is stored in your device\'s secure keychain.',
+              'After a session times out, unlock JK BMS Remote with your fingerprint or face instead of re-entering your password. Your password is stored in your device\'s secure keychain.',
               style: JKBMSRTypography.bodySecondary,
             ),
             const SizedBox(height: JKBMSRTokens.space8),

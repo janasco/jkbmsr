@@ -53,7 +53,7 @@ class BiometricAuthService {
   Future<bool> authenticate({String? reason}) async {
     try {
       final authenticated = await _localAuth.authenticate(
-        localizedReason: reason ?? 'Authenticate to access JKBMSR',
+        localizedReason: reason ?? 'Authenticate to access JK BMS Remote',
         options: const AuthenticationOptions(
           stickyAuth: true,
           // Biometrics only. With this false, Android shows the device

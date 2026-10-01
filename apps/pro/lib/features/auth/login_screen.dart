@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: JKBMSRTokens.space16),
         Text(
-          'JKBMSR Pro',
+          'JK BMS Remote',
           textAlign: TextAlign.center,
           style: JKBMSRTypography.pageHeading.copyWith(
             color: context.colors.accent,

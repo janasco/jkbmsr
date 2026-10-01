@@ -1,6 +1,6 @@
 name: jkbmsr_pro
-description: "JKBMSR Pro — remote monitoring for JK-BMS. Not affiliated with JK-BMS."
-version: 1.3.31+63
+description: "JK BMS Remote — cloud monitoring for JK-BMS. Not affiliated with JK-BMS."
+version: 1.3.32+64
 
 publish_to: 'none'
 

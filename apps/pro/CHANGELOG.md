@@ -1,4 +1,4 @@
-# JKBMSR Pro Changelog
+# JK BMS Remote Changelog
 
 Real, per-release "what's new" notes — one entry per tagged release
 (`vX.Y.Z`, matching `pubspec.yaml`'s `version:` and the git tag the
@@ -13,6 +13,10 @@ also written to a `whatsnew`-style text file attached to the GitHub
 Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
+
+## v1.3.32
+
+- The app is now named JK BMS Remote, matching the rest of the product. Same app, same data — only the name on your home screen changed.
 
 ## v1.3.31
 
