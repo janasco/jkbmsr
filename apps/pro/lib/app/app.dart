@@ -6,7 +6,7 @@ import '../widgets/shared/design_system/components.dart';
 import '../widgets/shared/design_system/jkbmsr_bottom_nav.dart';
 import 'back_intent.dart';
 
-/// The root layout shell for the JKBMSR Pro app.
+/// The root layout shell for the JK BMS Remote app.
 /// Implements a responsive and unified layout frame.
 class JKBMSRShellLayout extends StatefulWidget {
   final Widget child;

@@ -62,7 +62,7 @@ void _stubPlugins() {
       .setMockMethodCallHandler(packageChannel, (call) async {
     if (call.method == 'getAll') {
       return <String, dynamic>{
-        'appName': 'JKBMSR Pro',
+        'appName': 'JK BMS Remote',
         'packageName': 'com.jkbmsr.pro',
         'version': '1.3.25',
         'buildNumber': '57',

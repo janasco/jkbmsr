@@ -28,7 +28,7 @@ class ClonedInstanceScreen extends StatelessWidget {
                   Icon(Icons.block_rounded, color: _critical, size: 56),
                   SizedBox(height: 24),
                   Text(
-                    "JKBMSR isn't supported in a cloned app",
+                    "JK BMS Remote isn't supported in a cloned app",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -40,7 +40,7 @@ class ClonedInstanceScreen extends StatelessWidget {
                   Text(
                     "This copy is running through your phone's \"Dual Apps\", "
                     "\"Clone Apps\", or \"App Twin\" feature. Please uninstall the "
-                    "cloned copy from Settings, then open JKBMSR from your normal "
+                    "cloned copy from Settings, then open JK BMS Remote from your normal "
                     "home screen.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),

@@ -35,7 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<_OnboardingPage> _pages = const [
     _OnboardingPage(
       icon: Icons.bolt,
-      title: 'Welcome to JKBMSR Pro',
+      title: 'Welcome to JK BMS Remote',
       subtitle: 'JK Battery Management System Remote',
       description: 'Monitor your battery systems in real-time from anywhere. Track voltage, temperature, and health across all your gateways.',
     ),

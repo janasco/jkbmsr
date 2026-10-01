@@ -63,7 +63,7 @@ class JKBMSRSidebar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(JKBMSRTokens.space24),
               child: Text(
-                'JKBMSR Pro',
+                'JK BMS Remote',
                 style: JKBMSRTypography.pageHeading.copyWith(
                   color: context.colors.accent,
                   letterSpacing: 1.5,

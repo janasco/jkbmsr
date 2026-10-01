@@ -92,7 +92,7 @@ ASSETS=("$APK_NAME" "${APK_NAME}.sha256" "$AAB_NAME" "${AAB_NAME}.sha256")
 if gh release view "$TAG" >/dev/null 2>&1; then
   gh release upload "$TAG" --clobber "${ASSETS[@]}"
 else
-  gh release create "$TAG" --title "JKBMSR Pro v${VERSION}" --notes-file notes.txt \
+  gh release create "$TAG" --title "JK BMS Remote v${VERSION}" --notes-file notes.txt \
     "${ASSETS[@]}"
 fi
 
