@@ -145,7 +145,7 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
         if (e is PermissionNeeded) {
           setState(() {
             _state = _State.updateAvailable;
-            _error = 'Allow "Install unknown apps" for JKBMSR BLE in the '
+            _error = 'Allow "Install unknown apps" for JK BMS Local in the '
                 'settings page that just opened, then tap Download again.';
           });
         } else {

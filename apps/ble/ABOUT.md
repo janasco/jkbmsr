@@ -1,6 +1,6 @@
 # About this component
 
-This directory is `apps/ble` — the **JKBMSR BLE** Flutter app, one component of a
+This directory is `apps/ble` — the **JK BMS Local** Flutter app, one component of a
 multi-component repository. It is **not a standalone repository**: build tooling,
 CI and shared conventions live at the repository root, and paths in this app's
 documentation are written relative to this directory.

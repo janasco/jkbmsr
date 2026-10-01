@@ -1,6 +1,6 @@
 {
-  "name": "JKBMSR BLE",
-  "description": "JKBMSR BLE Bluetooth battery monitoring and real-time cell voltage telemetry app.",
+  "name": "JK BMS Local",
+  "description": "JK BMS Local Bluetooth battery monitoring and real-time cell voltage telemetry app.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

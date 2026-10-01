@@ -3,9 +3,9 @@
 The BLE app ships two behaviours, and this document is the durable spec for the
 one that costs money.
 
-- **JKBMSR BLE Free** — may show ads; the release builds configure them (see
+- **JK BMS Local Free** — may show ads; the release builds configure them (see
   `lib/services/ads_config.dart` and `scripts/ads-defines.sh`).
-- **JKBMSR BLE Supporter** — ad-free, permanently, by owning one Google Play
+- **JK BMS Local Supporter** — ad-free, permanently, by owning one Google Play
   product.
 
 There is no second app, no "Pro" edition of this app, and no subscription. The
@@ -23,7 +23,7 @@ contains no billing code at all.
 | Play Console path    | Monetize → Products → **One-time products**  |
 | Price                | TBD — pick once; Play localizes it per market |
 | Internal name        | Supporter — remove ads                       |
-| Description          | Removes ads from JKBMSR BLE permanently. One payment, not a subscription. |
+| Description          | Removes ads from JK BMS Local permanently. One payment, not a subscription. |
 
 The product ID is hardcoded once, in `lib/services/entitlement_service.dart`:
 
