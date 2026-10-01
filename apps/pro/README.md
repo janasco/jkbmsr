@@ -44,7 +44,7 @@ Responsibilities:
 
 ## Current Status
 
-- Released. `v1.3.32` is published (signed APK + AAB) via the tag-triggered
+- Released. `v1.3.33` is published (signed APK + AAB) via the tag-triggered
   `release.yml` workflow: full release history lives as GitHub Releases on
   this repo (private backup, every past build kept), and the latest signed
   APK is separately pushed to `jkbmsr-api`, which stores it in R2 and serves
@@ -130,7 +130,7 @@ Relevant endpoints already available:
   `android/key.properties.example`) or CI secrets. No keystore and no signing
   password is published in this repository.
 - Signed APK/AAB publishing is done and has shipped multiple releases
-  (currently `v1.3.32`) — GitHub Releases on this repo for full history,
+  (currently `v1.3.33`) — GitHub Releases on this repo for full history,
   latest APK mirrored to `jkbmsr-api`'s R2 bucket for the public download.
 - Not yet started: an actual Google Play Store listing. `jkbmsr-brand/store-listing/`
   has the icon and feature graphic; screenshots, listing copy, and the privacy
