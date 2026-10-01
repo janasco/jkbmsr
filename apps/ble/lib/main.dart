@@ -53,7 +53,7 @@ class JkbmsrBleApp extends StatelessWidget {
       valueListenable: themeService.themeModeNotifier,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'JKBMSR BLE',
+          title: 'JK BMS Local',
           debugShowCheckedModeBanner: false,
           // Follow the active theme so the status-bar icons never disappear
           // over a light header (they were hardcoded light in main()).

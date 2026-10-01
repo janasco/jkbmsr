@@ -70,7 +70,7 @@ class SupportModal extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Support JKBMSR',
+                  'Support JK BMS Local',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 18,
@@ -129,8 +129,8 @@ class SupportModal extends StatelessWidget {
       return 'You are a Supporter — this app is ad-free.';
     }
     if (!AdsConfig.current.isConfigured) {
-      return 'JKBMSR BLE is free and ad-free.';
+      return 'JK BMS Local is free and ad-free.';
     }
-    return 'JKBMSR BLE is free. The one-time Supporter unlock removes ads.';
+    return 'JK BMS Local is free. The one-time Supporter unlock removes ads.';
   }
 }

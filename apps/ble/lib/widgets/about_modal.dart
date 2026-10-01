@@ -52,19 +52,19 @@ class AboutModal extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'About JKBMSR BLE',
+              'About JK BMS Local',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 4),
             const Text(
-              'Version 4.17.22 (Build 42)',
+              'Version 4.17.23 (Build 43)',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Color(0xFF10B981), fontFamily: 'monospace', fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
-              'JKBMSR BLE connects directly to your JK-BMS Bluetooth module for real-time '
+              'JK BMS Local connects directly to your JK-BMS Bluetooth module for real-time '
               'telemetry, cell-level diagnostics, and power-flow visualization, with hardware '
               'control where the JK-BMS protocol supports it.',
               textAlign: TextAlign.left,

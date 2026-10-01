@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Motion primitives for the JKBMSR BLE app — the "alive" layer.
+/// Motion primitives for the JK BMS Local app — the "alive" layer.
 ///
 /// Everything here is painter/state based (no assets, no extra deps) and
 /// loops on long durations so the effects read as atmosphere and liveness,

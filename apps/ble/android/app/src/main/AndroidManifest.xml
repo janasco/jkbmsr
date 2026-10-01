@@ -30,7 +30,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <application
-        android:label="JK BMS Remote BLE"
+        android:label="JK BMS Local"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -66,12 +66,10 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- AdMob application id. THIS IS A PLACEHOLDER, NOT A REAL ID: it is
-             Google's official TEST app id. Ads stay off until AdsConfig is
-             given a real id at build time (see lib/services/ads_config.dart);
-             this entry only exists so a future release build cannot crash for
-             a missing APPLICATION_ID. REPLACE with the real AdMob app id
-             (ca-app-pub-…~…) before shipping ads. -->
+        <!-- AdMob application id for `com.jkbmsr.ble`. This is the real id: the
+             native SDK reads it from here, and the app's own gate reads the
+             matching ADMOB_APP_ID compile-time define (scripts/ads-defines.sh).
+             Both must name the same AdMob app or the gate and SDK disagree. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-7509069315268105~6175254978" />

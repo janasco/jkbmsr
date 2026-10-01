@@ -33,7 +33,7 @@ class WelcomeScreen extends StatelessWidget {
                 const _HeroMark(),
                 const SizedBox(height: 20),
                 Text(
-                  'WELCOME TO JKBMSR BLE',
+                  'WELCOME TO JK BMS LOCAL',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.4, color: textPrimary),
                 ),
