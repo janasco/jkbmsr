@@ -18,6 +18,20 @@ class AuthPinDialog extends StatefulWidget {
     required this.onDismiss,
   });
 
+  /// Human-readable heading for the operation being authorised. This is a
+  /// local write gate, never an account sign-in, so the wording names the
+  /// action ("Unlock Controls") rather than implying credentials.
+  static String titleFor(String target) {
+    switch (target) {
+      case 'CONTROL':
+        return 'Unlock Controls';
+      case 'BMS PARAMETERS':
+        return 'Unlock Parameter Editing';
+      default:
+        return 'Unlock Settings';
+    }
+  }
+
   @override
   State<AuthPinDialog> createState() => _AuthPinDialogState();
 }
@@ -122,12 +136,13 @@ class _AuthPinDialogState extends State<AuthPinDialog>
             ),
             const SizedBox(height: 14),
             Text(
-              widget.target == 'CONTROL' ? 'Unlock Controls' : 'Unlock Settings',
+              AuthPinDialog.titleFor(widget.target),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A)),
             ),
             const SizedBox(height: 6),
             const Text(
-              'Enter JKBMS security PIN to modify parameters (Default: 1234)',
+              'Local control PIN, not an account. Sent only to authorise a '
+              'command to your connected BMS (default: 1234).',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
             ),

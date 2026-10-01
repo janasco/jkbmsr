@@ -38,10 +38,43 @@ class BleBmsService {
 
   BluetoothDevice? _connectedDevice;
   BluetoothDevice? get connectedDevice => _connectedDevice;
-  bool get isConnected => _connectedDevice != null;
+
+  // ---- Test-only connection overrides ----
+  // Widget tests have no BLE stack, so they can never reach the state where a
+  // write (and therefore the PIN gate that fronts it) is reachable. These let
+  // a test present the UI as "connected to a JK-BMS with live data" without
+  // touching real hardware. Production never sets them; every getter falls
+  // back to the real connection state when they are null.
+  bool? _debugIsConnected;
+  BmsBrand? _debugConnectedBrand;
+  bool? _debugHasLiveData;
+
+  /// Test-only. Forces the connection-facing getters so widget tests can
+  /// exercise the write path without a real BLE stack. Never call from app
+  /// code; see [debugResetConnectionState].
+  @visibleForTesting
+  void debugSetConnectionState({
+    bool? isConnected,
+    BmsBrand? brand,
+    bool? hasLiveData,
+  }) {
+    _debugIsConnected = isConnected;
+    _debugConnectedBrand = brand;
+    _debugHasLiveData = hasLiveData;
+  }
+
+  /// Test-only: clears any [debugSetConnectionState] override.
+  @visibleForTesting
+  void debugResetConnectionState() {
+    _debugIsConnected = null;
+    _debugConnectedBrand = null;
+    _debugHasLiveData = null;
+  }
+
+  bool get isConnected => _debugIsConnected ?? (_connectedDevice != null);
 
   BmsBrand _connectedBrand = BmsBrand.unknown;
-  BmsBrand get connectedBrand => _connectedBrand;
+  BmsBrand get connectedBrand => _debugConnectedBrand ?? _connectedBrand;
 
   BluetoothCharacteristic? _writeCharacteristic;
   bool _writeWithoutResponse = false;
@@ -158,7 +191,7 @@ class BleBmsService {
   // rather than zero, so screens that gate on isConnected alone show those
   // placeholders as if they were live hardware readings.
   bool _hasLiveData = false;
-  bool get hasLiveData => _hasLiveData;
+  bool get hasLiveData => _debugHasLiveData ?? _hasLiveData;
 
   void _addLog(String log) {
     // Defensive: never let a security PIN reach the user-visible (and
