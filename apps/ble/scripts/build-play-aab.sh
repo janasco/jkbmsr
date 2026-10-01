@@ -18,7 +18,10 @@ set -euo pipefail
 #
 # Usage: scripts/build-play-aab.sh [version]  (defaults to pubspec.yaml)
 
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+# shellcheck source=scripts/ads-defines.sh
+source "$SCRIPT_DIR/ads-defines.sh"
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "flutter not found on PATH" >&2
@@ -61,8 +64,8 @@ if grep -q "REQUEST_INSTALL_PACKAGES" "$MANIFEST"; then
   echo "FAILED to strip REQUEST_INSTALL_PACKAGES from manifest" >&2
   exit 1
 fi
-echo "==> Manifest stripped; building Play AAB ($VERSION)"
-flutter build appbundle --release
+echo "==> Manifest stripped; building Play AAB ($VERSION) with ads enabled"
+flutter build appbundle --release "${ADMOB_DART_DEFINES[@]}"
 
 AAB="build/app/outputs/bundle/release/app-release.aab"
 AAB_NAME="jkbmsr-ble-v${VERSION}.aab"

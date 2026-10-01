@@ -58,7 +58,7 @@ class AboutModal extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Version 4.17.21 (Build 41)',
+              'Version 4.17.22 (Build 42)',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Color(0xFF10B981), fontFamily: 'monospace', fontWeight: FontWeight.bold),
             ),

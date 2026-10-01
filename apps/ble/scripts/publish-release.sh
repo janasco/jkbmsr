@@ -15,7 +15,10 @@ set -euo pipefail
 #   version defaults to the value in pubspec.yaml (e.g. "4.15.0"). The
 #   GitHub tag is prefixed with "v"), e.g. v4.15.0.
 
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+# shellcheck source=scripts/ads-defines.sh
+source "$SCRIPT_DIR/ads-defines.sh"
 
 if [[ ! -f scripts/.env.local ]]; then
   echo "Missing scripts/.env.local with BLE_RELEASE_UPLOAD_SECRET" >&2
@@ -35,9 +38,9 @@ VERSION="${1:-$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')}"
 VERSION_NUMBER="${VERSION%+*}"
 TAG="v${VERSION}"
 
-echo "==> Building signed release APK ($VERSION)"
+echo "==> Building signed release APK ($VERSION) with ads enabled"
 flutter pub get
-flutter build apk --release
+flutter build apk --release "${ADMOB_DART_DEFINES[@]}"
 
 APK="build/app/outputs/flutter-apk/app-release.apk"
 APK_NAME="jkbmsr-ble-v${VERSION}.apk"
