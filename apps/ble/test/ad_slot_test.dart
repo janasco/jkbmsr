@@ -61,9 +61,11 @@ void main() {
   }
 
   group('AdsConfig (the one ad decision)', () {
-    test('is not configured in any shipped build', () {
+    test('is not configured in a build with no dart-defines', () {
       expect(AdsConfig.current.isConfigured, isFalse,
-          reason: 'there is no AdMob app id for com.jkbmsr.ble — ads stay off');
+          reason: 'no ADMOB_APP_ID define — this test build and a plain '
+              'flutter build stay ad-free; the release scripts pass the '
+              'defines and are configured');
       expect(AdsConfig.current.admobAppId, isNull,
           reason: 'an ad unit/app id must never be invented');
     });

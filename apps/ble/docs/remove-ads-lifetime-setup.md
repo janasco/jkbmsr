@@ -3,8 +3,8 @@
 The BLE app ships two behaviours, and this document is the durable spec for the
 one that costs money.
 
-- **JKBMSR BLE Free** — may show ads, once ads are configured (see
-  `lib/services/ads_config.dart`; they are **not** configured today).
+- **JKBMSR BLE Free** — may show ads; the release builds configure them (see
+  `lib/services/ads_config.dart` and `scripts/ads-defines.sh`).
 - **JKBMSR BLE Supporter** — ad-free, permanently, by owning one Google Play
   product.
 
@@ -94,38 +94,40 @@ Implementation, for reference when editing:
 | Google Play            | no                         | no      |
 | Google Play, Play down | unknown                    | no      |
 
-## 4. Turning ads on later (not now)
+## 4. How ads are enabled (done for 4.17.22+42)
 
-Ads stay off until an AdMob application id exists for `com.jkbmsr.ble`. The
-Google Mobile Ads dependency is already present, and both the AdMob app id and
-the ads kill switch are **build-time constants** in
+The Google Mobile Ads dependency is present, and both the AdMob app id and the
+ads kill switch are **build-time constants** in
 `lib/services/ads_config.dart` (`String.fromEnvironment('ADMOB_APP_ID')` and
-`bool.fromEnvironment('ADS_ENABLED')`), so turning ads on is a build invocation
+`bool.fromEnvironment('ADS_ENABLED')`), so enabling ads is a build invocation
 rather than a code edit:
 
 ```sh
 flutter build apk \
-  --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+  --dart-define=ADMOB_APP_ID=ca-app-pub-…~… \
+  --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-…/… \
   --dart-define=ADS_ENABLED=true
 ```
 
-Without those defines, `AdsConfig.current` is `isConfigured: false`,
-`enabledInThisBuild: false`, `admobAppId: null`, and no ad is ever requested.
-There is deliberately no fake id in `AdsConfig`: an AdMob SDK initialises
-against a malformed id rather than failing loudly, so a placeholder there would
-ship as a silent runtime failure. The Android manifest does carry **Google's
-official test app id** as a placeholder, only so a release build cannot crash
-for a missing `APPLICATION_ID`; it must be replaced with the real id before ads
-ship.
+The real values are public, so they live in `scripts/ads-defines.sh`, which
+`scripts/build-play-aab.sh` and `scripts/publish-release.sh` both source. A
+build with no such defines stays inert: `AdsConfig.current` is
+`isConfigured: false`, `enabledInThisBuild: false`, `admobAppId: null`, and no
+ad is ever requested — which is why `flutter test` and a plain `flutter build`
+remain silent. There is deliberately no fake id in `AdsConfig`: an AdMob SDK
+initialises against a malformed id rather than failing loudly, so a placeholder
+there would ship as a silent runtime failure. The Android manifest carries the
+real application id (it must be present or a release build crashes), paired
+with the same `ADMOB_APP_ID` define.
 
-To enable, in this order:
+The checklist that produced this state:
 
-1. Create the AdMob app for `com.jkbmsr.ble` and a banner ad unit.
+1. Create the AdMob app for `com.jkbmsr.ble` and a banner ad unit. ✅
 2. Pass the real app id at build time (`ADMOB_APP_ID=…`) and set
-   `ADS_ENABLED=true`.
+   `ADS_ENABLED=true`. ✅ (via `scripts/ads-defines.sh`)
 3. Replace the test `APPLICATION_ID` in the Android manifest with the real one.
-4. Add the ad-unit id to `AdsConfig` and replace the placeholder in
-   `AdSlot._buildAd` with the SDK's widget.
+   ✅
+4. `AdSlot._buildAd` renders the SDK's real banner (`_AdMobBanner`). ✅
 
 `AdSlot` is the only widget allowed to render an ad, and it is currently
 placed on exactly two read-only surfaces (`StatusScreen`, `CellsScreen`). It

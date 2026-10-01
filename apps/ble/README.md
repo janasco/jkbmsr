@@ -115,31 +115,38 @@ the reasoning behind brand detection and capability gating.
 
 ## Enabling real AdMob ads
 
-Ads are **off by default**. With no `--dart-define` the app makes no AdMob
-SDK call and requests no ad (`lib/services/ads_config.dart`,
-`lib/services/ad_sdk.dart`, `lib/widgets/ad_slot.dart`). The shipped
-`AndroidManifest.xml` carries Google's **test** application id, and the banner
-ad unit defaults to Google's **test** unit, so a dev/test build can be switched
-on without ever serving a live ad.
+Ads are **off in any build without `--dart-define`**. Such a build makes no
+AdMob SDK call and requests no ad (`lib/services/ads_config.dart`,
+`lib/services/ad_sdk.dart`, `lib/widgets/ad_slot.dart`), which is what keeps
+`flutter test` and a plain `flutter build` silent.
 
-To enable ads, three things are needed:
+Ads are **on in the two release builds**. The AdMob ids are not secrets, so
+they live in `scripts/ads-defines.sh`, and both `scripts/build-play-aab.sh`
+(the Play AAB) and `scripts/publish-release.sh` (the sideload APK) source that
+file and pass its `--dart-define` flags. The shipped
+`AndroidManifest.xml` carries the real application id; the banner ad unit is
+the real one too.
+
+Those are the three settings ads need:
 
 1. **The AdMob application id, in two places.** The native SDK reads it from
    `android/app/src/main/AndroidManifest.xml`
-   (`com.google.android.gms.ads.APPLICATION_ID`); the app's gate reads it from a
-   compile-time define. Replace the placeholder in the manifest with the real
-   app id, and pass the same id at build time.
+   (`com.google.android.gms.ads.APPLICATION_ID`); the app's gate reads it from
+   the `ADMOB_APP_ID` compile-time define. Both must name the same app.
 2. **The real banner ad unit id**, passed as `ADMOB_BANNER_AD_UNIT_ID`.
-   Omitting it serves Google's test banner — intentional, so nobody ships a
-   real creative by accident.
+   Omitting it serves Google's test banner — intentional, so a build cannot
+   ship a real creative by accident.
 3. **`ADS_ENABLED=true`**, the deliberate kill switch.
 
 ```bash
 flutter build appbundle --release \
-  --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
-  --dart-define=ADS_ENABLED=true \
-  --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
+  --dart-define=ADMOB_APP_ID=ca-app-pub-…~… \
+  --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-…/… \
+  --dart-define=ADS_ENABLED=true
 ```
+
+A sideloaded copy never shows ads regardless, because the entitlement resolves
+it as ad-free by product decision (see `remove-ads-lifetime-setup.md`).
 
 Rules that hold whatever is passed:
 

@@ -27,10 +27,12 @@ typedef AdSlotAdBuilder = Widget Function(
 /// The one and only place an ad is allowed to appear in this app.
 ///
 /// Renders nothing at all unless [AdsConfig.mayShowAds] says so, which under
-/// the shipped configuration is never: no AdMob app id, so
+/// the no-defines default is never: no AdMob app id, so
 /// `AdsConfig.current.isConfigured` is false. In that state neither an SDK
 /// initialisation nor an ad request happens, because [_buildRealBanner] — the
-/// only code that could do either — is never reached.
+/// only code that could do either — is never reached. The release scripts pass
+/// the real ids (see `scripts/ads-defines.sh`), which is what makes this
+/// configured in a shipped build.
 ///
 /// When a build IS configured, the decision is still made before anything
 /// touches the SDK: a Supporter short-circuits at [mayShowAds] here, and
@@ -58,8 +60,7 @@ class AdSlot extends StatelessWidget {
   final AdSlotKind slot;
 
   /// Defaults to [AdsConfig.current] — the app-wide ad configuration. Tests
-  /// pass a configured instance to exercise the enabled path, which is
-  /// unreachable in a shipped build.
+  /// pass a configured instance to exercise the enabled path without defines.
   final AdsConfig config;
 
   /// Overrides the ad widget, for tests only. Left null in the app, so the

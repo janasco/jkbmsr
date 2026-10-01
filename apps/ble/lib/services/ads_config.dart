@@ -3,37 +3,45 @@ import 'package:flutter/foundation.dart';
 import 'entitlement_service.dart';
 
 /// ─────────────────────────────────────────────────────────────────────────
-/// ADS ARE OFF until an AdMob application id exists. They must stay off until
-/// then.
+/// This file is the single ad decision. The SDK is wired (see
+/// `lib/widgets/ad_slot.dart` and `lib/services/ad_sdk.dart`) and the release
+/// builds switch it on: `scripts/ads-defines.sh` holds the real AdMob ids and
+/// both `scripts/build-play-aab.sh` and `scripts/publish-release.sh` pass them
+/// as `--dart-define` flags.
 ///
-/// This file is the single ad decision. The SDK is now wired (see
-/// `lib/widgets/ad_slot.dart` and `lib/services/ad_sdk.dart`), but it is inert
-/// under the shipped default: with no `--dart-define` [current] is
-/// `isConfigured: false`, so [mayShowAds] is false for every user, [AdSlot]
-/// renders nothing, and the Google Mobile Ads SDK is never initialised and
-/// never contacted. `test/ad_slot_test.dart` and `test/ad_sdk_test.dart` assert
-/// exactly that.
+/// A build with NO defines is still inert, and that is the deliberate default:
+/// with no `--dart-define` [current] is `isConfigured: false`, so [mayShowAds]
+/// is false for every user, [AdSlot] renders nothing, and the Google Mobile
+/// Ads SDK is never initialised and never contacted. `test/ad_slot_test.dart`
+/// and `test/ad_sdk_test.dart` assert exactly that, and they run without
+/// defines.
 ///
-/// Turning ads on is ONE deliberate build invocation, with no code edit:
+/// Turning ads on is therefore a deliberate build invocation — the one the two
+/// release scripts already make — with no code edit:
 ///
 ///   flutter build apk \
-///     --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+///     --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXX~YYYYY \
+///     --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-XXXXX/ZZZZZ \
 ///     --dart-define=ADS_ENABLED=true
-///     # optional, for real creatives; without it Google's TEST ad is served:
-///     # --dart-define=ADMOB_BANNER_AD_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
 ///
 /// [admobAppIdFromEnvironment] and [adsEnabledInBuild] are read at compile
 /// time, so [current] stays `isConfigured: false` / `enabledInThisBuild:
 /// false` / `admobAppId: null` in any build that does not pass them: the SDK is
-/// not initialised, no ad request is made, and the app behaves exactly as it
-/// does today.
+/// not initialised, no ad request is made, and the app behaves exactly as a
+/// pre-ads build did.
+///
+/// The native SDK reads its application id from the
+/// `com.google.android.gms.ads.APPLICATION_ID` meta-data in
+/// `android/app/src/main/AndroidManifest.xml`, which now carries the real id;
+/// the `ADMOB_APP_ID` define is what flips [isConfigured]. Both must name the
+/// same AdMob app.
 ///
 /// The entitlement that suppresses ads already ships and is already honoured
 /// here ([mayShowAds]): a Supporter is rejected before [AdSlot] builds an ad,
 /// and [AdSdk.ensureInitialised] re-checks the same gate before it touches the
 /// SDK — so a Supporter never initialises it.
 ///
-/// Where ads may NOT go, even once they are enabled: the Connect/Scanning
+/// Where ads may NOT go, even now that they are enabled: the Connect/Scanning
 /// flow, the Control screen, the PIN dialog, and anything rendered while a
 /// BLE connection is being established. Ads belong on read-only status and
 /// history surfaces only.
@@ -94,9 +102,11 @@ class AdsConfig {
       String.fromEnvironment('ADMOB_BANNER_AD_UNIT_ID',
           defaultValue: googleTestBannerAdUnitId);
 
-  /// What ships today. With no `--dart-define` this is `isConfigured: false`,
-  /// `enabledInThisBuild: false`, `admobAppId: null`, so [mayShowAds] is false
-  /// for every user on every build and no ad is ever requested.
+  /// The app-wide configuration of the build this code was compiled into.
+  /// With no `--dart-define` (tests, a plain `flutter build`) this is
+  /// `isConfigured: false`, `enabledInThisBuild: false`, `admobAppId: null`,
+  /// so [mayShowAds] is false for every user and no ad is ever requested. The
+  /// release scripts pass the real defines, which makes it configured+enabled.
   static const AdsConfig current = AdsConfig(
     isConfigured: admobAppIdFromEnvironment != '',
     enabledInThisBuild: adsEnabledInBuild,
@@ -104,8 +114,9 @@ class AdsConfig {
         admobAppIdFromEnvironment == '' ? null : admobAppIdFromEnvironment,
   );
 
-  /// True once a real AdMob application id exists and the SDK is present.
-  /// Until then this is `false` and that alone keeps every ad off.
+  /// True when a real AdMob application id was supplied at build time and the
+  /// SDK is present. `false` on any build that passed no `ADMOB_APP_ID`
+  /// define, and that alone keeps every ad off.
   final bool isConfigured;
 
   /// A deliberate on/off switch, separate from configuration, so a build can
