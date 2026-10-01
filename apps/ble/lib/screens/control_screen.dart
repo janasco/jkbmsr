@@ -20,44 +20,58 @@ class _ControlScreenState extends State<ControlScreen> {
   bool _isUnlocked = false;
   String _pin = '1234';
 
-  void _requestUnlock() {
+  /// Verifies the control PIN immediately before a write is sent.
+  ///
+  /// The gate lives on the write path, not on screen entry: opening this
+  /// screen, viewing live state, or browsing the app never prompts. The
+  /// prompt appears only when the user is about to toggle a MOSFET and a BMS
+  /// is actually connected — with nothing to write to there is nothing to
+  /// authorise, so no prompt is raised. Returns true only after a successful
+  /// PIN check; every caller must abort the write on false.
+  Future<bool> _ensureWriteAccess() async {
+    if (_isUnlocked) return true;
+
     if (!_bleService.isConnected) {
+      // Defensive: the switches only render while connected, but never raise
+      // a PIN prompt when there is no BMS to write to.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Connect a BMS from the Devices tab before unlocking controls.'),
           backgroundColor: Color(0xFFF59E0B),
         ),
       );
-      return;
+      return false;
     }
-    showDialog(
+
+    final verifiedPin = await showDialog<String>(
       context: context,
       builder: (ctx) => AuthPinDialog(
         target: 'CONTROL',
         onVerifyPin: (enteredPin) => _security.verifyPin(enteredPin),
-        onVerified: (enteredPin) {
-          setState(() {
-            _isUnlocked = true;
-            _pin = enteredPin;
-          });
-          Navigator.pop(ctx);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Controls Unlocked!'),
-              backgroundColor: Color(0xFF10B981),
-            ),
-          );
-        },
+        onVerified: (enteredPin) => Navigator.pop(ctx, enteredPin),
         onDismiss: () => Navigator.pop(ctx),
       ),
     );
+
+    if (!mounted || verifiedPin == null) return false;
+    setState(() {
+      _isUnlocked = true;
+      _pin = verifiedPin;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Controls Unlocked!'),
+        backgroundColor: Color(0xFF10B981),
+      ),
+    );
+    return true;
   }
 
-  void _handleToggle(String switchKey, bool currentValue, {bool? peerMosEnabled}) async {
-    if (!_isUnlocked) {
-      _requestUnlock();
-      return;
-    }
+  Future<void> _handleToggle(String switchKey, bool currentValue, {bool? peerMosEnabled}) async {
+    // PIN is checked here, on the write, rather than on entering the screen.
+    // A false result aborts before any bytes are sent.
+    if (!await _ensureWriteAccess()) return;
+    if (!mounted) return;
 
     final newValue = !currentValue;
     HapticFeedback.mediumImpact();
@@ -212,7 +226,9 @@ class _ControlScreenState extends State<ControlScreen> {
                       onPressed: _isUnlocked
                           ? () => setState(() => _isUnlocked = false)
                           : isConnected
-                              ? _requestUnlock
+                              ? () {
+                                  _ensureWriteAccess();
+                                }
                               : null,
                       child: Text(
                         _isUnlocked ? 'LOCK' : 'UNLOCK',

@@ -33,6 +33,18 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
   }
 
   void _unlockParameter(BmsParameter p) {
+    // The PIN is only meaningful with a BMS to write to. Parameter rows only
+    // render once live data is flowing, but guard anyway so a stale frame can
+    // never raise a PIN prompt with nothing behind it.
+    if (!_bleService.isConnected || !_bleService.hasLiveData) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connect a BMS before editing parameters.'),
+          backgroundColor: Color(0xFFF59E0B),
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AuthPinDialog(

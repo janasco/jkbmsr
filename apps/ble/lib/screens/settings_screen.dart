@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/security_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/auth_pin_dialog.dart';
 import '../widgets/motion_kit.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,10 +14,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _themeService = ThemeService();
   final _security = SecurityService();
 
-  // Per-field lock state. Nothing here is persisted — every field starts
-  // locked again on app relaunch, and a field re-locks itself the moment
-  // it's saved.
-  final Set<String> _unlockedFields = {};
+  // Tracks the in-flight save of the control PIN so the button can show a
+  // spinner. The PIN field itself is always editable: changing the app's own
+  // (local, non-account) PIN is a preference, not a BMS write, so it is not
+  // gated behind the control PIN. The write path still verifies the PIN
+  // before any command reaches hardware.
   final Set<String> _savingFields = {};
 
   static const String _pinFieldKey = 'security_pin';
@@ -31,22 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  void _unlockField(String fieldKey) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AuthPinDialog(
-        target: 'SETTINGS',
-        onVerifyPin: (enteredPin) => _security.verifyPin(enteredPin),
-        onVerified: (enteredPin) {
-          setState(() => _unlockedFields.add(fieldKey));
-          Navigator.pop(ctx);
-        },
-        onDismiss: () => Navigator.pop(ctx),
-      ),
-    );
-  }
-
-  Future<void> _savePinField() async {
+  void _savePinField() {
     final newPin = _newPinController.text.trim();
     if (newPin.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,17 +42,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       return;
     }
+    _persistPinField(newPin);
+  }
+
+  Future<void> _persistPinField(String newPin) async {
     setState(() => _savingFields.add(_pinFieldKey));
     await _security.setPin(newPin);
     _newPinController.clear();
     if (!mounted) return;
-    setState(() {
-      _savingFields.remove(_pinFieldKey);
-      _unlockedFields.remove(_pinFieldKey);
-    });
+    setState(() => _savingFields.remove(_pinFieldKey));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Security PIN updated.'),
+        content: Text('Control PIN updated.'),
         backgroundColor: Color(0xFF10B981),
       ),
     );
@@ -145,21 +131,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 14),
 
-              // SECURITY PIN (gates Control tab's switches)
+              // CONTROL PIN — an app-local gate on sending commands, not an
+              // account. It is intentionally NOT required to view or change
+              // any app preference: only a write to a connected BMS verifies
+              // it (see ControlScreen / BmsParametersScreen).
               TileEntrance(
                 delayIndex: 1,
                 child: _buildSettingsGroup(
                 context: context,
-                title: 'Security PIN',
+                title: 'Control PIN',
                 icon: Icons.password_rounded,
                 iconColor: const Color(0xFFF59E0B),
                 children: [
+                  const Text(
+                    'Authorises control commands and parameter writes to a '
+                    'connected BMS. It never blocks viewing or app settings.',
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.35),
+                  ),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _newPinController,
-                          enabled: _unlockedFields.contains(_pinFieldKey),
                           obscureText: true,
                           keyboardType: TextInputType.number,
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary),
@@ -177,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _buildLockIcon(_pinFieldKey, _savePinField),
+                      _buildSavePinButton(),
                     ],
                   ),
                 ],
@@ -277,35 +271,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Small per-row lock/save control: closed padlock (locked, tap prompts
-  /// PIN entry) <-> open padlock (unlocked, tap saves the field's current
-  /// value and re-locks it). Nothing here persists across app restarts.
-  Widget _buildLockIcon(String fieldKey, Future<void> Function() onSave) {
-    final isUnlocked = _unlockedFields.contains(fieldKey);
-    final isSaving = _savingFields.contains(fieldKey);
-
-    if (isSaving) {
+  /// Always-available save control for the local control PIN. There is no
+  /// preceding unlock step: the field is editable and this button saves it.
+  Widget _buildSavePinButton() {
+    if (_savingFields.contains(_pinFieldKey)) {
       return const SizedBox(
-        width: 32,
-        height: 32,
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+        width: 64,
+        height: 48,
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+          ),
         ),
       );
     }
 
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        iconSize: 20,
-        tooltip: isUnlocked ? 'Save & lock' : 'Unlock to edit',
-        icon: Icon(isUnlocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded),
-        color: isUnlocked ? const Color(0xFF10B981) : const Color(0xFF64748B),
-        onPressed: isUnlocked ? () => onSave() : () => _unlockField(fieldKey),
+    return FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF10B981),
+        foregroundColor: const Color(0xFF090D10),
+        minimumSize: const Size(64, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
+      onPressed: _savePinField,
+      child: const Text('SAVE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
