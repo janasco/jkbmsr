@@ -30,7 +30,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <application
-        android:label="JKBMSR BLE"
+        android:label="JK BMS Remote BLE"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
