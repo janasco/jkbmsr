@@ -14,6 +14,10 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.34
+
+- The Cloud Service screen now explains that subscriptions are managed on the website, without opening a browser.
+
 ## v1.3.33
 
 - Push notifications are now enabled, so gateway alerts can reach your phone even when the app is closed.
