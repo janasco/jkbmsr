@@ -59,7 +59,7 @@ class BmsDrawer extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'JK BMS Local',
+                          'JK BMS Bluetooth',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -155,7 +155,7 @@ class BmsDrawer extends StatelessWidget {
                     context: context,
                     icon: Icons.info_outline_rounded,
                     iconColor: const Color(0xFFF59E0B),
-                    label: 'About JK BMS Local',
+                    label: 'About JK BMS Bluetooth',
                     onTap: () {
                       Navigator.pop(context);
                       onOpenAbout();
@@ -172,7 +172,7 @@ class BmsDrawer extends StatelessWidget {
               padding: EdgeInsets.all(16),
               child: Center(
                 child: Text(
-                  'JK BMS LOCAL 4.17.23 | BUILD 43',
+                  'JK BMS BLUETOOTH 4.17.24 | BUILD 44',
                   style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',

@@ -16,10 +16,10 @@ const _darkMuted = Color(0xFF94A3B8); // AppColors.textMuted on dark
 /// PackageInfo + the (test-mocked) HTTP probe to settle there.
 Future<void> _pumpToOffline(WidgetTester tester, ThemeData theme) async {
   PackageInfo.setMockInitialValues(
-    appName: 'JK BMS Local',
+    appName: 'JK BMS Bluetooth',
     packageName: 'com.jkbmsr.ble',
-    version: '4.17.23',
-    buildNumber: '43',
+    version: '4.17.24',
+    buildNumber: '44',
     buildSignature: '',
   );
   await tester.pumpWidget(MaterialApp(
