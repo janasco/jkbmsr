@@ -28,7 +28,7 @@ Built as an open alternative to proprietary vendor tools, **JK BMS Local** conne
 
 - **BMS Safety Switches with PIN Authorization**:
   - Controls are filtered to only what's actually verified for the connected brand — no switches are shown that this app can't genuinely operate.
-  - Protected behind a Security PIN (default `1234`, changeable in Settings) that must be entered before any control command is sent; the Control tab's unlock is disabled entirely while no BMS is connected.
+  - Protected behind a Security PIN (default `1234`, changeable in the drawer's App settings) that must be entered before any write is sent; the Controls tab shows an honest empty state while no BMS is connected.
 
 - **Per-Field Locked Settings**:
   - Each parameter field has its own small lock/save icon — enter the PIN to unlock just that field, save it to re-lock. Nothing stays unlocked across an app restart.
@@ -63,10 +63,12 @@ lib/
 │   └── security_service.dart   # Control/Settings PIN storage + verification
 ├── screens/
 │   ├── status_screen.dart      # Live telemetry: power flow, cell voltages, wire resistance, diagnostics log
+│   ├── controls_screen.dart    # Controls tab: switch toggles + parameter editor on one surface
 │   ├── control_screen.dart     # PIN-gated switches, filtered per connected brand
-│   ├── settings_screen.dart    # Per-field PIN-gated parameter editors + theme picker
+│   ├── bms_parameters_screen.dart # Per-field PIN-gated parameter editors
+│   ├── settings_screen.dart    # App settings (drawer): theme picker + control-PIN change
 │   └── devices_screen.dart     # BLE scanner — recognized/possible-BMS devices only
-└── widgets/                    # Status/Control tab sections, drawer, modals, PIN dialog
+└── widgets/                    # Status/Controls tab sections, drawer, modals, PIN dialog
 ```
 
 See [`docs/ble-protocol-reference.md`](docs/ble-protocol-reference.md) for the

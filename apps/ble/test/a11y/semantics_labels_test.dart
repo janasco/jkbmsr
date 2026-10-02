@@ -81,7 +81,7 @@ void main() {
     final handle = tester.ensureSemantics();
     try {
       var checkedAny = false;
-      for (final tab in ['STATUS', 'CELLS', 'DEVICES', 'SETTINGS']) {
+      for (final tab in ['STATUS', 'CELLS', 'DEVICES', 'CONTROLS']) {
         final finder = find.text(tab);
         if (finder.evaluate().isNotEmpty) {
           await tester.tap(finder.last);

@@ -19,6 +19,7 @@ import 'package:jkbmsr_ble/main.dart';
 import 'package:jkbmsr_ble/models/bms_models.dart';
 import 'package:jkbmsr_ble/screens/bms_parameters_screen.dart';
 import 'package:jkbmsr_ble/screens/control_screen.dart';
+import 'package:jkbmsr_ble/screens/controls_screen.dart';
 import 'package:jkbmsr_ble/screens/settings_screen.dart';
 import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/auth_pin_dialog.dart';
@@ -124,7 +125,19 @@ void main() {
       expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
     });
 
-    testWidgets('fresh install: the Settings tab is browsable with no PIN',
+    testWidgets('Controls: no BMS shows an honest empty state, never a PIN',
+        (tester) async {
+      await tester.pumpWidget(_wrap(const ControlsScreen()));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Connect to a BMS to use controls'), findsOneWidget);
+      // Nothing to control, so no section selector and no prompt.
+      expect(find.text('SWITCHES'), findsNothing);
+      expect(find.text('PARAMETERS'), findsNothing);
+      expect(find.byType(AuthPinDialog), findsNothing);
+    });
+
+    testWidgets('fresh install: app settings open from the drawer with no PIN',
         (tester) async {
       tester.view.physicalSize = const Size(900, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -139,14 +152,24 @@ void main() {
         await tester.pump(const Duration(milliseconds: 600));
       }
 
-      final settingsTab = find.text('SETTINGS');
-      expect(settingsTab, findsWidgets);
-      await tester.tap(settingsTab.last);
-      await tester.pump(const Duration(milliseconds: 600));
+      // Settings is no longer a bottom-nav tab: it moved into the drawer.
+      expect(find.text('SETTINGS'), findsNothing,
+          reason: 'the Settings tab was replaced by Controls');
+
+      await tester.tap(find.byIcon(Icons.menu_rounded));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 80));
+      }
+      final appSettings = find.text('App settings');
+      expect(appSettings, findsOneWidget);
+      await tester.tap(appSettings);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 80));
+      }
 
       expect(find.text('CONTROL PIN'), findsOneWidget);
       expect(find.byType(AuthPinDialog), findsNothing,
-          reason: 'the reviewer-blocking "Unlock Settings" prompt is gone');
+          reason: 'opening app settings must not prompt for the control PIN');
     });
   });
 
@@ -211,6 +234,35 @@ void main() {
       await _submitPin(tester, '1234');
       expect(find.byType(AuthPinDialog), findsNothing);
       expect(find.byIcon(Icons.lock_open_rounded), findsWidgets);
+    });
+
+    testWidgets(
+        'Controls: section switch is free; each section gates only its writes',
+        (tester) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_wrap(const ControlsScreen()));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The merged surface opens on the switches section; browsing is free.
+      expect(find.byType(AuthPinDialog), findsNothing);
+      expect(find.text('SWITCHES'), findsOneWidget);
+      expect(find.text('PARAMETERS'), findsOneWidget);
+      expect(find.text('Charge Switch'), findsOneWidget);
+
+      // Switching to the parameters section does not prompt either.
+      await tester.tap(find.text('PARAMETERS'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AuthPinDialog), findsNothing);
+      expect(find.byIcon(Icons.lock_outline_rounded), findsWidgets);
+
+      // The parameters write path still does.
+      await tester.tap(find.byIcon(Icons.lock_outline_rounded).first);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(find.byType(AuthPinDialog), findsOneWidget);
+      expect(find.text('Unlock Parameter Editing'), findsOneWidget);
     });
   });
 }
