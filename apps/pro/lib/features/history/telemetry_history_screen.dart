@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
@@ -125,14 +124,6 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
     }
   }
 
-  Future<void> _openSubscribePage() async {
-    final targetId = _resolvedDeviceId ?? widget.deviceId;
-    final uri = Uri.parse(
-      'https://jkbmsr.com/device/settings${targetId != null ? '?deviceId=${Uri.encodeComponent(targetId)}' : ''}',
-    );
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
   String _cacheAgeLabel(DateTime cachedAt) {
     final elapsed = DateTime.now().difference(cachedAt);
     if (elapsed.inMinutes < 1) return 'moments ago';
@@ -218,11 +209,9 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
               JKBMSREmptyState(
                 icon: Icons.lock_outline,
                 title: 'Cloud Service required',
-                description: 'An active Cloud Service subscription is required to browse historical data for this gateway.',
-                action: ElevatedButton(
-                  onPressed: () => unawaited(_openSubscribePage()),
-                  child: const Text('Subscribe on jkbmsr.com'),
-                ),
+                description: 'An active Cloud Service subscription is required to '
+                    'browse historical data for this gateway. Cloud Service '
+                    'subscriptions are managed on our website.',
               ),
             ] else if (_error != null && _points.isEmpty) ...[
               JKBMSREmptyState(
