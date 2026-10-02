@@ -217,9 +217,9 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
             Text(
               'Installed: $_currentVersion',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF64748B),
+                  color: AppColors.textSecondary(context),
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.bold),
             ),
@@ -253,20 +253,21 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
   Widget _buildStatus() {
     switch (_state) {
       case _State.checking:
-        return const Column(
+        return Column(
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
                 color: Color(0xFF38BDF8), strokeWidth: 3),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text('Checking for updates…',
-                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                style: TextStyle(
+                    fontSize: 12, color: AppColors.textMuted(context))),
           ],
         );
       case _State.upToDate:
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E2830).withValues(alpha: 0.5),
+            color: AppColors.bgNested(context),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.borderColor(context)),
           ),
@@ -278,8 +279,10 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               Expanded(
                 child: Text(
                   'You are running the latest version ($_latestVersion).',
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF94A3B8), height: 1.3),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted(context),
+                      height: 1.3),
                 ),
               ),
             ],
@@ -314,8 +317,9 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               if (_releasedAt.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text('Released ${_fmtDate(_releasedAt)}',
-                    style: const TextStyle(
-                        fontSize: 11.0, color: Color(0xFF64748B))),
+                    style: TextStyle(
+                        fontSize: 11.0,
+                        color: AppColors.textSecondary(context))),
               ],
               const SizedBox(height: 12),
               SizedBox(
@@ -344,10 +348,12 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
                 ),
               ] else ...[
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Downloads in-app and opens the Android installer — '
                   'no browser needed. You will confirm the install.',
-                  style: TextStyle(fontSize: 11.0, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                      fontSize: 11.0,
+                      color: AppColors.textSecondary(context)),
                 ),
               ],
             ],
@@ -382,8 +388,9 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               if (_releasedAt.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text('Released ${_fmtDate(_releasedAt)}',
-                    style: const TextStyle(
-                        fontSize: 11.0, color: Color(0xFF64748B))),
+                    style: TextStyle(
+                        fontSize: 11.0,
+                        color: AppColors.textSecondary(context))),
               ],
               const SizedBox(height: 12),
               SizedBox(
@@ -412,10 +419,12 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
                 ),
               ] else ...[
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'This copy was installed from Google Play, so updates '
                   'arrive through the Play Store.',
-                  style: TextStyle(fontSize: 11.0, color: Color(0xFF64748B)),
+                  style: TextStyle(
+                      fontSize: 11.0,
+                      color: AppColors.textSecondary(context)),
                 ),
               ],
             ],
@@ -454,10 +463,10 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
                   ),
                   GestureDetector(
                     onTap: _cancelDownload,
-                    child: const Padding(
-                      padding: EdgeInsets.all(15),
+                    child: Padding(
+                      padding: const EdgeInsets.all(15),
                       child: Icon(Icons.close_rounded,
-                          color: Color(0xFF64748B), size: 18),
+                          color: AppColors.textSecondary(context), size: 18),
                     ),
                   ),
                 ],
@@ -472,7 +481,7 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
                   builder: (context, v, _) => LinearProgressIndicator(
                     value: v,
                     minHeight: 7,
-                    backgroundColor: const Color(0xFF1E2830),
+                    backgroundColor: AppColors.borderColor(context),
                     color: const Color(0xFF38BDF8),
                   ),
                 ),
@@ -498,8 +507,10 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
                 child: Text(
                   'Download complete — Android is asking to install v$_latestVersion. '
                   'Tap Install, and the app restarts updated.',
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF94A3B8), height: 1.35),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted(context),
+                      height: 1.35),
                 ),
               ),
             ],
@@ -534,8 +545,10 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               if (_error.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(_error,
-                    style: const TextStyle(
-                        fontSize: 11.0, color: Color(0xFF94A3B8), height: 1.3)),
+                    style: TextStyle(
+                        fontSize: 11.0,
+                        color: AppColors.textMuted(context),
+                        height: 1.3)),
               ],
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -556,21 +569,22 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E2830).withValues(alpha: 0.5),
+            color: AppColors.bgNested(context),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.borderColor(context)),
           ),
           child: Column(
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.cloud_off_rounded,
+                  const Icon(Icons.cloud_off_rounded,
                       color: Color(0xFFF59E0B), size: 20),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text('Could not reach the update server.',
                         style: TextStyle(
-                            fontSize: 11, color: Color(0xFF94A3B8))),
+                            fontSize: 11,
+                            color: AppColors.textMuted(context))),
                   ),
                 ],
               ),
