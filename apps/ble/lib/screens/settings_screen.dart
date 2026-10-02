@@ -180,9 +180,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 14),
 
               // BMS hardware configuration (cell count, capacity, balance
-              // and protection thresholds) lives in the "BMS parameters"
-              // drawer entry (BmsParametersScreen) — enabled only for brands
-              // with a verified settings read/write path (JK02, Daly, KS).
+              // and protection thresholds) lives in the Controls tab
+              // (BmsParametersScreen) — enabled only for brands with a
+              // verified settings read/write path (JK02, Daly, KS).
             ],
           ),
         ),
@@ -298,6 +298,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       onPressed: _savePinField,
       child: const Text('SAVE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+    );
+  }
+}
+
+/// Navigation wrapper for the app-settings body, opened from the drawer's
+/// "App settings" entry. [SettingsScreen] stays a pure body (it is mounted
+/// directly by tests and could be re-hosted), so the Scaffold and back
+/// affordance that a pushed route needs live here instead.
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgCanvas(context),
+      appBar: AppBar(
+        backgroundColor: AppColors.bgCanvas(context),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: const Text(
+          'APP SETTINGS',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+        ),
+      ),
+      body: const SettingsScreen(),
     );
   }
 }

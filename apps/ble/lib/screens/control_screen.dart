@@ -8,7 +8,12 @@ import '../widgets/info_banner.dart';
 import '../widgets/motion_kit.dart';
 
 class ControlScreen extends StatefulWidget {
-  const ControlScreen({super.key});
+  /// When true this renders only the switches body — no ambient background —
+  /// so it can be embedded as a section of the merged Controls tab. The
+  /// standalone form (default) keeps its own background for direct use.
+  final bool embedded;
+
+  const ControlScreen({super.key, this.embedded = false});
 
   @override
   State<ControlScreen> createState() => _ControlScreenState();
@@ -127,8 +132,7 @@ class _ControlScreenState extends State<ControlScreen> {
             _SwitchItem(key: 'balance', label: 'Balance Switch', desc: 'Enable active cell balancing', isChecked: status.balanceEnabled),
         ];
 
-        return JkAmbientBackground(
-          child: SingleChildScrollView(
+        final body = SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           physics: const BouncingScrollPhysics(),
           child: Column(
@@ -346,8 +350,8 @@ class _ControlScreenState extends State<ControlScreen> {
               ],
             ],
           ),
-        ),
-      );
+        );
+        return widget.embedded ? body : JkAmbientBackground(child: body);
       },
     );
   }

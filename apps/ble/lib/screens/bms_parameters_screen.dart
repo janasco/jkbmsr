@@ -14,7 +14,12 @@ import '../widgets/motion_kit.dart';
 /// values shown come from real decoded hardware frames (`settingsStream`),
 /// never placeholders, and writes go through `BleBmsService.writeParameter`.
 class BmsParametersScreen extends StatefulWidget {
-  const BmsParametersScreen({super.key});
+  /// When true this renders only the parameters body — no Scaffold or AppBar —
+  /// so it can be embedded as a section of the merged Controls tab. The back
+  /// affordance only makes sense for the pushed (standalone) form.
+  final bool embedded;
+
+  const BmsParametersScreen({super.key, this.embedded = false});
 
   @override
   State<BmsParametersScreen> createState() => _BmsParametersScreenState();
@@ -176,29 +181,9 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
     final hasLiveData = _bleService.hasLiveData;
     final params = _parameters;
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFFFFFFF),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('BMS PARAMETERS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
-        actions: [
-          IconButton(
-            tooltip: 'Sync from hardware',
-            icon: const Icon(Icons.sync_rounded),
-            onPressed: hasLiveData ? () => _bleService.requestSettings() : null,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        child: StreamBuilder<BmsSettingsSnapshot>(
+    final body = SafeArea(
+      top: false,
+      child: StreamBuilder<BmsSettingsSnapshot>(
           stream: _bleService.settingsStream,
           initialData: _bleService.currentSettings,
           builder: (context, snapshot) {
@@ -309,7 +294,31 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
             );
           },
         ),
+      );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFFFFFFF),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('BMS PARAMETERS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+        actions: [
+          IconButton(
+            tooltip: 'Sync from hardware',
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: hasLiveData ? () => _bleService.requestSettings() : null,
+          ),
+        ],
       ),
+      body: body,
     );
   }
 

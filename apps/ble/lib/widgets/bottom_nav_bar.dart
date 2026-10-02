@@ -6,7 +6,7 @@ enum NavTab {
   status,
   cells,
   devices,
-  settings,
+  controls,
 }
 
 class BottomNavBar extends StatefulWidget {
@@ -28,7 +28,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     (NavTab.status, Icons.dashboard_rounded, 'STATUS'),
     (NavTab.cells, Icons.grid_view_rounded, 'CELLS'),
     (NavTab.devices, Icons.bluetooth_rounded, 'DEVICES'),
-    (NavTab.settings, Icons.settings_rounded, 'SETTINGS'),
+    (NavTab.controls, Icons.tune_rounded, 'CONTROLS'),
   ];
 
   Alignment _alignmentFor(int index) {

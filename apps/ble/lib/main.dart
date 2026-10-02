@@ -13,7 +13,7 @@ import 'widgets/support_modal.dart';
 import 'widgets/about_modal.dart';
 import 'screens/status_screen.dart';
 import 'screens/cells_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/controls_screen.dart';
 import 'screens/devices_screen.dart';
 import 'screens/welcome_screen.dart';
 
@@ -179,8 +179,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         return 'CELLS';
       case NavTab.devices:
         return 'DEVICES';
-      case NavTab.settings:
-        return 'SETTINGS';
+      case NavTab.controls:
+        return 'CONTROLS';
     }
   }
 
@@ -449,8 +449,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         return const StatusScreen();
       case NavTab.cells:
         return const CellsScreen();
-      case NavTab.settings:
-        return const SettingsScreen();
+      case NavTab.controls:
+        return ControlsScreen(
+          onNavigateToDevices: () => _switchTab(NavTab.devices),
+        );
       case NavTab.devices:
         return DevicesScreen(
           onConnected: () => _switchTab(NavTab.status),

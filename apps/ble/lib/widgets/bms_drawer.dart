@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/bms_parameters_screen.dart';
-import '../screens/control_screen.dart';
+import '../screens/settings_screen.dart';
 import 'motion_kit.dart';
 
 class BmsDrawer extends StatelessWidget {
@@ -106,34 +105,17 @@ class BmsDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   TileEntrance(
-                    delayIndex: 2,
-                    child: _buildMenuItem(
-                    context: context,
-                    icon: Icons.power_settings_new_rounded,
-                    iconColor: const Color(0xFF38BDF8),
-                    label: 'Controls',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ControlScreen()),
-                      );
-                    },
-                  ),
-                  ),
-                  const SizedBox(height: 4),
-                  TileEntrance(
                     delayIndex: 1,
                     child: _buildMenuItem(
                     context: context,
-                    icon: Icons.tune_rounded,
+                    icon: Icons.settings_rounded,
                     iconColor: const Color(0xFF8B5CF6),
-                    label: 'BMS parameters',
+                    label: 'App settings',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const BmsParametersScreen()),
+                        MaterialPageRoute(builder: (_) => const SettingsPage()),
                       );
                     },
                   ),
