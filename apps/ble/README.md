@@ -1,4 +1,4 @@
-# JK BMS Local — Bluetooth Monitor & Controller for JK-BMS
+# JK BMS Bluetooth — Bluetooth Monitor & Controller for JK-BMS
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.35.7-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.9.2-0175C2?logo=dart)](https://dart.dev)
@@ -10,7 +10,7 @@
 
 A modern, high-performance mobile application for real-time Bluetooth Low Energy (BLE) telemetry monitoring and active balancer management for **JK-BMS** battery systems.
 
-Built as an open alternative to proprietary vendor tools, **JK BMS Local** connects directly to hardware via Bluetooth Low Energy without requiring cloud accounts or internet access. There is no simulation/demo mode — every reading on screen comes from a real, connected BMS.
+Built as an open alternative to proprietary vendor tools, **JK BMS Bluetooth** connects directly to hardware via Bluetooth Low Energy without requiring cloud accounts or internet access. There is no simulation/demo mode — every reading on screen comes from a real, connected BMS.
 
 ---
 

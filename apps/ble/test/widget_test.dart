@@ -6,7 +6,7 @@ import 'support/fake_flutter_blue_plus.dart';
 void main() {
   setUp(installFakeFlutterBluePlus);
 
-  testWidgets('JK BMS Local App test', (WidgetTester tester) async {
+  testWidgets('JK BMS Bluetooth App test', (WidgetTester tester) async {
     // flutter_blue_plus has no platform implementation on the Dart VM, so
     // install a no-op one — otherwise the app's adapter-state subscription
     // throws UnsupportedError during initState and the test can never pump.

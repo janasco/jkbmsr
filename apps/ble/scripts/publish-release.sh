@@ -59,7 +59,7 @@ echo "==> Creating GitHub Release v${VERSION} (history only)"
 if gh release view "$TAG" >/dev/null 2>&1; then
   gh release upload "$TAG" --clobber "$APK_NAME" "${APK_NAME}.sha256"
 else
-  gh release create "$TAG" --title "JK BMS Local v${VERSION}" --notes-file notes.txt \
+  gh release create "$TAG" --title "JK BMS Bluetooth v${VERSION}" --notes-file notes.txt \
     "$APK_NAME" "${APK_NAME}.sha256"
 fi
 
