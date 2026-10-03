@@ -12,7 +12,7 @@ configuring alerts, and flashing/onboarding new gateways.
 - URL: [web.jkbmsr.com](https://web.jkbmsr.com)
 - Best for: setup, configuration, history, and anything with a keyboard.
 
-## JKBMSR Pro (Android)
+## JK BMS Remote (Android)
 
 The companion app for the **ESP32 gateway** product. It reads the cloud, so it
 works from anywhere (same data as the web dashboard) and adds:
@@ -23,7 +23,7 @@ works from anywhere (same data as the web dashboard) and adds:
 - Firmware (OTA) status and release history
 - Biometric unlock after a session timeout
 
-## JKBMSR BLE (Android)
+## JK BMS Bluetooth (Android)
 
 A standalone, direct-Bluetooth monitoring app — **no gateway, no cloud, no
 account required**. It connects straight to the BMS's Bluetooth module and
@@ -37,5 +37,5 @@ JK-BMS.
 
 ## Getting the apps
 
-- Android (JKBMSR Pro and JKBMSR BLE): [jkbmsr.com/download](https://jkbmsr.com/download)
+- Android (JK BMS Remote and JK BMS Bluetooth): [jkbmsr.com/download](https://jkbmsr.com/download)
 - Web dashboard: [web.jkbmsr.com](https://web.jkbmsr.com)

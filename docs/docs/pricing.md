@@ -38,6 +38,6 @@ and [Refund Policy](https://jkbmsr.com/refunds) for the details.
 
 ## Donations
 
-The standalone **JKBMSR BLE** app is free with no ads. It's supported by
+The standalone **JK BMS Bluetooth** app is free with no ads. It's supported by
 optional donations — see the donors wall at
 [jkbmsr.com/donations](https://jkbmsr.com/donations).
