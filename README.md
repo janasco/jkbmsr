@@ -17,8 +17,8 @@ it yourself.
 
 | Path | What it is |
 | :--- | :--- |
-| `apps/ble/` | **JKBMSR BLE** — Android app that talks to a JK-BMS over Bluetooth. No account, no gateway, no cloud. |
-| `apps/pro/` | **JKBMSR Pro** — Android app for gateways running the firmware below. Cloud monitoring and alerts. |
+| `apps/ble/` | **JK BMS Bluetooth** — Android app that talks to a JK-BMS over Bluetooth. No account, no gateway, no cloud. |
+| `apps/pro/` | **JK BMS Remote** — Android app for gateways running the firmware below. Cloud monitoring and alerts. |
 | `firmware/` | ESP32 gateway firmware. Talks to JK-BMS over UART, uploads telemetry, verifies signed OTA updates. |
 | `hardware/` | Hardware notes, pinouts, and planning for DIY ESP32 gateway builds. |
 | `docs/` | Documentation site source. |
@@ -35,10 +35,10 @@ from the BLE app is a Google Play in-app product, **not** a third app.
    JK-BMS pack
        │  Bluetooth (BLE app)          UART (gateway)
        ▼                                 ▼
-  ┌─────────────┐                 ┌──────────────┐
-  │  JKBMSR BLE │                 │   firmware   │  ESP32
-  │  (no cloud) │                 │  (ESP32)     │
-  └─────────────┘                 └──────┬───────┘
+  ┌────────────────┐                 ┌──────────────┐
+  │JK BMS Bluetooth│                 │   firmware   │  ESP32
+  │   (no cloud)   │                 │  (ESP32)     │
+  └────────────────┘                 └──────┬───────┘
                                          │ HTTPS
                                          ▼
                                api.jkbmsr.com
@@ -47,8 +47,8 @@ from the BLE app is a Google Play in-app product, **not** a third app.
                         ┌────────────────┴────────────────┐
                         │                                 │
                  ┌──────┴──────┐                  ┌───────┴──────┐
-                 │ JKBMSR Pro  │                  │  web app    │
-                 │ (Android)   │                  │ (browser)   │
+                 │JK BMS Remote│                  │  web app    │
+                 │  (Android)  │                  │ (browser)   │
                  └─────────────┘                  └──────────────┘
 ```
 
