@@ -1,16 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'app/router.dart';
 import 'app/theme_controller.dart';
 import 'features/security/cloned_instance_screen.dart';
-import 'services/app_update_service.dart';
 import 'services/auth_store.dart';
 import 'services/biometric_auth_service.dart';
 import 'services/biometric_relogin.dart';
 import 'services/clone_guard_service.dart';
 import 'services/notification_service.dart';
+import 'widgets/app_update_prompt.dart';
 import 'widgets/shared/design_system/theme.dart';
 import 'widgets/shared/design_system/components.dart';
 
@@ -67,8 +66,13 @@ class _JKBMSRAppState extends State<JKBMSRApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Prompt once per launch if a newer build has been published.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _promptForAppUpdate());
+    // Prompt once per launch if a newer build has been published. Play
+    // installs update through Play's in-app flow; sideloaded copies keep the
+    // direct-APK prompt (see promptForAppUpdate).
+    WidgetsBinding.instance.addPostFrameCallback((_) => promptForAppUpdate(
+          contextProvider: () =>
+              jkbmsrRouter.routerDelegate.navigatorKey.currentContext,
+        ));
     // Foreground pushes don't produce a system notification on their own;
     // surface them as an in-app toast instead.
     NotificationService.instance.onForegroundMessage?.listen((message) {
@@ -84,34 +88,6 @@ class _JKBMSRAppState extends State<JKBMSRApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  /// Shows a one-tap "update available" prompt when a newer build is
-  /// published (see AppUpdateService). Silent when up to date or offline.
-  Future<void> _promptForAppUpdate() async {
-    final latest = await AppUpdateService.updateAvailable();
-    final context = jkbmsrRouter.routerDelegate.navigatorKey.currentContext;
-    if (latest == null || context == null || !context.mounted) return;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Update available'),
-        content: Text(
-            'JK BMS Remote $latest is available. Update for the latest fixes and features.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await launchUrl(Uri.parse(AppUpdateService.downloadUrl),
-                  mode: LaunchMode.externalApplication);
-            },
-            child: const Text('Download'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
