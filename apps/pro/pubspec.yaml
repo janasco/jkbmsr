@@ -1,6 +1,6 @@
 name: jkbmsr_pro
 description: "JK BMS Remote — cloud monitoring for JK-BMS. Not affiliated with JK-BMS."
-version: 1.3.36+68
+version: 1.3.37+69
 
 publish_to: 'none'
 
@@ -35,6 +35,11 @@ dependencies:
   # prefs file — see lib/services/secure_credential_store.dart.
   flutter_secure_storage: ^9.2.4
   package_info_plus: ^8.1.1
+  # Google Play In-App Updates: the required update path for Play-installed
+  # copies (Play policy forbids pointing a Play user at a sideloaded APK). The
+  # direct-APK prompt is retained for sideloaded/website installs only, and the
+  # branch on installer package is in lib/services/app_update_service.dart.
+  in_app_update: ^5.0.0
   # QR scanning for device claiming (scan device+code off the web claim
   # page's QR instead of typing it) — MLKit on Android, AVFoundation on iOS.
   mobile_scanner: ^5.2.3

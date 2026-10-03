@@ -14,6 +14,11 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.37
+
+- If you installed JK BMS Remote from Google Play, updates now come through Play itself, right inside the app.
+- Copies installed directly from our website keep updating in the app as before.
+
 ## v1.3.36
 
 - The Alert summary counts (Active Alarms / Critical / Warnings) now have clear separation, so the numbers no longer sit flush against their labels.
