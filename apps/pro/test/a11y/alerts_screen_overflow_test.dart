@@ -61,7 +61,7 @@ void main() {
     );
   }
 
-  Future<void> pumpAlerts(WidgetTester tester) async {
+  Future<void> pumpAlerts(WidgetTester tester, {double textScale = 2.0}) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -74,13 +74,37 @@ void main() {
       home: Builder(
         builder: (context) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(2.0),
+            textScaler: TextScaler.linear(textScale),
           ),
           child: const AlertsScreen(),
         ),
       ),
     ));
     await tester.pumpAndSettle();
+  }
+
+  // The three summary pills ("Active Alarms" / "Critical" / "Warnings") used to
+  // butt straight up against the separator lines because the pill had no
+  // horizontal padding and the row sits in a `FittedBox(scaleDown)`, so
+  // `spaceAround` had no free space to distribute. An overflow assertion cannot
+  // see that (nothing overflows — it just looks cramped), so measure the actual
+  // air between the adjacent labels.
+  void expectSummaryPillGaps(WidgetTester tester) {
+    Rect labelRect(String key, String label) => tester.getRect(find.descendant(
+          of: find.byKey(ValueKey(key)),
+          matching: find.text(label),
+        ));
+
+    final active = labelRect('alerts-summary-active', 'Active Alarms');
+    final critical = labelRect('alerts-summary-critical', 'Critical');
+    final warnings = labelRect('alerts-summary-warnings', 'Warnings');
+
+    // 4dp is a deliberately low bar so this guards "touching/overlapping"
+    // rather than pinning a specific padding value.
+    expect(critical.left - active.right, greaterThanOrEqualTo(4.0),
+        reason: 'Critical label has no clear gap from Active Alarms');
+    expect(warnings.left - critical.right, greaterThanOrEqualTo(4.0),
+        reason: 'Warnings label has no clear gap from Critical');
   }
 
   testWidgets('active alerts do not overflow at textScale 2.0 on a 360dp phone',
@@ -96,6 +120,22 @@ void main() {
     await tester.tap(find.text('Alert History'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 6)); // drain toast timers
+  });
+
+  testWidgets('summary pills have clear separation at the default text scale',
+      (tester) async {
+    await pumpAlerts(tester, textScale: 1.0);
+    expect(tester.takeException(), isNull);
+    expectSummaryPillGaps(tester);
+    await tester.pump(const Duration(seconds: 6)); // drain toast timers
+  });
+
+  testWidgets('summary pills have clear separation at textScale 2.0',
+      (tester) async {
+    await pumpAlerts(tester, textScale: 2.0);
+    expect(tester.takeException(), isNull);
+    expectSummaryPillGaps(tester);
     await tester.pump(const Duration(seconds: 6)); // drain toast timers
   });
 }

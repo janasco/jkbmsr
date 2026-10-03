@@ -395,17 +395,23 @@ class _AlertsScreenState extends State<AlertsScreen> {
         children: [
           // The three pills sit in a fixed row; at large OS text scales they
           // outgrow a narrow phone, so scale the row down to fit rather than
-          // overflowing (a no-op at the default scale).
+          // overflowing (a no-op at the default scale). Each pill carries its
+          // own horizontal padding so the labels never touch the dividers (or
+          // each other) once `scaleDown` has removed the free space that
+          // `spaceAround` would otherwise distribute.
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildSummaryPill('Active Alarms', '${_activeAlerts.length}', context.colors.textPrimary),
+                _buildSummaryPill('Active Alarms', '${_activeAlerts.length}', context.colors.textPrimary,
+                    key: const ValueKey('alerts-summary-active')),
                 Container(width: 1, height: 28, color: context.colors.line),
-                _buildSummaryPill('Critical', '$criticalCount', context.colors.critical),
+                _buildSummaryPill('Critical', '$criticalCount', context.colors.critical,
+                    key: const ValueKey('alerts-summary-critical')),
                 Container(width: 1, height: 28, color: context.colors.line),
-                _buildSummaryPill('Warnings', '$warningCount', context.colors.warning),
+                _buildSummaryPill('Warnings', '$warningCount', context.colors.warning,
+                    key: const ValueKey('alerts-summary-warnings')),
               ],
             ),
           ),
@@ -464,16 +470,23 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Widget _buildSummaryPill(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label, style: JKBMSRTypography.label.copyWith(fontSize: 11.0)),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: JKBMSRTypography.monoTechnical.copyWith(fontSize: 16.0, fontWeight: FontWeight.bold, color: color),
-        ),
-      ],
+  Widget _buildSummaryPill(String label, String value, Color color, {Key? key}) {
+    return Padding(
+      key: key,
+      // Horizontal breathing room around each pill. The row sits in a
+      // FittedBox, so the separator line and its neighbours would otherwise be
+      // flush; the padding scales down with the row at large text scales.
+      padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space12),
+      child: Column(
+        children: [
+          Text(label, style: JKBMSRTypography.label.copyWith(fontSize: 11.0)),
+          const SizedBox(height: JKBMSRTokens.space2),
+          Text(
+            value,
+            style: JKBMSRTypography.monoTechnical.copyWith(fontSize: 16.0, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
     );
   }
 
