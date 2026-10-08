@@ -45,10 +45,12 @@ Future<void> main() async {
 
   // Register/refresh the FCM token on every launch for a signed-in user, so
   // alert push doesn't depend on remembering to toggle a switch in Settings.
-  // Best-effort: failures are recorded in NotificationService.lastPushError and
-  // surfaced the next time the user touches the notification switches.
+  // ensureRegistered() also asks for the OS notification permission, which
+  // Android 13+ requires before anything can be shown. Best-effort: failures
+  // are recorded in NotificationService.lastPushError and surfaced the next
+  // time the user touches the notification switches.
   if (NotificationService.instance.isFirebaseReady && await AuthStore.instance.hasToken()) {
-    unawaited(NotificationService.instance.getPushToken());
+    unawaited(NotificationService.instance.ensureRegistered());
   }
 
   runApp(const JKBMSRApp());

@@ -1,6 +1,10 @@
 package com.jkbmsr.pro
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
+import android.os.Bundle
 import android.os.Process
 import android.os.UserManager
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -14,6 +18,37 @@ import io.flutter.plugin.common.MethodChannel
 // unlock and signs the user out. The BLE app has the same requirement.
 class MainActivity : FlutterFragmentActivity() {
     private val securityChannel = "jkbmsr/security"
+
+    companion object {
+        // Must equal the manifest's default_notification_channel_id.
+        private const val ALERT_CHANNEL_ID = "jkbmsr_alerts"
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        createAlertChannel()
+    }
+
+    // FCM posts with the channel named by the manifest's
+    // `com.google.firebase.messaging.default_notification_channel_id`
+    // ("jkbmsr_alerts"). If that channel does not exist, FCM falls back to its
+    // own "Miscellaneous" channel at default importance — so alerts arrive
+    // without a heads-up and under a name the user can't recognise. Creating
+    // it here at HIGH importance is what makes critical alerts actually
+    // interrupt. The id MUST stay equal to the manifest value.
+    private fun createAlertChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel(ALERT_CHANNEL_ID) != null) return
+        val channel = NotificationChannel(
+            ALERT_CHANNEL_ID,
+            "Battery & gateway alerts",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = "Critical battery conditions and gateway offline alerts"
+        }
+        manager.createNotificationChannel(channel)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

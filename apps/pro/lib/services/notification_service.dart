@@ -161,6 +161,17 @@ class NotificationService {
   Stream<RemoteMessage>? get onForegroundMessage =>
       _firebaseReady ? FirebaseMessaging.onMessage : null;
 
+  /// Called at launch for a signed-in user: asks for the OS notification
+  /// permission and registers the FCM token. The permission used to be
+  /// requested only from a Settings toggle, so a user who never touched one
+  /// got no notifications at all on Android 13+ — where nothing is ever shown
+  /// without POST_NOTIFICATIONS. Both steps are idempotent; the OS remembers a
+  /// grant or a denial, so this does not nag.
+  Future<void> ensureRegistered() async {
+    await requestPermission();
+    await getPushToken();
+  }
+
   // --- Preferences Getters ---
 
   Future<bool> isCriticalAlertsEnabled() async {
