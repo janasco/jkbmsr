@@ -110,3 +110,28 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// 16 KB page-size support (Google Play requirement, enforced since 2025-11-01).
+//
+// mobile_scanner 5.2.3's dependency graph pins two native libraries that ship
+// only 4 KB-aligned ELF segments, so the production bundle was rejected by
+// Play ("App must support 16 KB memory page sizes"):
+//   - ML Kit's libbarhopper_v3.so      (com.google.mlkit:barcode-scanning 17.2.0)
+//   - CameraX's libimage_processing_util_jni.so (androidx.camera:camera-core 1.3.3)
+//
+// These constraints raise each to the first version that aligns the 64-bit
+// segments (arm64-v8a, x86_64) to 16 KB. The Dart-side API is unchanged —
+// mobile_scanner is kept at 5.2.3 rather than jumping to 6.x/7.x, whose
+// breaking API changes are a separate migration.
+//
+// Verified by scripts/check-16kb-alignment.py, which both app release
+// scripts run before anything is uploaded — a regression fails the release
+// instead of being rejected by Play after the fact.
+dependencies {
+    constraints {
+        implementation("com.google.mlkit:barcode-scanning:17.3.0")
+        implementation("androidx.camera:camera-core:1.4.2")
+        implementation("androidx.camera:camera-camera2:1.4.2")
+        implementation("androidx.camera:camera-lifecycle:1.4.2")
+    }
+}

@@ -74,3 +74,7 @@ cp "$AAB" "$AAB_NAME"
 echo "$SHA256  $AAB_NAME" > "${AAB_NAME}.sha256"
 echo "AAB: $AAB_NAME ($(stat -c%s "$AAB") bytes)"
 echo "SHA256: $SHA256"
+
+echo
+echo "==> Verifying 16 KB page-size alignment (required by Google Play)"
+python3 "$(cd ../.. && pwd)/scripts/check-16kb-alignment.py" "$AAB_NAME"

@@ -14,6 +14,10 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.38
+
+- Added support for the newest Android devices and 16 KB memory pages, so the app runs correctly on them and future updates keep arriving through Google Play.
+
 ## v1.3.37
 
 - If you installed JK BMS Remote from Google Play, updates now come through Play itself, right inside the app.
