@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bms_models.dart';
 import '../services/ble_service.dart';
+import 'motion_kit.dart';
 
 /// The BMS's own on-board event log ("logbook"). This is genuine hardware
 /// history, not app-side accumulation: it is fetched from the JK-BMS with
@@ -150,6 +151,13 @@ class _BmsLogbookSectionState extends State<BmsLogbookSection> {
                 initialData: ble.currentLogbook,
                 builder: (context, snapshot) {
                   final logbook = snapshot.data;
+                  // A fetch is in flight and there are no rows to show yet:
+                  // placeholder log rows occupy the same geometry as the real
+                  // ones, so the card does not grow or jump when they arrive.
+                  // A refresh that already has entries keeps showing them.
+                  if (_requesting && (logbook == null || logbook.entries.isEmpty)) {
+                    return const _LogbookSkeleton();
+                  }
                   if (logbook == null) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
@@ -249,6 +257,44 @@ class _LogbookRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Placeholder log rows shown while a logbook fetch is in flight. It mirrors
+/// [_LogbookRow]'s geometry — a 22px index badge, a title line and an
+/// indented relative-time line — so swapping in the real entries does not
+/// reflow the card. Four rows is the typical first page of an event log.
+class _LogbookSkeleton extends StatelessWidget {
+  const _LogbookSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < 4; i++)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                JkSkeleton(width: 22, height: 22, borderRadius: 6),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      JkSkeleton(width: 156, height: 11, borderRadius: 4),
+                      SizedBox(height: 6),
+                      JkSkeleton(width: 78, height: 10, borderRadius: 4),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

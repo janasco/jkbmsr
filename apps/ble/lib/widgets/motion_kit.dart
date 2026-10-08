@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../services/theme_service.dart';
+
 /// Motion primitives for the JK BMS Bluetooth app — the "alive" layer.
 ///
 /// Everything here is painter/state based (no assets, no extra deps) and
@@ -700,6 +702,96 @@ class _AnimatedDotsState extends State<AnimatedDots>
           style: widget.style,
         );
       },
+    );
+  }
+}
+
+// ─── Skeleton placeholder ────────────────────────────────────────────────────
+
+/// A single pulsing placeholder bar or box shown while real content loads.
+///
+/// This is the app's one skeleton primitive: every skeleton in the BLE app is
+/// built from it, so the pulse, radius and palette stay identical everywhere
+/// rather than being re-declared call site by call site. It fills with the
+/// theme's border token ([AppColors.borderColor]) so it sits correctly on a
+/// card in both the light and the dark theme.
+///
+/// The pulse mirrors the Pro app's skeleton — opacity eases between 0.3 and
+/// 0.7 on a 900 ms loop — and is DISABLED when the OS asks for reduced motion
+/// (`accessibilityFeatures.disableAnimations`). Under reduced motion the box
+/// holds a fixed mid opacity: it still reads as a placeholder, it just does not
+/// loop, per the same rule the other primitives in this file follow.
+///
+/// Skeletons are for *content* that is on its way (a list, a card, a field
+/// whose value has not arrived). They are deliberately NOT for an action in
+/// progress — a submit, save, purchase or PIN verification keeps its spinner.
+class JkSkeleton extends StatefulWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  /// Overrides the fill. Leave null to use [AppColors.borderColor].
+  final Color? color;
+
+  const JkSkeleton({
+    super.key,
+    this.width = double.infinity,
+    this.height = 14,
+    this.borderRadius = 6,
+    this.color,
+  });
+
+  @override
+  State<JkSkeleton> createState() => _JkSkeletonState();
+}
+
+class _JkSkeletonState extends State<JkSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  /// Captured once at construction: the OS reduced-motion flag is a
+  /// construction-time input, matching every other primitive in this file.
+  late final bool _animate;
+
+  @override
+  void initState() {
+    super.initState();
+    _animate = !_reducedMotion();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulse = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    if (_animate) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = widget.color ?? AppColors.borderColor(context);
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, _) => Opacity(
+        // Mid opacity when static: 0.3 is nearly invisible on the light theme,
+        // and a user who disabled animations should still see the placeholder.
+        opacity: _animate ? _pulse.value : 0.55,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
+        ),
+      ),
     );
   }
 }

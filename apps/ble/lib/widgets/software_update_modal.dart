@@ -253,12 +253,39 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
   Widget _buildStatus() {
     switch (_state) {
       case _State.checking:
+        // Content load: the modal is waiting for the latest-release payload to
+        // display. A skeleton of the status card is a truer placeholder than a
+        // lone spinner, and it does not jump when the real card replaces it.
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const CircularProgressIndicator(
-                color: Color(0xFF38BDF8), strokeWidth: 3),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.bgNested(context),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.borderColor(context)),
+              ),
+              child: const Row(
+                children: [
+                  JkSkeleton(width: 20, height: 20, borderRadius: 6),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        JkSkeleton(width: 132, height: 12, borderRadius: 4),
+                        SizedBox(height: 8),
+                        JkSkeleton(width: 196, height: 10, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             Text('Checking for updates…',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 12, color: AppColors.textMuted(context))),
           ],
