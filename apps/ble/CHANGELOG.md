@@ -12,11 +12,10 @@ version's bullets within that, combined.
 
 ## v4.17.25+45
 
-- New **Device information** panel for JK-BMS: model, hardware and firmware
-  revision, serial number, manufacturing date, power-on count and total run
-  time — read straight from the battery's own hardware.
-- New **Event history** panel: fetch the battery's built-in event log on
-  demand to see what tripped, when, and when it cleared.
+- New Device information panel: model, hardware and firmware revision, serial number, manufacturing date, power-on count and run time.
+- New Event history panel: fetch the battery's built-in event log on demand to see what tripped and when it cleared.
+- The scan now animates and can be re-run anytime; the Control PIN shows only while a battery is connected.
+- Removed a redundant top-right menu and fixed a cropped app logo.
 
 ## v4.17.24+44
 
