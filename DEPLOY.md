@@ -14,7 +14,7 @@ before you open a pull request.
 | Check every component | `scripts/check-all.sh --run` | no |
 | Check one component | `scripts/check-all.sh --run --only firmware` | no |
 | Build the docs, publish nothing | `scripts/deploy-docs.sh --build-only` | no |
-| Publish the docs origin (retired subdomain) | `scripts/deploy-docs.sh --deploy` | `jkbmsr-docs.pages.dev` — `docs.jkbmsr.com` now 301s to the apex |
+| Publish the docs origin (retired subdomain) | `scripts/deploy-docs.sh --deploy` | `jkbmsr-docs-b1p.pages.dev` — `docs.jkbmsr.com` now 301s to the apex |
 | Package the release CDN, publish nothing | `scripts/deploy-releases.sh --build-only` | no |
 | Publish the release CDN | `scripts/deploy-releases.sh --deploy` | `cdn.jkbmsr.com` |
 | Environment check on its own | `scripts/preflight.sh --project jkbmsr-docs` | no |
@@ -159,7 +159,7 @@ different hostname.** The `jkbmsr-docs` Pages project must not be renamed: the
 `docs.jkbmsr.com` custom domain points at it, and it is what makes the rollback
 (delete the Worker route) a one-command revert to a browsable subdomain. Keep it
 current. Its post-deploy HTTP verification now reads
-`https://jkbmsr-docs.pages.dev`, **not** the custom domain: the custom domain
+`https://jkbmsr-docs-b1p.pages.dev`, **not** the custom domain: the custom domain
 301s to the apex `/docs/` build, which is a *different* build on a *different*
 project, so hashing that against this project's output would fail on a healthy
 deploy. The script says so in its own header.
@@ -399,7 +399,7 @@ edge propagation. To check by hand:
 # docs origin (docs.jkbmsr.com is retired and 301s to the apex, so verify the
 # project's own hostname, not the custom domain — see "Publishing the docs")
 python3 scripts/verify-publish.py \
-  --url https://jkbmsr-docs.pages.dev/index.html \
+  --url https://jkbmsr-docs-b1p.pages.dev/index.html \
   --file docs/dist/index.html
 
 # release CDN: index, the index the flasher reads, and every target's binary
