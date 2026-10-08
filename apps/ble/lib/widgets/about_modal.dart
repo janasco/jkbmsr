@@ -10,6 +10,13 @@ class AboutModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The mark scales with the device so it stays proportionate on small and
+    // large screens. `BoxFit.contain` (not `cover`) is required: StaggerIn
+    // lays its children out in a stretched Column, so the image box is
+    // full-width — a `cover` fit scaled the tile to fill that wide, short box
+    // and showed only the middle strip of the logo.
+    final double logoSize =
+        (MediaQuery.sizeOf(context).shortestSide * 0.22).clamp(72.0, 112.0);
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -39,12 +46,12 @@ class AboutModal extends StatelessWidget {
                 AppColors.isDark(context)
                     ? 'assets/icon/app_icon.png'
                     : 'assets/icon/app_icon_light.png',
-                width: 64,
-                height: 64,
+                width: logoSize,
+                height: logoSize,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  width: 64,
-                  height: 64,
+                  width: logoSize,
+                  height: logoSize,
                   color: const Color(0xFF1E2830),
                   child: const Icon(Icons.bolt_rounded, color: Color(0xFF10B981), size: 36),
                 ),
