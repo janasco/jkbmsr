@@ -14,6 +14,11 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.40
+
+- Cloud Service history CSV exports now cover the whole range you pick — a 30/90/365-day export includes older hourly data instead of only the last week.
+- Added a Protection Warnings switch: cell-imbalance and over-current alerts are now on by default but can be turned off on their own, without muting critical battery alarms.
+
 ## v1.3.39
 
 - Notifications now work reliably. You'll be asked to allow them when you sign in, and low-temperature, cell-imbalance and high-current alerts now notify you like the others.

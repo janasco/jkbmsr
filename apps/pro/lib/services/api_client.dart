@@ -845,6 +845,7 @@ class APIClient with RequestDeduplicationMixin {
     required bool criticalAlerts,
     required bool temperatureAlerts,
     required bool offlineAlerts,
+    required bool warningAlerts,
   }) async {
     final url = Uri.parse('$baseUrl/api/v1/user/notifications/register');
     final response = await _client.post(
@@ -856,6 +857,7 @@ class APIClient with RequestDeduplicationMixin {
         'criticalAlerts': criticalAlerts,
         'temperatureAlerts': temperatureAlerts,
         'offlineAlerts': offlineAlerts,
+        'warningAlerts': warningAlerts,
       }),
     );
     _handleResponse(response);

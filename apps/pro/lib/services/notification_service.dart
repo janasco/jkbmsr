@@ -22,6 +22,7 @@ class NotificationService {
   static const String _keyCriticalAlerts = 'jkbmsr_notify_critical';
   static const String _keyTempWarnings = 'jkbmsr_notify_temp';
   static const String _keyOfflineGateways = 'jkbmsr_notify_offline';
+  static const String _keyWarningAlerts = 'jkbmsr_notify_warning';
   static const String _keyPushToken = 'jkbmsr_push_token';
 
   // Singleton instance
@@ -120,6 +121,7 @@ class NotificationService {
         criticalAlerts: await isCriticalAlertsEnabled(),
         temperatureAlerts: await isTempWarningsEnabled(),
         offlineAlerts: await isOfflineGatewaysEnabled(),
+        warningAlerts: await isWarningsEnabled(),
       );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyPushToken, token);
@@ -189,6 +191,15 @@ class NotificationService {
     return prefs.getBool(_keyOfflineGateways) ?? false;
   }
 
+  /// Warning-level battery alerts (cell imbalance, over-current). On by
+  /// default — these used to be silent, and a silent protection warning is
+  /// worse than an extra notification — but now individually controllable
+  /// rather than riding the "Critical Battery Alarms" toggle.
+  Future<bool> isWarningsEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyWarningAlerts) ?? true;
+  }
+
   // --- Preferences Setters ---
 
   Future<void> setCriticalAlerts(bool enabled) async {
@@ -206,6 +217,12 @@ class NotificationService {
   Future<void> setOfflineGateways(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOfflineGateways, enabled);
+    await _resyncIfRegistered();
+  }
+
+  Future<void> setWarningsEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyWarningAlerts, enabled);
     await _resyncIfRegistered();
   }
 }

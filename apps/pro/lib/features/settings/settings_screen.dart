@@ -115,6 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _criticalBattery = true;
   bool _highTemp = true;
   bool _offlineGateway = false;
+  bool _warningAlerts = true;
 
   String _appVersion = '';
 
@@ -347,6 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final critical = await _notificationService.isCriticalAlertsEnabled();
       final temp = await _notificationService.isTempWarningsEnabled();
       final offline = await _notificationService.isOfflineGatewaysEnabled();
+      final warning = await _notificationService.isWarningsEnabled();
 
       setState(() {
         _activeDeviceId = targetId;
@@ -362,6 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _criticalBattery = critical;
         _highTemp = temp;
         _offlineGateway = offline;
+        _warningAlerts = warning;
         _batteryAnimationsEnabled = config['batteryAnimationsEnabled'] as bool? ?? true;
         _dashboardTemplate = config['dashboardTemplateMobile'] as String? ?? 'default';
         _currentVersion = config['firmwareVersion'] as String? ?? '—';
@@ -781,6 +784,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _highTemp = value;
       } else if (type == 'offline') {
         _offlineGateway = value;
+      } else if (type == 'warning') {
+        _warningAlerts = value;
       }
     });
 
@@ -793,6 +798,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         break;
       case 'offline':
         await _notificationService.setOfflineGateways(value);
+        break;
+      case 'warning':
+        await _notificationService.setWarningsEnabled(value);
         break;
     }
   }
@@ -2272,13 +2280,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text('Critical Battery Alarms', style: JKBMSRTypography.body),
                     const SizedBox(height: JKBMSRTokens.space4),
-                    Text('Under-voltage or balance protections', style: JKBMSRTypography.bodySecondary),
+                    Text('Under-voltage, over-voltage or low charge', style: JKBMSRTypography.bodySecondary),
                   ],
                 ),
                 Switch(
                   value: _criticalBattery,
                   activeThumbColor: context.colors.accent,
                   onChanged: (val) => _handleNotificationToggle('critical', val),
+                ),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space16),
+
+            // Protection warnings (cell imbalance, over-current)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Protection Warnings', style: JKBMSRTypography.body),
+                    const SizedBox(height: JKBMSRTokens.space4),
+                    Text('Cell imbalance or over-current warnings', style: JKBMSRTypography.bodySecondary),
+                  ],
+                ),
+                Switch(
+                  value: _warningAlerts,
+                  activeThumbColor: context.colors.accent,
+                  onChanged: (val) => _handleNotificationToggle('warning', val),
                 ),
               ],
             ),
