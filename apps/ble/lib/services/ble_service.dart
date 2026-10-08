@@ -10,7 +10,9 @@ import 'detection_engine.dart';
 class BleBmsService {
   static final BleBmsService _instance = BleBmsService._internal();
   factory BleBmsService() => _instance;
-  BleBmsService._internal();
+  BleBmsService._internal() {
+    _ensureScanMirror();
+  }
 
   final _db = AppDatabase();
   static const String _lastDeviceIdKey = 'jkbmsr_last_device_id';
@@ -18,6 +20,32 @@ class BleBmsService {
   /// Live Bluetooth adapter on/off state, used to show an in-app notice
   /// when Bluetooth is disabled.
   Stream<BluetoothAdapterState> get adapterStateStream => FlutterBluePlus.adapterState;
+
+  /// Live scan lifecycle, mirrored from FlutterBluePlus.
+  ///
+  /// [startBleScan] returns as soon as the scan has *started* — the 12s window
+  /// then runs on a timer inside the plugin — so a screen that only awaited
+  /// that call could not keep a "scanning" state on screen. This stream stays
+  /// true for the whole window, which is what the Devices tab animates on.
+  final _scanStateController = StreamController<bool>.broadcast();
+  Stream<bool> get scanStateStream => _scanStateController.stream;
+  StreamSubscription<bool>? _scanMirrorSub;
+  bool _scanning = false;
+  bool? _debugIsScanning;
+  bool get isScanning => _debugIsScanning ?? _scanning;
+
+  /// Mirrors the plugin's scan state into [scanStateStream]. Subscribes once;
+  /// the service is a process-wide singleton, so it lives for the app session.
+  void _ensureScanMirror() {
+    _scanMirrorSub ??= FlutterBluePlus.isScanning.listen((value) {
+      // A test override wins, so a debug-driven state is not clobbered by the
+      // plugin's real (idle) state.
+      if (_debugIsScanning != null) return;
+      if (_scanning == value) return;
+      _scanning = value;
+      _scanStateController.add(value);
+    });
+  }
 
   final _statusController = StreamController<BmsStatus>.broadcast();
   Stream<BmsStatus> get statusStream => _statusController.stream;
@@ -76,6 +104,10 @@ class BleBmsService {
     _debugIsConnected = isConnected;
     _debugConnectedBrand = brand;
     _debugHasLiveData = hasLiveData;
+    // Nudge listeners the way a real connect/disconnect does — both emit on the
+    // status stream — so a widget test can drive a connection *transition*
+    // while a screen is mounted. Harmless when nothing is subscribed yet.
+    _statusController.add(_currentStatus);
   }
 
   /// Test-only: clears any [debugSetConnectionState] override.
@@ -84,6 +116,23 @@ class BleBmsService {
     _debugIsConnected = null;
     _debugConnectedBrand = null;
     _debugHasLiveData = null;
+  }
+
+  /// Test-only: forces the scan-facing state so widget tests can present the
+  /// scanner mid-scan (or drive it stopped) without a BLE stack. Never call
+  /// from app code; see [debugResetScanningState].
+  @visibleForTesting
+  void debugSetScanningState(bool scanning) {
+    _debugIsScanning = scanning;
+    _scanning = scanning;
+    _scanStateController.add(scanning);
+  }
+
+  /// Test-only: clears any [debugSetScanningState] override.
+  @visibleForTesting
+  void debugResetScanningState() {
+    _debugIsScanning = null;
+    _scanning = FlutterBluePlus.isScanningNow;
   }
 
   bool get isConnected => _debugIsConnected ?? (_connectedDevice != null);

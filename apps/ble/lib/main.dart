@@ -370,12 +370,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            tooltip: 'More options',
-                            icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF64748B)),
-                            onPressed: () => _switchTab(NavTab.devices),
-                          ),
                         ],
                       ),
                     ],

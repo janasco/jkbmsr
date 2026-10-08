@@ -65,7 +65,8 @@ void main() {
   tearDown(() => BleBmsService().debugResetConnectionState());
 
   group('no BMS connected — nothing to authorise, so no PIN anywhere', () {
-    testWidgets('Settings: theme and control-PIN change never prompt for a PIN',
+    testWidgets(
+        'Settings: with no BMS connected the control-PIN card is hidden and nothing prompts',
         (tester) async {
       tester.view.physicalSize = const Size(900, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -77,26 +78,16 @@ void main() {
       // Entering the screen does not prompt.
       expect(find.byType(AuthPinDialog), findsNothing);
 
-      // The PIN field is editable without any unlock step...
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.enabled, isNot(false),
-          reason: 'changing the app PIN must not require the control PIN');
-      await tester.enterText(find.byType(TextField), '4321');
-      await tester.pump();
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-          '4321');
+      // The PIN exists to authorise writes, so with nothing connected the card
+      // is hidden entirely — no title, no field, no save button.
+      expect(find.text('CONTROL PIN'), findsNothing,
+          reason: 'the control-PIN card must be hidden while no BMS is connected');
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('SAVE'), findsNothing);
 
-      // ...and the old padlock affordance is gone.
-      expect(find.byIcon(Icons.lock_outline_rounded), findsNothing);
-      expect(find.byIcon(Icons.lock_open_rounded), findsNothing);
-
-      // Saving is reachable directly; empty input fails validation (a snack
-      // bar), never a PIN prompt.
-      await tester.enterText(find.byType(TextField), '');
-      await tester.tap(find.text('SAVE'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(AuthPinDialog), findsNothing);
-      expect(find.text('PIN must be at least 4 characters.'), findsOneWidget);
+      // The rest of app settings is still fully browsable.
+      expect(find.text('APPEARANCE THEME'), findsOneWidget);
+      expect(find.text('DARK'), findsOneWidget);
     });
 
     testWidgets('Control: no BMS means no prompt, no switches, disabled unlock',
@@ -167,7 +158,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 80));
       }
 
-      expect(find.text('CONTROL PIN'), findsOneWidget);
+      // No BMS on a fresh install, so the control-PIN card is hidden.
+      expect(find.text('CONTROL PIN'), findsNothing);
+      expect(find.text('APPEARANCE THEME'), findsOneWidget);
       expect(find.byType(AuthPinDialog), findsNothing,
           reason: 'opening app settings must not prompt for the control PIN');
     });
@@ -263,6 +256,65 @@ void main() {
       await tester.pump(const Duration(milliseconds: 150));
       expect(find.byType(AuthPinDialog), findsOneWidget);
       expect(find.text('Unlock Parameter Editing'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Settings: the control-PIN card shows while connected and saving never prompts',
+        (tester) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_wrap(const SettingsScreen()));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Connected: the card is present and the field is editable with no
+      // unlock step — changing the app's own PIN is a preference, not a write.
+      expect(find.text('CONTROL PIN'), findsOneWidget);
+      final field = find.byType(TextField);
+      expect(field, findsOneWidget);
+      expect(tester.widget<TextField>(field).enabled, isNot(false));
+
+      await tester.enterText(field, '4321');
+      await tester.pump();
+      expect(tester.widget<TextField>(field).controller!.text, '4321');
+
+      await tester.tap(find.text('SAVE'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AuthPinDialog), findsNothing,
+          reason: 'saving the app PIN must not ask for the control PIN');
+      expect(find.text('Control PIN updated.'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Settings: the card hides on disconnect and no stale PIN survives',
+        (tester) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_wrap(const SettingsScreen()));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('CONTROL PIN'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '4321');
+      await tester.pump();
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          '4321');
+
+      // Disconnect while the screen is open: the card goes away with no manual
+      // refresh...
+      BleBmsService().debugSetConnectionState(isConnected: false);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('CONTROL PIN'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+
+      // ...and reconnecting does not resurface the half-typed value.
+      BleBmsService().debugSetConnectionState(isConnected: true);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('CONTROL PIN'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty);
     });
   });
 }
