@@ -67,6 +67,9 @@ echo "$AAB_SHA  $AAB_NAME" > "${AAB_NAME}.sha256"
 echo "APK: $APK_NAME ($(stat -c%s "$APK") bytes)"
 echo "AAB: $AAB_NAME ($(stat -c%s "$AAB") bytes)"
 
+echo "==> Verifying 16 KB page-size alignment (required by Google Play)"
+python3 "$(cd ../.. && pwd)/scripts/check-16kb-alignment.py" "$AAB"
+
 echo "==> Extracting Play Store release notes (skipped if no changelog entry)"
 WHATS_NEW=""
 if [[ -f scripts/extract_changelog.py ]]; then
