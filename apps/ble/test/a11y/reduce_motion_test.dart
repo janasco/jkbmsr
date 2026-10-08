@@ -68,4 +68,36 @@ void main() {
           'would pass for a widget that renders nothing.',
     );
   });
+
+  testWidgets('ScanRadar does not sweep when the OS disables animations',
+      (tester) async {
+    _setDisableAnimations(tester, true);
+
+    await tester.pumpWidget(_wrap(const ScanRadar(color: Color(0xFF10B981))));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      tester.binding.hasScheduledFrame,
+      isFalse,
+      reason: 'ScanRadar kept scheduling frames with disableAnimations on — '
+          'its repeat() is not gated on reduced motion.',
+    );
+  });
+
+  testWidgets('positive control: ScanRadar DOES sweep when animations are allowed',
+      (tester) async {
+    _setDisableAnimations(tester, false);
+
+    await tester.pumpWidget(_wrap(const ScanRadar(color: Color(0xFF10B981))));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      tester.binding.hasScheduledFrame,
+      isTrue,
+      reason: 'The control must animate, or the reduced-motion assertion above '
+          'would pass for a widget that renders nothing.',
+    );
+  });
 }

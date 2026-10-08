@@ -79,7 +79,7 @@ void main() {
       await expectTapTargetsAtLeast(tester, minSize: 48, where: 'Drawer');
     });
 
-    testWidgets('app header (menu, Bluetooth pill, overflow) exposes >=48dp targets', (tester) async {
+    testWidgets('app header (menu, Bluetooth pill) exposes >=48dp targets', (tester) async {
       _setSize(tester, const Size(400, 800));
 
       // Mounts the real app (with the no-op BLE platform from setUp), which

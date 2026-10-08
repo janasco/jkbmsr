@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../models/bms_models.dart';
+import '../services/ble_service.dart';
 import '../services/security_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/motion_kit.dart';
@@ -13,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _themeService = ThemeService();
   final _security = SecurityService();
+  final _bleService = BleBmsService();
 
   // Tracks the in-flight save of the control PIN so the button can show a
   // spinner. The PIN field itself is always editable: changing the app's own
@@ -25,8 +30,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final _newPinController = TextEditingController();
 
+  // Last observed connection state, so a disconnect can be told apart from any
+  // other status update and the half-typed PIN dropped exactly once.
+  StreamSubscription<BmsStatus>? _statusSub;
+  bool _wasConnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasConnected = _bleService.isConnected;
+    _statusSub = _bleService.statusStream.listen((_) {
+      final connected = _bleService.isConnected;
+      if (_wasConnected && !connected) {
+        // The PIN card hides on disconnect; clear any unsaved value so it can
+        // never reappear on screen on a later connection.
+        _newPinController.clear();
+      }
+      _wasConnected = connected;
+    });
+  }
+
   @override
   void dispose() {
+    _statusSub?.cancel();
     _newPinController.dispose();
     super.dispose();
   }
@@ -129,55 +155,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               ),
-              const SizedBox(height: 14),
-
               // CONTROL PIN — an app-local gate on sending commands, not an
               // account. It is intentionally NOT required to view or change
               // any app preference: only a write to a connected BMS verifies
               // it (see ControlScreen / BmsParametersScreen).
-              TileEntrance(
-                delayIndex: 1,
-                child: _buildSettingsGroup(
-                context: context,
-                title: 'Control PIN',
-                icon: Icons.password_rounded,
-                iconColor: const Color(0xFFF59E0B),
-                children: [
-                  const Text(
-                    'Authorises control commands and parameter writes to a '
-                    'connected BMS. It never blocks viewing or app settings.',
-                    style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.35),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _newPinController,
-                          obscureText: true,
-                          keyboardType: TextInputType.number,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary),
-                          decoration: InputDecoration(
-                            hintText: 'New PIN (min. 4 digits)',
-                            hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            filled: true,
-                            fillColor: nestedBg,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
+              //
+              // Shown only while a BMS is connected: the PIN exists to
+              // authorise writes, so with nothing connected the card is pure
+              // noise. Visibility tracks the same connection state the Control
+              // tab uses (BleBmsService.isConnected), rebuilt off the status
+              // stream, so it reacts to connect/disconnect with no refresh.
+              StreamBuilder<BmsStatus>(
+                stream: _bleService.statusStream,
+                initialData: _bleService.currentStatus,
+                builder: (context, snapshot) {
+                  if (!_bleService.isConnected) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: TileEntrance(
+                      delayIndex: 1,
+                      child: _buildSettingsGroup(
+                        context: context,
+                        title: 'Control PIN',
+                        icon: Icons.password_rounded,
+                        iconColor: const Color(0xFFF59E0B),
+                        children: [
+                          const Text(
+                            'Authorises control commands and parameter writes to a '
+                            'connected BMS. It never blocks viewing or app settings.',
+                            style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.35),
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _newPinController,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary),
+                                  decoration: InputDecoration(
+                                    hintText: 'New PIN (min. 4 digits)',
+                                    hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    filled: true,
+                                    fillColor: nestedBg,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: borderColor),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSavePinButton(),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      _buildSavePinButton(),
-                    ],
-                  ),
-                ],
+                    ),
+                  );
+                },
               ),
-              ),
-              const SizedBox(height: 14),
 
               // BMS hardware configuration (cell count, capacity, balance
               // and protection thresholds) lives in the Controls tab

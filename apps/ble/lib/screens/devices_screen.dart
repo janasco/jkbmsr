@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
 import '../services/ble_service.dart';
@@ -15,7 +17,6 @@ class DevicesScreen extends StatefulWidget {
 
 class _DevicesScreenState extends State<DevicesScreen> {
   final _bleService = BleBmsService();
-  bool _isScanning = false;
 
   @override
   void initState() {
@@ -23,15 +24,29 @@ class _DevicesScreenState extends State<DevicesScreen> {
     _triggerScan();
   }
 
-  void _triggerScan() async {
-    if (_isScanning) return;
-    setState(() => _isScanning = true);
-    await _bleService.startBleScan();
-    if (mounted) setState(() => _isScanning = false);
+  /// Starts a scan — or restarts one that is already running. Deliberately not
+  /// guarded on the current scan state: tapping while a scan is live is a
+  /// manual reload, and it is safe because FlutterBluePlus stops the in-flight
+  /// scan before opening the new window and the service resets its
+  /// discovered-device map on every call.
+  void _triggerScan() {
+    unawaited(_bleService.startBleScan());
   }
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild the scanner whenever the plugin's real scan state changes, so the
+    // animation and the (re)start control always reflect a scan that is
+    // actually running (startBleScan returns as soon as the scan has started).
+    return StreamBuilder<bool>(
+      stream: _bleService.scanStateStream,
+      initialData: _bleService.isScanning,
+      builder: (context, snapshot) =>
+          _buildScannedBody(context, snapshot.data ?? false),
+    );
+  }
+
+  Widget _buildScannedBody(BuildContext context, bool isScanning) {
     final connectedDev = _bleService.connectedDevice;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF131A20) : const Color(0xFFFFFFFF);
@@ -65,8 +80,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -79,7 +94,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       ),
                       // Live radar sweep while a scan is running; static
                       // glyph when idle.
-                      child: _isScanning
+                      child: isScanning
                           ? const Padding(
                               padding: EdgeInsets.all(3),
                               child: ScanRadar(size: 34, color: Color(0xFF0284C7)),
@@ -87,54 +102,62 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           : const Icon(Icons.radar_rounded, color: Color(0xFF0284C7), size: 20),
                     ),
                     const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'DEVICE SCANNER',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.8,
-                            color: textPrimary,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'DEVICE SCANNER',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                              color: textPrimary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        _isScanning
-                            ? const AnimatedDots(
-                                base: 'Scanning for nearby JK-BMS',
-                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                              )
-                            : const Text('Ready to discover balancers', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                      ],
+                          const SizedBox(height: 2),
+                          isScanning
+                              ? const AnimatedDots(
+                                  base: 'Scanning for nearby JK-BMS',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                )
+                              : const Text('Ready to discover balancers', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: const Color(0xFF090D10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.all(10),
-                    minimumSize: const Size(40, 40),
-                  ),
-                  onPressed: _isScanning ? null : _triggerScan,
-                  child: _isScanning
-                      ? Semantics(
-                          label: 'Scanning for devices',
-                          child: const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                          ),
-                        )
-                      : const Icon(
-                          Icons.refresh_rounded,
+                const SizedBox(height: 14),
+                // Always tappable: while a scan runs this means "start the scan
+                // window again" (a manual reload), not a disabled spinner.
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF38BDF8),
+                      foregroundColor: const Color(0xFF090D10),
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _triggerScan,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isScanning ? Icons.refresh_rounded : Icons.bluetooth_searching_rounded,
                           size: 18,
-                          color: Colors.black,
-                          // Icon-only button: without this it announces nothing.
-                          semanticLabel: 'Scan for devices',
+                          color: const Color(0xFF090D10),
                         ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isScanning ? 'SCAN AGAIN' : 'SCAN FOR DEVICES',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -170,7 +193,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        _isScanning
+                        isScanning
                             ? const ScanRadar(size: 64, color: Color(0xFF10B981))
                             : const Icon(
                                 Icons.bluetooth_disabled_rounded,
@@ -178,7 +201,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                                 size: 40,
                               ),
                         const SizedBox(height: 12),
-                        _isScanning
+                        isScanning
                             ? AnimatedDots(
                                 base: 'Scanning 2.4GHz Spectrum',
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
