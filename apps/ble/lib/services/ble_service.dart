@@ -27,6 +27,21 @@ class BleBmsService {
   BmsSettingsSnapshot _currentSettings = BmsSettingsSnapshot.empty(BmsBrand.unknown);
   BmsSettingsSnapshot get currentSettings => _currentSettings;
 
+  // Hardware identity decoded from the JK02 device-info frame (type 0x03).
+  // Emits null on disconnect so the UI can fall back to its honest empty
+  // state rather than showing a stale serial/uptime from the last session.
+  final _deviceInfoController = StreamController<BmsModelInfo?>.broadcast();
+  Stream<BmsModelInfo?> get deviceInfoStream => _deviceInfoController.stream;
+  BmsModelInfo? _currentDeviceInfo;
+  BmsModelInfo? get currentDeviceInfo => _currentDeviceInfo;
+
+  // The BMS's own on-board logbook (JK02 frame type 0x05, requested with
+  // command 0xA1). Null until the user requests it and it arrives.
+  final _logbookController = StreamController<Jk02Logbook?>.broadcast();
+  Stream<Jk02Logbook?> get logbookStream => _logbookController.stream;
+  Jk02Logbook? _currentLogbook;
+  Jk02Logbook? get currentLogbook => _currentLogbook;
+
   final _devicesController = StreamController<List<BleDeviceInfo>>.broadcast();
   Stream<List<BleDeviceInfo>> get devicesStream => _devicesController.stream;
 
@@ -666,6 +681,14 @@ class BleBmsService {
   // request/write entry points used by the settings editor UI.
   //--------------------------------------------------------------------
 
+  /// Requests the BMS's on-board logbook (JK02 command 0xA1, frame type
+  /// 0x05). This is the only brand with a verified BMS-side history; every
+  /// other brand returns false and the UI shows an honest empty state.
+  Future<bool> requestLogbook() {
+    if (_connectedBrand != BmsBrand.jkbms) return Future.value(false);
+    return _writeCommand(BmsProtocolHelper.buildJk02LogbookRequest());
+  }
+
   /// Requests a fresh settings dump from the connected BMS. Brands without
   /// a verified settings-frame read are no-ops (they stay editor-disabled).
   void requestSettings() {
@@ -921,6 +944,16 @@ class BleBmsService {
         _jkIs32s = is32s;
         _jkDeviceInfoReceived = true;
         _addLog("JK-BMS device info received (${is32s ? '32-cell' : '24-cell'} register layout).");
+        // Decode the identifying fields (model / hardware / software / serial
+        // / manufacturing date / uptime / power-on count) for the
+        // device-information panel. Same frame, separate from the layout
+        // probe above — a null here must not block the handshake, so it is
+        // not treated as a parse failure.
+        final info = BmsProtocolHelper.parseJk02DeviceInfoFrame(_jkFrameBuffer);
+        if (info != null) {
+          _currentDeviceInfo = info;
+          _deviceInfoController.add(info);
+        }
         // syssi/esphome-jk-bms sends exactly one cell-info (0x96) request
         // after the device-info handshake; the BMS then auto-streams cell
         // frames on its own. This single request is what starts the silent
@@ -965,6 +998,18 @@ class BleBmsService {
       final settings = BmsProtocolHelper.parseJk02SettingsFrame(_jkFrameBuffer);
       if (settings != null) {
         _ingestJkSettings(settings);
+      }
+    } else if (frameType == 0x05) {
+      // Logbook — the BMS's own event history, answered only to an explicit
+      // 0xA1 request (see requestLogbook()). It is not part of the normal
+      // telemetry stream.
+      final logbook = BmsProtocolHelper.parseJk02LogbookFrame(_jkFrameBuffer);
+      if (logbook != null) {
+        _currentLogbook = logbook;
+        _logbookController.add(logbook);
+        _addLog("JK-BMS logbook received (${logbook.logCount} entr${logbook.logCount == 1 ? 'y' : 'ies'}).");
+      } else {
+        _addLog("JK02 logbook frame CRC/parse check failed.");
       }
     }
     _jkFrameBuffer.clear();
@@ -1304,6 +1349,10 @@ class BleBmsService {
     _hasLiveData = false;
     _currentSettings = BmsSettingsSnapshot.empty(BmsBrand.unknown);
     _settingsController.add(_currentSettings);
+    _currentDeviceInfo = null;
+    _deviceInfoController.add(null);
+    _currentLogbook = null;
+    _logbookController.add(null);
     _addLog("Disconnected from BMS hardware.");
 
     _currentStatus = BmsStatus(

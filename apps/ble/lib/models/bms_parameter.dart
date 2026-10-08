@@ -164,10 +164,26 @@ class BmsSettingsSnapshot {
 
 /// Identifying details of the connected BMS hardware, decoded from the
 /// JK02 device-info frame (frame type 0x03) by [BmsProtocolHelper].
+///
+/// Every field below is decoded from the frame at the offset documented by
+/// syssi/esphome-jk-bms `decode_device_info_` (jk_bms_ble.cpp:1583). The
+/// device passcode / setup passcode / user-data fields the frame also
+/// carries are deliberately NOT decoded or surfaced — they are credentials,
+/// not identity.
 class BmsModelInfo {
   final String modelName;
   final String hardwareVersion;
   final String softwareVersion;
+
+  /// Serial number (frame offset 86, 11 bytes). Empty when the frame carries
+  /// none. Shown as "Serial Number" by the OEM app's device-info screen.
+  final String serialNumber;
+
+  /// Manufacturing / first power-on date as `YYYY-MM-DD` (frame offset 78,
+  /// 6 ASCII bytes `YYMMDD`, prefixed with "20" exactly as syssi does), or
+  /// empty when the field is zero-filled (syssi: `data[78] == '\0'`).
+  final String manufacturingDate;
+
   final int uptimeSeconds;
   final int powerOnCount;
 
@@ -175,6 +191,8 @@ class BmsModelInfo {
     required this.modelName,
     required this.hardwareVersion,
     required this.softwareVersion,
+    this.serialNumber = '',
+    this.manufacturingDate = '',
     required this.uptimeSeconds,
     required this.powerOnCount,
   });

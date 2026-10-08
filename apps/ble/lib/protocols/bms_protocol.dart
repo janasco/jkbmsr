@@ -130,6 +130,7 @@ class BmsProtocolHelper {
 
   static const int jk02CommandCellInfo = 0x96; // -> response frame type 0x02
   static const int jk02CommandDeviceInfo = 0x97; // -> response frame type 0x03
+  static const int jk02CommandLogbook = 0xA1; // -> response frame type 0x05
 
   /// JK02 holding-register addresses for each switch. Charge/discharge/
   /// balancer (0x1D/0x1E/0x1F) are identical across the JK02_24S and
@@ -231,7 +232,12 @@ class BmsProtocolHelper {
   /// response into a [BmsModelInfo]. Verified against syssi's
   /// `decode_device_info_` (jk_bms_ble.cpp:1583) — offsets 6 (model, 16B),
   /// 22 (hardware version, 8B), 30 (software version, 8B), 38 (uptime u32),
-  /// 42 (power-on count u32). Null on any structural/CRC failure.
+  /// 42 (power-on count u32), 78 (manufacturing date, 6B YYMMDD), 86 (serial
+  /// number, 11B). The offsets are independently confirmed by the OEM JK-BMS
+  /// Android app's device-info screen (AboutDialogFragment), which reads the
+  /// same positions for Vendor ID / Hardware Version / Software Version /
+  /// Power-on Times / Total Time / First On Date / Serial Number. Null on any
+  /// structural/CRC failure.
   static BmsModelInfo? parseJk02DeviceInfoFrame(List<int> data) {
     if (data.length < _jk02FrameSize) return null;
     if (data[0] != 0x55 || data[1] != 0xAA || data[2] != 0xEB || data[3] != 0x90) return null;
@@ -241,13 +247,329 @@ class BmsProtocolHelper {
     String text(List<int> slice) =>
         String.fromCharCodes(slice.takeWhile((b) => b != 0));
 
+    // Manufacturing date: 6 ASCII bytes YYMMDD, prefixed with "20" exactly
+    // as syssi does; empty when the first byte is NUL (syssi:
+    // `data[78] == '\0' ? "" : "20" + …`). Guarded so a malformed value
+    // cannot throw — an absent date must degrade to "unknown", not crash.
+    String manufacturingDate = '';
+    if (data[78] != 0) {
+      final raw = text(data.sublist(78, 84));
+      if (raw.length == 6) {
+        manufacturingDate = '20${raw.substring(0, 2)}-${raw.substring(2, 4)}-${raw.substring(4, 6)}';
+      } else {
+        manufacturingDate = '20$raw';
+      }
+    }
+
     return BmsModelInfo(
       modelName: text(data.sublist(6, 22)),
       hardwareVersion: text(data.sublist(22, 30)),
       softwareVersion: text(data.sublist(30, 38)),
+      serialNumber: text(data.sublist(86, 97)),
+      manufacturingDate: manufacturingDate,
       uptimeSeconds: _u32(data, 38),
       powerOnCount: _u32(data, 42),
     );
+  }
+
+  /// Logbook event-code names, transcribed from syssi/esphome-jk-bms
+  /// `jk_bms_ble.cpp` LOGBOOK_CODES (256 entries, index = wire code).
+  static const List<String> jk02LogbookCodes = [
+    '',
+    'Boot',
+    'Shutdown',
+    'APP close charge',
+    'APP open charge',
+    'APP close discharge',
+    'APP open discharge',
+    'Remote close charge',
+    'Remote open charge',
+    'Remote close discharge',
+    'Remote open discharge',
+    'MOS over temperature protection',
+    'MOS over-temperature protection is released',
+    'Abnormal current sensor',
+    'Abnormal release of current sensor',
+    'Abnormal coprocessor communication',
+    'Abnormal cancellation of coprocessor communication',
+    'Cell overcharge protection',
+    'Cell overcharge protection is released',
+    'Battery overcharge protection',
+    'Battery overcharge protection is released',
+    'Charge overcurrent protection',
+    'Charge overcurrent protection is released',
+    'Charge short circuit protection',
+    'Charge short circuit protection is released',
+    'Charge over temperature protection',
+    'Charge over temperature protection is released',
+    'Charge low temperature protection',
+    'Charge low temperature protection is released',
+    'Cell undervoltage protection',
+    'Cell undervoltage protection is released',
+    'Battery undervoltage protection',
+    'Battery undervoltage protection is released',
+    'Discharge overcurrent protection',
+    'Discharge overcurrent protection is released',
+    'Discharge short circuit protection',
+    'Discharge short circuit protection released',
+    'Discharge over temperature protection',
+    'Discharge over-temperature protection is released',
+    'Reset Watch-Dog',
+    'Discharge level 2 short circuit protection',
+    'Manually enable the emergency mode',
+    'Manually turn off the emergency mode',
+    'Turn off the emergency mode automatically',
+    'APP to turn it off',
+    'Button to turn it off',
+    'Discharge On Failed',
+    'RS485 power off',
+    'CAN charge off',
+    'CAN charge on',
+    'CAN discharge off',
+    'CAN discharge on',
+    'RS485 charge off',
+    'RS485 charge on',
+    'RS485 discharge off',
+    'RS485 discharge on',
+    'Enter sleep',
+    'Charge MOS abnormal',
+    'Discharge MOS abnormal',
+    'Time calibration',
+    'Cells Count Incorrect',
+    'Button Emergency On',
+    'Button Emergency Off',
+    'Button Forced Heating',
+    'Discharge OCP II',
+    'Discharge OCP III',
+    'SCP Release Failed',
+    'Factory setting LION',
+    'Factory setting LFP',
+    'Factory setting LTO',
+    'Remote Emergency On',
+    'Remote Emergency Off',
+    'Discharge under temperature protection',
+    'Discharge under temperature protection Release',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    'Cell 01 over charge protection',
+    'Cell 02 over charge protection',
+    'Cell 03 over charge protection',
+    'Cell 04 over charge protection',
+    'Cell 05 over charge protection',
+    'Cell 06 over charge protection',
+    'Cell 07 over charge protection',
+    'Cell 08 over charge protection',
+    'Cell 09 over charge protection',
+    'Cell 10 over charge protection',
+    'Cell 11 over charge protection',
+    'Cell 12 over charge protection',
+    'Cell 13 over charge protection',
+    'Cell 14 over charge protection',
+    'Cell 15 over charge protection',
+    'Cell 16 over charge protection',
+    'Cell 17 over charge protection',
+    'Cell 18 over charge protection',
+    'Cell 19 over charge protection',
+    'Cell 20 over charge protection',
+    'Cell 21 over charge protection',
+    'Cell 22 over charge protection',
+    'Cell 23 over charge protection',
+    'Cell 24 over charge protection',
+    'Cell 25 over charge protection',
+    'Cell 26 over charge protection',
+    'Cell 27 over charge protection',
+    'Cell 28 over charge protection',
+    'Cell 29 over charge protection',
+    'Cell 30 over charge protection',
+    'Cell 31 over charge protection',
+    'Cell 32 over charge protection',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    'Cell 01 over discharge protection',
+    'Cell 02 over discharge protection',
+    'Cell 03 over discharge protection',
+    'Cell 04 over discharge protection',
+    'Cell 05 over discharge protection',
+    'Cell 06 over discharge protection',
+    'Cell 07 over discharge protection',
+    'Cell 08 over discharge protection',
+    'Cell 09 over discharge protection',
+    'Cell 10 over discharge protection',
+    'Cell 11 over discharge protection',
+    'Cell 12 over discharge protection',
+    'Cell 13 over discharge protection',
+    'Cell 14 over discharge protection',
+    'Cell 15 over discharge protection',
+    'Cell 16 over discharge protection',
+    'Cell 17 over discharge protection',
+    'Cell 18 over discharge protection',
+    'Cell 19 over discharge protection',
+    'Cell 20 over discharge protection',
+    'Cell 21 over discharge protection',
+    'Cell 22 over discharge protection',
+    'Cell 23 over discharge protection',
+    'Cell 24 over discharge protection',
+    'Cell 25 over discharge protection',
+    'Cell 26 over discharge protection',
+    'Cell 27 over discharge protection',
+    'Cell 28 over discharge protection',
+    'Cell 29 over discharge protection',
+    'Cell 30 over discharge protection',
+    'Cell 31 over discharge protection',
+    'Cell 32 over discharge protection',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ];
+
+  /// Builds the "retrieve logbook" command (`AA 55 90 EB A1 …`). Verified
+  /// against syssi's `CONF_RETRIEVE_LOGBOOK` button (button/__init__.py:28,
+  /// register 0xA1) and independently confirmed by the OEM JK-BMS Android
+  /// app, whose "System Log" screen sends register 161 (0xA1) before it
+  /// decodes the 0x05 response.
+  static Uint8List buildJk02LogbookRequest() =>
+      buildJk02Command(jk02CommandLogbook);
+
+  /// Name for a logbook event code, or '' when the code is undocumented.
+  static String jk02LogbookCodeName(int code) =>
+      (code >= 0 && code < jk02LogbookCodes.length) ? jk02LogbookCodes[code] : '';
+
+  /// Parses a complete 300-byte JK02 "logbook" (frame type 0x05) response.
+  /// Verified against syssi's `decode_logbook_` (jk_bms_ble.cpp:1550): the
+  /// log count is a u32 LE at offset 6, then up to 50 entries from offset 11,
+  /// each 5 bytes — a u32 LE seconds value followed by one event-code byte.
+  /// Null on any structural/CRC failure.
+  static Jk02Logbook? parseJk02LogbookFrame(List<int> data) {
+    if (data.length < _jk02FrameSize) return null;
+    if (data[0] != 0x55 || data[1] != 0xAA || data[2] != 0xEB || data[3] != 0x90) return null;
+    if (data[4] != 0x05) return null;
+    if (!isCompleteJk02Frame(data)) return null;
+
+    final logCount = _u32(data, 6);
+    final capped = logCount > 50 ? 50 : logCount;
+    final entries = <Jk02LogbookEntry>[];
+    for (int i = 0; i < capped; i++) {
+      final off = 11 + i * 5;
+      if (off + 5 > data.length) break;
+      final code = data[off + 4];
+      entries.add(Jk02LogbookEntry(
+        code: code,
+        name: jk02LogbookCodeName(code),
+        seconds: _u32(data, off),
+      ));
+    }
+    return Jk02Logbook(logCount: logCount, entries: entries, timestamp: DateTime.now());
   }
 
   /// Parses a complete 300-byte JK02 "settings" (frame type 0x01) response
