@@ -411,6 +411,50 @@ class BmsStatus {
   bool get isBalancingActive => balanceEnabled && (balanceCurrentA > 0.05 || cells.any((c) => c.isBalancing));
 }
 
+/// One event recorded in the BMS's own on-board logbook (JK02 frame type
+/// 0x05). Decoded from a real captured frame; see [Jk02Logbook].
+class Jk02LogbookEntry {
+  /// Event code exactly as sent on the wire (the final byte of the 5-byte
+  /// entry).
+  final int code;
+
+  /// Human-readable name for [code] from syssi/esphome-jk-bms's
+  /// `LOGBOOK_CODES` table. Empty when the code is not a documented event.
+  final String name;
+
+  /// The entry's timestamp value in seconds. The BMS does not send an
+  /// absolute wall-clock time — syssi formats this same value as
+  /// `DdHHhMMmSSs`, so it is exposed as a relative elapsed offset rather
+  /// than being misrepresented as a calendar date.
+  final int seconds;
+
+  const Jk02LogbookEntry({
+    required this.code,
+    required this.name,
+    required this.seconds,
+  });
+}
+
+/// The BMS's on-board event log ("logbook"), decoded from a JK02 logbook
+/// frame (type 0x05). This is genuine BMS-side history, not app-side
+/// accumulation: it is requested from the hardware with command `0xA1`
+/// (syssi's `retrieve_logbook` button) and answered with frame type 0x05.
+class Jk02Logbook {
+  /// Number of log entries the BMS reports at frame offset 6 (u32 LE).
+  final int logCount;
+
+  /// Decoded entries in the order the BMS sent them.
+  final List<Jk02LogbookEntry> entries;
+
+  final DateTime timestamp;
+
+  const Jk02Logbook({
+    required this.logCount,
+    required this.entries,
+    required this.timestamp,
+  });
+}
+
 class BleDeviceInfo {
   final String id;
   final String name;

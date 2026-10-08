@@ -10,6 +10,14 @@ release notes and copied into Google Play Console's "What's new in this
 version" field, which has a hard 500-character limit per release — keep each
 version's bullets within that, combined.
 
+## v4.17.25+45
+
+- New **Device information** panel for JK-BMS: model, hardware and firmware
+  revision, serial number, manufacturing date, power-on count and total run
+  time — read straight from the battery's own hardware.
+- New **Event history** panel: fetch the battery's built-in event log on
+  demand to see what tripped, when, and when it cleared.
+
 ## v4.17.24+44
 
 - The app is now named JK BMS Bluetooth. Same app, same data — only the name on

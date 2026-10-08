@@ -20,6 +20,8 @@ Built as an open alternative to proprietary vendor tools, **JK BMS Bluetooth** c
   - Full JK02 protocol: live telemetry (cell voltages, resistance, temps, current, SOC, cycle data) and switch control (charge/discharge/balancer plus extended registers).
   - The Devices scanner shows a "POSSIBLE BMS" tag for hardware it can't name-match but whose Bluetooth service looks like a known BMS protocol, instead of hiding it.
 
+- **Device Information & Event History** — the connected JK-BMS's hardware identity (model, hardware and firmware revision, serial number, manufacturing date, power-on count, total run time) and its own on-board event log ("logbook"), read directly from the battery over BLE. The event log is fetched on demand, never fabricated, and never replaces live telemetry.
+
 - **Real-Time Battery Telemetry**:
   - State of Charge (SOC %), Total Pack Voltage (V), Live Current (A), and Power (W).
   - Per-cell voltage grid with wire resistance (mΩ) where the brand's protocol reports it, min/max indicators, and delta (mV) highlighting.

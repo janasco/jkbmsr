@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
+import '../models/bms_parameter.dart';
 import '../services/ble_service.dart';
 import '../widgets/motion_kit.dart';
 import '../widgets/battery_hero_card.dart';
@@ -7,6 +8,8 @@ import '../widgets/brand_hero_strip.dart';
 import '../widgets/quick_toggle_cards.dart';
 import '../widgets/alerts_section.dart';
 import '../widgets/bms_info_section.dart';
+import '../widgets/bms_device_info_section.dart';
+import '../widgets/bms_logbook_section.dart';
 import '../widgets/battery_metrics_grid.dart';
 import '../widgets/temperatures_section.dart';
 import '../widgets/cell_voltages_section.dart';
@@ -118,6 +121,24 @@ class StatusScreen extends StatelessWidget {
                   // BATTERY / BMS INFORMATION
                   BmsInfoSection(status: status, isConnected: hasLiveData),
                   const SizedBox(height: 14),
+
+                  // HARDWARE IDENTITY + ON-BOARD EVENT LOG. Both are JK-BMS
+                  // only: the device-info (0x03) and logbook (0x05) frames
+                  // exist only in the JK02 protocol, so no other brand shows
+                  // a panel of dashes it can never fill.
+                  if (brand == BmsBrand.jkbms) ...[
+                    StreamBuilder<BmsModelInfo?>(
+                      stream: bleService.deviceInfoStream,
+                      initialData: bleService.currentDeviceInfo,
+                      builder: (context, infoSnap) => BmsDeviceInfoSection(
+                        info: infoSnap.data,
+                        isConnected: hasLiveData,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    BmsLogbookSection(isConnected: hasLiveData),
+                    const SizedBox(height: 14),
+                  ],
 
                   // EXPANDABLE LIVE BLE DIAGNOSTICS STREAM
                   DiagnosticsExpandable(rawLogs: logs),
