@@ -188,6 +188,11 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
           initialData: _bleService.currentSettings,
           builder: (context, snapshot) {
             final settings = snapshot.data ?? _bleService.currentSettings;
+            // Content load, not an action: the schema is known immediately,
+            // but the values arrive with the settings frame. Until then each
+            // field shows a skeleton bar in place of its value, so the form is
+            // a faithful placeholder rather than a wall of "—".
+            final loading = settings.values.isEmpty;
 
             if (brand == BmsBrand.unknown || params == null || params.isEmpty) {
               return _buildUnsupported(brand, textPrimary, cardBg, borderColor);
@@ -279,6 +284,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
                               nestedBg,
                               borderColor,
                               divider: i < groups[group]!.length - 1,
+                              loading: loading,
                             ),
                         ],
                       ),
@@ -329,6 +335,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
     Color nestedBg,
     Color borderColor, {
     required bool divider,
+    required bool loading,
   }) {
     final value = settings.valueFor(p);
     final isUnlocked = _unlockedIds.contains(p.id);
@@ -352,15 +359,21 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: textPrimary),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  _formatParameterValue(p, value),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    color: value == null ? const Color(0xFF64748B) : const Color(0xFF10B981),
+                if (loading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 1),
+                    child: JkSkeleton(width: 64, height: 12, borderRadius: 4),
+                  )
+                else
+                  Text(
+                    _formatParameterValue(p, value),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                      color: value == null ? const Color(0xFF64748B) : const Color(0xFF10B981),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

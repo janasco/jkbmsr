@@ -183,7 +183,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
               final devices = snapshot.data ?? [];
 
               if (devices.isEmpty) {
-                return Container(
+                // While the scan is live but has found nothing yet, show a few
+                // placeholder device cards beneath the radar. They mirror a
+                // real result card's height so the first device to appear does
+                // not shift the layout.
+                final emptyState = Container(
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
                     color: cardBg,
@@ -216,6 +220,23 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       ],
                     ),
                   ),
+                );
+
+                if (!isScanning) return emptyState;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    emptyState,
+                    const SizedBox(height: 10),
+                    for (int i = 0; i < 3; i++) ...[
+                      _SkeletonDeviceCard(
+                        cardBg: cardBg,
+                        borderColor: borderColor,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
                 );
               }
 
@@ -474,6 +495,47 @@ class _EntranceCard extends StatelessWidget {
           offset: Offset(0, 14 * (1 - t)),
           child: child,
         ),
+      ),
+    );
+  }
+}
+
+/// Placeholder for a scan-result card while a scan runs and nothing has been
+/// found yet. Same radius, padding, leading icon box, line heights and trailing
+/// control box as a real result card, so the first device to appear slides into
+/// place without reflowing the list.
+class _SkeletonDeviceCard extends StatelessWidget {
+  final Color cardBg;
+  final Color borderColor;
+
+  const _SkeletonDeviceCard({required this.cardBg, required this.borderColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor),
+      ),
+      child: const Row(
+        children: [
+          JkSkeleton(width: 40, height: 40, borderRadius: 12),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                JkSkeleton(width: 150, height: 13, borderRadius: 4),
+                SizedBox(height: 7),
+                JkSkeleton(width: 96, height: 10, borderRadius: 4),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          JkSkeleton(width: 40, height: 40, borderRadius: 12),
+        ],
       ),
     );
   }

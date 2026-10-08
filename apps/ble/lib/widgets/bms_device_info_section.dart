@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/bms_parameter.dart';
+import 'motion_kit.dart';
 
 /// Hardware-identity card decoded from the JK-BMS device-info frame
 /// (JK02 frame type 0x03). This is a different surface from
@@ -8,9 +9,16 @@ import '../models/bms_parameter.dart';
 /// the *hardware itself* — model, hardware/firmware revision, serial number,
 /// manufacturing date, power-on count and total run time.
 ///
-/// Every value comes straight from [BmsModelInfo]; when nothing has been
-/// decoded yet (or a field is absent from the frame) the row shows "—"
-/// rather than a placeholder that could be mistaken for a real reading.
+/// Every value comes straight from [BmsModelInfo]. The card distinguishes two
+/// different kinds of "no value", deliberately:
+///
+///  * **Still waiting** — connected, but the 0x03 frame has not been decoded
+///    yet (`info == null`). The value column shows pulsing skeleton bars, so a
+///    pending read reads as pending.
+///  * **Not present** — a frame *has* been decoded but this particular field
+///    is absent from it (or the BMS is disconnected). The row shows "—", an
+///    honest statement that there is no value, never a placeholder that could
+///    be mistaken for a real reading.
 class BmsDeviceInfoSection extends StatelessWidget {
   final BmsModelInfo? info;
   final bool isConnected;
@@ -40,6 +48,9 @@ class BmsDeviceInfoSection extends StatelessWidget {
     final textPrimary = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
 
     final i = info;
+    // Pending (connected, frame not decoded yet) vs. not-present (decoded but
+    // this field is absent, or disconnected). See the class doc.
+    final pending = isConnected && i == null;
     final rows = <(String, String)>[
       ('Model', _orDash(i?.modelName)),
       ('Hardware version', _orDash(i?.hardwareVersion)),
@@ -66,11 +77,14 @@ class BmsDeviceInfoSection extends StatelessWidget {
           child: Column(
             children: [
               for (int r = 0; r < rows.length; r++) ...[
-                _InfoRow(
-                  label: rows[r].$1,
-                  value: isConnected ? rows[r].$2 : '—',
-                  textPrimary: textPrimary,
-                ),
+                if (pending)
+                  _SkeletonInfoRow(label: rows[r].$1)
+                else
+                  _InfoRow(
+                    label: rows[r].$1,
+                    value: isConnected ? rows[r].$2 : '—',
+                    textPrimary: textPrimary,
+                  ),
                 if (r != rows.length - 1)
                   Divider(height: 1, thickness: 1, color: borderColor.withValues(alpha: 0.6)),
               ],
@@ -110,6 +124,30 @@ class _InfoRow extends StatelessWidget {
                   fontSize: 12.5, fontWeight: FontWeight.w700, color: textPrimary, fontFamily: 'monospace'),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The pending twin of [_InfoRow]: the same label and row height, with the
+/// value replaced by a skeleton bar. The label stays real so the panel still
+/// reads as "these fields are on their way", not as an empty box.
+class _SkeletonInfoRow extends StatelessWidget {
+  final String label;
+
+  const _SkeletonInfoRow({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12.5, color: BmsDeviceInfoSection._muted)),
+          const SizedBox(width: 12),
+          const JkSkeleton(width: 96, height: 12, borderRadius: 4),
         ],
       ),
     );
