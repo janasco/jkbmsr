@@ -41,7 +41,7 @@ class AboutModal extends StatelessWidget {
                     : 'assets/icon/app_icon_light.png',
                 width: 64,
                 height: 64,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Container(
                   width: 64,
                   height: 64,
