@@ -146,6 +146,7 @@ for required in \
   README.md \
   CHANGELOG.md \
   index.html \
+  404.html \
   firmware/releases.json \
   firmware/hardware-targets.json \
   docs/DOWNLOADS.md \
@@ -229,7 +230,7 @@ if [ "$MODE" = "dry-run" ]; then
   step "plan: package and publish"
   cat <<PLAN
    ..    rm -rf releases/dist
-   ..    cp releases/{index.html,_headers,_redirects} releases/dist/
+   ..    cp releases/{index.html,404.html,_headers,_redirects} releases/dist/
    ..    cp releases/firmware/hardware-targets.json releases/dist/firmware/
    ..    python3  ->  releases/dist/firmware/releases.json  (one slim entry per
           target, built from each firmware/<target>/latest.json)
@@ -250,7 +251,12 @@ else
   rm -rf "$DIST"
   mkdir -p "$DIST"
 
-  cp index.html _headers _redirects "$DIST/"
+  # 404.html is what makes Cloudflare Pages answer an unknown path with a real
+  # 404 status instead of falling back to index.html at 200. Without it, `/`, a
+  # bogus path and a deleted artifact were byte-identical 200s, so a 2xx proved
+  # nothing and the post-cutover audit could not certify this host. Pages serves
+  # 404.html for unmatched routes and does not let it shadow real assets.
+  cp index.html 404.html _headers _redirects "$DIST/"
 
   # Kept verbatim from the workflow, intermediate file and all, so the two
   # implementations can be compared line for line.
