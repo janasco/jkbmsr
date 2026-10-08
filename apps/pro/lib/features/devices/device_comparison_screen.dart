@@ -125,7 +125,7 @@ class _DeviceComparisonScreenState extends State<DeviceComparisonScreen> {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: context.colors.accent))
+          ? _buildComparisonSkeleton()
           : _error != null
               ? JKBMSREmptyState(
                   icon: Icons.error_outline,
@@ -153,6 +153,59 @@ class _DeviceComparisonScreenState extends State<DeviceComparisonScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: _devices.map((item) => _buildDeviceColumn(item)).toList(),
+      ),
+    );
+  }
+
+  // Loading placeholder mirroring the real comparison layout: a horizontally
+  // scrollable row of device-column cards (same 200dp width and spacing as
+  // _buildDeviceColumn) so the content doesn't jump when the fetch lands.
+  // Three columns is the typical comparison size; the loader is scrollable so
+  // it matches the real row rather than clipping on a narrow phone.
+  Widget _buildComparisonSkeleton() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.all(JKBMSRTokens.space16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(3, (_) => _buildDeviceColumnSkeleton()),
+      ),
+    );
+  }
+
+  Widget _buildDeviceColumnSkeleton() {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: JKBMSRTokens.space12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(JKBMSRTokens.space16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Name line + status badge.
+              Row(
+                children: const [
+                  Expanded(child: JKBMSRSkeleton(height: 18)),
+                  SizedBox(width: JKBMSRTokens.space8),
+                  JKBMSRSkeleton(width: 56, height: 20, borderRadius: 999),
+                ],
+              ),
+              const SizedBox(height: JKBMSRTokens.space12),
+              // Four label/value metric blocks (SOC, Voltage, Current, Temp),
+              // each mirroring a _ComparisonMetric.
+              for (var i = 0; i < 4; i++) ...[
+                const JKBMSRSkeleton(width: 48, height: 10),
+                const SizedBox(height: 6),
+                const JKBMSRSkeleton(width: 120, height: 18),
+                const SizedBox(height: JKBMSRTokens.space8),
+              ],
+              const SizedBox(height: JKBMSRTokens.space4),
+              // "View Dashboard" button.
+              const JKBMSRSkeleton(height: 36),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../widgets/shared/design_system/tokens.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
+import '../../widgets/shared/design_system/next_update_countdown.dart';
 import '../../services/api_client.dart';
 import '../../models/device.dart';
 import '../../models/telemetry.dart';
@@ -402,6 +403,23 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                 ],
               ),
               const SizedBox(height: JKBMSRTokens.space16),
+
+              // Live countdown to the gateway's next expected check-in. The
+              // forward-facing half of the same cadence as the "Last update"
+              // line that lives inside each dashboard template. Rendered once
+              // here rather than threaded through all 9 templates so it is
+              // consistent regardless of which template the device uses and
+              // no template has to grow a new required parameter.
+              if (JKBMSRNextUpdateCountdown.shouldShow(
+                secondsUntilNextExpectedCheckIn: _device!.secondsUntilNextExpectedCheckIn,
+                deviceStatus: _device!.status,
+              )) ...[
+                JKBMSRNextUpdateCountdown(
+                  secondsUntilNextExpectedCheckIn: _device!.secondsUntilNextExpectedCheckIn,
+                  deviceStatus: _device!.status,
+                ),
+                const SizedBox(height: JKBMSRTokens.space16),
+              ],
 
               // Only renders when the gateway explicitly reports its BMS link
               // down — the healthy/unknown case contributes nothing, so there
