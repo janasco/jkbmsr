@@ -62,7 +62,19 @@ PUBLIC_URL="https://docs.jkbmsr.com"
 # the result against this project's root-based output would fail on a perfectly
 # healthy deploy — a verification that measures the wrong thing. The
 # `<project>.pages.dev` hostname serves THIS deployment.
-VERIFY_URL="https://jkbmsr-docs.pages.dev"
+#
+# The hostname is the project's Cloudflare-assigned `subdomain`, which is NOT
+# always `<project>.pages.dev`: Cloudflare appends a suffix when the bare name is
+# already taken, and recreating the project can change it. It changed to
+# `jkbmsr-docs-b1p.pages.dev` when the projects were recreated during the
+# 2026-10-08 account cleanup. So the value below is the CURRENT-account subdomain
+# and a fallback only: deploy mode re-derives it from the API (resolve_verify_url)
+# rather than trusting a constant that has already gone stale once. Re-derive it
+# by hand with:
+#   GET /accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/jkbmsr-docs
+#   -> .result.subdomain
+FALLBACK_VERIFY_HOST="jkbmsr-docs-b1p.pages.dev"
+VERIFY_URL="https://$FALLBACK_VERIFY_HOST"
 
 # The VitePress source directory inside the component is itself called `docs`,
 # so the doubled path below is correct, not a typo. The original workflow ran
@@ -109,6 +121,38 @@ warn_if_not_main() {
   dirty=$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null | head -5 || true)
   [ -z "$dirty" ] || warn "working tree has uncommitted changes; you are publishing what is on disk, not what is committed:"
   [ -z "$dirty" ] || printf '%s\n' "$dirty" | sed 's/^/          /'
+  return 0
+}
+
+# Resolve the Pages project's own hostname from the Cloudflare API. See the
+# FALLBACK_VERIFY_HOST note above for why a constant cannot be trusted. Only
+# called in deploy mode, where preflight has already required both credentials.
+# Returns 1 (without printing) on any failure so the caller can fall back.
+resolve_verify_url() {
+  local host=""
+  [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || return 1
+  host=$(
+    CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID" \
+    CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" \
+    python3 - "$PAGES_PROJECT" <<'PY' 2>/dev/null || true
+import json, os, sys, urllib.request
+req = urllib.request.Request(
+    "https://api.cloudflare.com/client/v4/accounts/%s/pages/projects/%s"
+    % (os.environ["CLOUDFLARE_ACCOUNT_ID"], sys.argv[1]),
+    headers={
+        "Authorization": "Bearer " + os.environ["CLOUDFLARE_API_TOKEN"],
+        "User-Agent": "jkbmsr-deploy-docs/1.0",
+    },
+)
+with urllib.request.urlopen(req, timeout=20) as resp:
+    data = json.load(resp)
+subdomain = (data.get("result") or {}).get("subdomain")
+if data.get("success") and subdomain:
+    sys.stdout.write(subdomain)
+PY
+  )
+  [ -n "$host" ] || return 1
+  VERIFY_URL="https://$host"
   return 0
 }
 
@@ -296,6 +340,16 @@ fi
 # that can see two accounts it can read the wrong one and still report a match.
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "deploy" ] && [ "$NO_VERIFY" -eq 0 ]; then
+  # Prefer the live API answer over the constant: the project subdomain has
+  # already changed once (see FALLBACK_VERIFY_HOST). A failure here is not a
+  # deploy failure — it just means we verify the last known hostname and say so.
+  if resolve_verify_url; then
+    info "readback hostname from the Pages API: $VERIFY_URL"
+  else
+    warn "could not read the project subdomain from the Pages API; using the last known current-account hostname"
+    warn "  $VERIFY_URL — subdomains are suffixed and change if the project is recreated;"
+    warn "  re-derive: GET /accounts/\$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PAGES_PROJECT (.result.subdomain)"
+  fi
   step "verify the published project ($VERIFY_URL)"
   python3 "$VERIFY" --url "$VERIFY_URL/index.html" --file "$DEPLOY_DIST/index.html" \
     || die "verification failed — the deploy landed but the project hostname does not serve these bytes"
