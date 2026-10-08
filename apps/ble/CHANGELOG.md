@@ -10,6 +10,10 @@ release notes and copied into Google Play Console's "What's new in this
 version" field, which has a hard 500-character limit per release — keep each
 version's bullets within that, combined.
 
+## v4.17.26+46
+
+- Screens now show a soft placeholder outline while their data loads, instead of a blank spinner — so the layout appears instantly and doesn't jump when the data arrives.
+
 ## v4.17.25+45
 
 - New Device information panel: model, hardware and firmware revision, serial number, manufacturing date, power-on count and run time.

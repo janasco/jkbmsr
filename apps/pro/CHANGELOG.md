@@ -14,6 +14,11 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.41+73
+
+- The dashboard now shows a live countdown to the next expected update ("Next update in …"), based on your gateway's check-in interval.
+- Comparison and other loading views now use placeholder outlines instead of a spinner.
+
 ## v1.3.40
 
 - Cloud Service history CSV exports now cover the whole range you pick — a 30/90/365-day export includes older hourly data instead of only the last week.
