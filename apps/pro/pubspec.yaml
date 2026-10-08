@@ -12,6 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.5
+  # Injectable wall clock (Dart team). Used by the dashboard's "Next update
+  # in …" countdown so a widget test can advance time deterministically via
+  # `withClock(tester.binding.clock, …)`; the default is just DateTime.now().
+  clock: ^1.1.2
   google_fonts: ^6.1.0
   go_router: ^13.0.0
   flutter_svg: ^2.0.9

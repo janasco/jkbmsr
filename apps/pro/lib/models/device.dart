@@ -14,6 +14,17 @@ class Device {
   final String? latestFirmwareVersion;
   final String? latestFirmwareReleasedAt;
   final bool updateAvailable;
+  // Telemetry cadence for this gateway, server-resolved from its Cloud
+  // Service tier. `expectedIntervalSeconds` is the gateway's own configured
+  // interval; `secondsSinceLastTelemetry` is how long ago it last checked in;
+  // `secondsUntilNextExpectedCheckIn` is the countdown the dashboard shows
+  // (already floored at 0 server-side). All three are nullable because the
+  // API omits them when the device has never reported telemetry — a fresh
+  // claim or a gateway that just reconnected — and older API builds may not
+  // send them at all. Do not treat null as zero.
+  final int? expectedIntervalSeconds;
+  final int? secondsSinceLastTelemetry;
+  final int? secondsUntilNextExpectedCheckIn;
   // False when this gateway was shared to the signed-in account rather than
   // owned by it — gates settings/rename/delete/sharing controls in the UI
   // (the API independently refuses those for non-owners regardless).
@@ -43,6 +54,9 @@ class Device {
     this.latestFirmwareVersion,
     this.latestFirmwareReleasedAt,
     required this.updateAvailable,
+    this.expectedIntervalSeconds,
+    this.secondsSinceLastTelemetry,
+    this.secondsUntilNextExpectedCheckIn,
     this.isOwner = true,
     this.ownerEmail,
     this.dashboardTemplateMobile = 'default',
@@ -63,6 +77,12 @@ class Device {
       latestFirmwareVersion: json['latestFirmwareVersion'] as String?,
       latestFirmwareReleasedAt: json['latestFirmwareReleasedAt'] as String?,
       updateAvailable: json['updateAvailable'] as bool? ?? false,
+      // `as num?` tolerates the API sending a double, and a missing key is
+      // null rather than 0 — the UI must be able to tell "no countdown"
+      // (never reported telemetry) from "due now" (0 seconds left).
+      expectedIntervalSeconds: (json['expectedIntervalSeconds'] as num?)?.toInt(),
+      secondsSinceLastTelemetry: (json['secondsSinceLastTelemetry'] as num?)?.toInt(),
+      secondsUntilNextExpectedCheckIn: (json['secondsUntilNextExpectedCheckIn'] as num?)?.toInt(),
       isOwner: json['isOwner'] as bool? ?? true,
       ownerEmail: json['ownerEmail'] as String?,
       dashboardTemplateMobile: json['dashboardTemplateMobile'] as String? ?? 'default',
@@ -84,6 +104,9 @@ class Device {
       'latestFirmwareVersion': latestFirmwareVersion,
       'latestFirmwareReleasedAt': latestFirmwareReleasedAt,
       'updateAvailable': updateAvailable,
+      'expectedIntervalSeconds': expectedIntervalSeconds,
+      'secondsSinceLastTelemetry': secondsSinceLastTelemetry,
+      'secondsUntilNextExpectedCheckIn': secondsUntilNextExpectedCheckIn,
       'isOwner': isOwner,
       'ownerEmail': ownerEmail,
       'dashboardTemplateMobile': dashboardTemplateMobile,
