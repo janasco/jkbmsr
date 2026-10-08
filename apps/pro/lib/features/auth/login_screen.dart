@@ -213,6 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
               : 'assets/icon/icon_light.png',
           height: 64,
           width: 64,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: JKBMSRTokens.space16),
         Text(
