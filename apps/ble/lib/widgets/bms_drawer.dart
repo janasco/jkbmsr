@@ -44,7 +44,9 @@ class BmsDrawer extends StatelessWidget {
                           : 'assets/icon/app_icon_light.png',
                       width: 44,
                       height: 44,
-                      fit: BoxFit.cover,
+                      // `contain` (not `cover`): the tile is square but the
+                      // whole mark must stay visible, never cropped to fill.
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => Container(
                         width: 44,
                         height: 44,
