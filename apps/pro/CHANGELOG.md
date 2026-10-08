@@ -14,6 +14,11 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.39
+
+- Notifications now work reliably. You'll be asked to allow them when you sign in, and low-temperature, cell-imbalance and high-current alerts now notify you like the others.
+- Fixed Share CSV in Cloud Service history — it now exports a real CSV file instead of failing.
+
 ## v1.3.38
 
 - Added support for the newest Android devices and 16 KB memory pages, so the app runs correctly on them and future updates keep arriving through Google Play.
