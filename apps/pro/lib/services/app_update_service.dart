@@ -21,12 +21,40 @@ enum AppUpdateRoute {
   playImmediate,
 }
 
+/// Why an update check ended with nothing to offer.
+///
+/// Only meaningful when [AppUpdateDecision.route] is [AppUpdateRoute.none]. It
+/// exists so a *manual* "Check for updates" can tell "the source answered, you
+/// are current" apart from "the source could not be reached" instead of
+/// claiming the former for both — a check that errored must never read as a
+/// pass.
+enum AppUpdateNoUpdate {
+  /// The update source was reached and reported no newer build. Saying
+  /// "you're up to date" is a claim this state can support.
+  upToDate,
+
+  /// The install source is unknown, or the Play/release-channel check failed.
+  /// Nothing can be claimed about freshness.
+  unavailable,
+}
+
 /// The outcome of one update check, already branched on how the app was
 /// installed.
 class AppUpdateDecision {
-  const AppUpdateDecision(this.route, {this.version, this.blocking = false});
+  const AppUpdateDecision(
+    this.route, {
+    this.version,
+    this.blocking = false,
+    this.noUpdate,
+  });
 
-  static const none = AppUpdateDecision(AppUpdateRoute.none);
+  /// Nothing to offer because the source was reached and is current.
+  static const upToDate =
+      AppUpdateDecision(AppUpdateRoute.none, noUpdate: AppUpdateNoUpdate.upToDate);
+
+  /// Nothing to offer because the source could not be reached/determined.
+  static const unavailable = AppUpdateDecision(
+      AppUpdateRoute.none, noUpdate: AppUpdateNoUpdate.unavailable);
 
   final AppUpdateRoute route;
 
@@ -38,6 +66,11 @@ class AppUpdateDecision {
   /// True when a Play release is marked high-priority and the immediate flow
   /// should not offer a "Later".
   final bool blocking;
+
+  /// Set only for an [AppUpdateRoute.none] decision: whether the check
+  /// actually reached a source and learned the app is current, or could not
+  /// learn anything. Null when an update is being offered.
+  final AppUpdateNoUpdate? noUpdate;
 }
 
 /// Decides how an update should be offered, branching on how the app was
@@ -78,14 +111,14 @@ class AppUpdateService {
       case InstallSource.sideload:
         return _checkViaSideloadApk();
       case InstallSource.unknown:
-        return AppUpdateDecision.none;
+        return AppUpdateDecision.unavailable;
     }
   }
 
   Future<AppUpdateDecision> _checkViaPlay() async {
     try {
       final status = await _play.checkForUpdate();
-      if (!status.updateAvailable) return AppUpdateDecision.none;
+      if (!status.updateAvailable) return AppUpdateDecision.upToDate;
       if (status.requiresImmediate) {
         return AppUpdateDecision(
           AppUpdateRoute.playImmediate,
@@ -96,8 +129,9 @@ class AppUpdateService {
     } catch (_) {
       // Play unavailable, or not actually a Play build. A Play-installed copy
       // is never redirected to the website APK as a fallback — doing so would
-      // be exactly the policy violation this branch exists to prevent.
-      return AppUpdateDecision.none;
+      // be exactly the policy violation this branch exists to prevent. The
+      // failure is recorded as unverifiable, not as "up to date".
+      return AppUpdateDecision.unavailable;
     }
   }
 
@@ -109,14 +143,15 @@ class AppUpdateService {
       final response = await _http
           .get(Uri.parse(latestJsonUrl))
           .timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) return AppUpdateDecision.none;
+      if (response.statusCode != 200) return AppUpdateDecision.unavailable;
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final latest = body['version'] as String?;
-      if (latest == null || latest.isEmpty) return AppUpdateDecision.none;
-      if (!isNewerVersion(latest, installed)) return AppUpdateDecision.none;
+      if (latest == null || latest.isEmpty) return AppUpdateDecision.unavailable;
+      if (!isNewerVersion(latest, installed)) return AppUpdateDecision.upToDate;
       return AppUpdateDecision(AppUpdateRoute.sideloadApk, version: latest);
     } catch (_) {
-      return AppUpdateDecision.none;
+      // A network/parse/version-read failure is unverifiable, not "current".
+      return AppUpdateDecision.unavailable;
     }
   }
 

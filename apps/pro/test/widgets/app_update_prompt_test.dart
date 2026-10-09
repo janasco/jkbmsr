@@ -58,6 +58,7 @@ Widget _harness(
   Future<String?> Function() installer, {
   PlayUpdateGateway? play,
   http.Client? httpClient,
+  bool manual = false,
 }) {
   final service = AppUpdateService(
     installSourceDetector: InstallSourceDetector(installerStoreReader: installer),
@@ -74,6 +75,7 @@ Widget _harness(
             onPressed: () => promptForAppUpdate(
               contextProvider: () => context,
               service: service,
+              manual: manual,
             ),
             child: const Text('check'),
           ),
@@ -139,5 +141,91 @@ void main() {
     expect(find.text('Update required'), findsOneWidget);
     expect(find.text('Update now'), findsOneWidget);
     expect(find.text('Later'), findsNothing);
+  });
+
+  // The About menu's "Check for updates" row drives this same function with
+  // `manual: true`. The only behavioural difference is what happens when there
+  // is nothing to offer: a manual check says so, a startup check stays silent.
+  group('manual check feedback', () {
+    testWidgets('an up-to-date manual check says so', (tester) async {
+      await tester.pumpWidget(_harness(
+        () async => 'com.android.packageinstaller',
+        manual: true,
+        httpClient: MockClient(
+            (_) async => http.Response('{"version":"1.3.36"}', 200)),
+      ));
+
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("You're on the latest version."), findsOneWidget);
+      expect(find.text('Update available'), findsNothing);
+    });
+
+    testWidgets('an unverifiable manual check does not claim up to date',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        () async => null,
+        manual: true,
+      ));
+
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              "Couldn't check for updates right now. Please try again later."),
+          findsOneWidget);
+      expect(find.text("You're on the latest version."), findsNothing);
+    });
+
+    testWidgets('a failed sideload check does not claim up to date',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        () async => 'com.android.packageinstaller',
+        manual: true,
+        httpClient: MockClient((_) async => http.Response('nope', 503)),
+      ));
+
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              "Couldn't check for updates right now. Please try again later."),
+          findsOneWidget);
+      expect(find.text("You're on the latest version."), findsNothing);
+    });
+
+    testWidgets('a manual check with an update still shows the prompt',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        () async => 'com.android.packageinstaller',
+        manual: true,
+        httpClient: MockClient(
+            (_) async => http.Response('{"version":"1.3.37"}', 200)),
+      ));
+
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Update available'), findsOneWidget);
+      expect(find.text("You're on the latest version."), findsNothing);
+    });
+
+    testWidgets('a silent startup check with no update shows nothing',
+        (tester) async {
+      await tester.pumpWidget(_harness(
+        () async => 'com.android.packageinstaller',
+        httpClient: MockClient(
+            (_) async => http.Response('{"version":"1.3.36"}', 200)),
+      ));
+
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("You're on the latest version."), findsNothing);
+      expect(find.text('Update available'), findsNothing);
+    });
   });
 }
