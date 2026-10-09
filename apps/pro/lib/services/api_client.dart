@@ -7,6 +7,7 @@ import '../models/user.dart';
 import '../models/device.dart';
 import '../models/device_share.dart';
 import '../models/device_wifi.dart';
+import '../models/device_wifi_target.dart';
 import '../models/telemetry.dart';
 import '../models/alert.dart';
 import '../models/ota_event.dart';
@@ -677,6 +678,43 @@ class APIClient with RequestDeduplicationMixin {
       headers: await _headers(),
       body: jsonEncode({'ssid': ssid, 'password': password}),
     );
+    _handleResponse(response);
+  }
+
+  /// Fetches the persistent remote WiFi target the owner set, the gateway's
+  /// last cloud-reported WiFi state, and the unreachable-alert episode.
+  /// Owner-only. The password is never included in the response.
+  Future<DeviceWifiTargetState> getDeviceWifiTarget(String deviceId) async {
+    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final response = await _client.get(url, headers: await _headers());
+    final data = _handleResponse(response);
+    return DeviceWifiTargetState.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Sets (or replaces) the persistent remote WiFi target. The password is
+  /// sent once, stored encrypted server-side, and never echoed back. Pass
+  /// [isOpen] for an open network, in which case no password is sent.
+  Future<void> setDeviceWifiTarget(
+    String deviceId, {
+    required String ssid,
+    String password = '',
+    bool isOpen = false,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final response = await _client.put(
+      url,
+      headers: await _headers(),
+      body: jsonEncode({'ssid': ssid, 'password': isOpen ? '' : password, 'isOpen': isOpen}),
+    );
+    _handleResponse(response);
+  }
+
+  /// Clears the persistent remote WiFi target and stops its alerts. The
+  /// gateway keeps whatever network it is on; only the absence of a target on
+  /// its next config poll changes.
+  Future<void> clearDeviceWifiTarget(String deviceId) async {
+    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final response = await _client.delete(url, headers: await _headers());
     _handleResponse(response);
   }
 

@@ -779,14 +779,20 @@ class JKBMSRDialog extends StatelessWidget {
                 style: JKBMSRTypography.body
                     .copyWith(color: context.colors.textMuted)),
             const SizedBox(height: JKBMSRTokens.space24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            // Wrap, not Row: two long action labels (e.g. "Sign Out Others" +
+            // "Cancel") overflow a phone-width dialog. Wrap keeps them
+            // right-aligned on one line when they fit and stacks them when they
+            // don't, instead of painting an overflow stripe.
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: JKBMSRTokens.space12,
+              runSpacing: JKBMSRTokens.space8,
               children: [
                 OutlinedButton(
                   onPressed: onCancel,
                   child: Text(cancelText),
                 ),
-                const SizedBox(width: JKBMSRTokens.space12),
                 ElevatedButton(
                   onPressed: onConfirm,
                   child: Text(confirmText),
