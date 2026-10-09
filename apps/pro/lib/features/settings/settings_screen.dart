@@ -20,6 +20,7 @@ import '../../models/recent_session.dart';
 import '../../models/user.dart';
 import '../../models/bms_vendor.dart';
 import '../../main.dart';
+import '../../widgets/app_update_prompt.dart';
 import '../../utils/error_messages.dart';
 
 class _SettingsCategory {
@@ -118,6 +119,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _warningAlerts = true;
 
   String _appVersion = '';
+
+  // About → "Check for updates": true only while the manual check is in
+  // flight, so the row can show a spinner and refuse a double-tap.
+  bool _checkingForUpdate = false;
 
   // Sharing (owner-only — the API refuses these for a shared viewer too)
   List<DeviceShare> _shares = [];
@@ -268,6 +273,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _appVersion = '${info.version} (${info.buildNumber})';
     });
+  }
+
+  // Manual update check from the About card. Reuses the exact startup path
+  // (`promptForAppUpdate`) rather than a second mechanism: Play installs still
+  // go through Play In-App Updates, sideloads still get the direct-APK prompt.
+  // `manual: true` only adds feedback for the nothing-to-offer case.
+  Future<void> _checkForAppUpdate() async {
+    if (_checkingForUpdate) return;
+    setState(() => _checkingForUpdate = true);
+    try {
+      await promptForAppUpdate(
+        contextProvider: () => mounted ? context : null,
+        manual: true,
+      );
+    } finally {
+      if (mounted) setState(() => _checkingForUpdate = false);
+    }
   }
 
   Future<void> _loadBiometricPreference() async {
@@ -2449,6 +2471,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _appVersion.isEmpty ? '—' : _appVersion,
               style: JKBMSRTypography.bodySecondary,
             ),
+          ),
+          Divider(height: 1, color: context.colors.line),
+          // Manual update check — same machinery as the startup prompt (Play
+          // In-App Updates for Play installs, direct-APK for sideloads).
+          ListTile(
+            leading: Icon(Icons.system_update_alt, color: context.colors.textMuted),
+            title: Text('Check for updates', style: JKBMSRTypography.body),
+            trailing: _checkingForUpdate
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(Icons.chevron_right, size: 18, color: context.colors.textMuted),
+            onTap: _checkingForUpdate ? null : _checkForAppUpdate,
           ),
           Divider(height: 1, color: context.colors.line),
           ListTile(
