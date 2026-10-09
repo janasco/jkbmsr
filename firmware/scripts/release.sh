@@ -455,10 +455,14 @@ import json, os, sys, urllib.error, urllib.parse, urllib.request
 # are shell constants, and only the token is a secret.
 key, bucket, base = sys.argv[1], sys.argv[2], sys.argv[3]
 account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+# A per-object GET (...)objects/<key>) returns the OBJECT BODY, not metadata,
+# so it cannot be parsed as JSON -- doing so died on the first binary byte.
+# LIST with an exact prefix instead: the result is a list of
+# {key, etag, last_modified, size, ...} and we pick the matching key.
 url = (
     f"{base}/accounts/{account}"
-    f"/r2/buckets/{urllib.parse.quote(bucket, safe='')}/objects/"
-    f"{urllib.parse.quote(key, safe='')}"
+    f"/r2/buckets/{urllib.parse.quote(bucket, safe='')}/objects"
+    f"?prefix={urllib.parse.quote(key, safe='')}"
 )
 request = urllib.request.Request(
     url, headers={"Authorization": f"Bearer {os.environ['CLOUDFLARE_API_TOKEN']}"}
@@ -472,7 +476,11 @@ except urllib.error.HTTPError as error:
 if not payload.get("success"):
     print("api reported failure")
     sys.exit(1)
-print(int(payload["result"]["size"]))
+match = next((o for o in (payload.get("result") or []) if o.get("key") == key), None)
+if match is None:
+    print("object not present in the bucket listing")
+    sys.exit(1)
+print(int(match["size"]))
 PY
 }
 
