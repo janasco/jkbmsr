@@ -263,6 +263,32 @@ ensure_platformio() {
     || die "PlatformIO is pinned to ${PIO_PINNED_VERSION} in this repository but '${PIO_BIN}' reports '${have:-nothing}'"
 }
 
+# PlatformIO Core shells out to `python -m pip` to install the Python
+# dependencies of some tool packages. The official installer's penv does not
+# always include pip -- this host's did not -- and without it a tool install
+# fails with "No module named pip" / MissingPackageManifestError, which is the
+# cryptic way an isolated core dir used to die before it could provision its own
+# environment. ensurepip ships its wheels inside CPython, so this needs no
+# network and is a no-op once pip is present.
+ensure_pio_pip() {
+  if [ "$DRY_RUN" -eq 1 ] || [ "$SKIP_BUILD" -eq 1 ]; then
+    return 0
+  fi
+  local bin python
+  bin="$(command -v "$PIO_BIN" 2>/dev/null || true)"
+  [ -n "$bin" ] || return 0
+  # The `pio` launcher is a console script whose shebang names the interpreter
+  # that owns PlatformIO's site-packages. If it is not a script, or has no
+  # usable shebang, leave the environment alone rather than guess.
+  python="$(sed -n '1s/^#!//p' "$bin" 2>/dev/null | awk '{print $1}')"
+  [ -n "$python" ] && [ -x "$python" ] || return 0
+  "$python" -c 'import pip' >/dev/null 2>&1 && return 0
+  info "PlatformIO's Python (${python}) has no pip; bootstrapping it so tool packages can install"
+  "$python" -m ensurepip --upgrade >/dev/null 2>&1 \
+    || warn "could not bootstrap pip into ${python}; a tool package that needs pip may fail to install"
+  return 0
+}
+
 # ── Step 3: OTA signing key ──────────────────────────────────────────────────
 # Deliberately no default, no generated key, no "unsigned is fine" fallback.
 # Anyone holding this key can sign firmware that real devices will accept, so
@@ -469,6 +495,50 @@ r2_object_key() {
 
 object_key_for() { r2_object_key "$1" "$VERSION"; }
 
+# ── Platform isolation: one PlatformIO core dir per platform FAMILY ─────────
+# The official `espressif32` platform and the community `pioarduino` fork both
+# register under the SAME PlatformIO platform name ("espressif32"), and both
+# install a package named `framework-arduinoespressif32`. Two builds that share
+# one PLATFORMIO_CORE_DIR therefore collide: only one framework can exist under
+# that package name at a time, so the C6 env that pins the fork dies deep inside
+# the fork's own build script --
+#   TypeError ... build_script_path = str(Path(FRAMEWORK_DIR) / ...)
+#   (FRAMEWORK_DIR is None)
+# -- before it ever compiles. Worse, the official targets still build, so the
+# collision is invisible until the very last matrix leg.
+#
+# This is why the old CI workflow gave the C6 env its own job/cache-key; the
+# release matrix mixes six official-platform envs with one pioarduino env
+# (esp32-c6-4mb), so the fork gets its own core dir here too. The dir is derived
+# from the env's own `platform =` line rather than a hardcoded env name, so a
+# second custom-platform env added later is isolated automatically:
+#   platform = espressif32@7.0.1  (official)  -> the base core dir, shared
+#   platform = <url>              (a fork)    -> the fork's isolated core dir
+PIO_FORK_CORE_SUFFIX="-pioarduino"
+
+platform_spec_for_env() {
+  local env="$1"
+  awk -v want="$env" '
+    $0 == "[env:" want "]" { inside = 1; next }
+    /^\[/                { inside = 0 }
+    inside && /^[[:space:]]*platform[[:space:]]*=/ {
+      sub(/^[[:space:]]*platform[[:space:]]*=[[:space:]]*/, "")
+      sub(/[[:space:]]*;.*$/, "")
+      print
+      exit
+    }
+  ' "${FIRMWARE_ROOT}/platformio.ini"
+}
+
+core_dir_for_env() {
+  local env="$1" spec
+  spec="$(platform_spec_for_env "$env")"
+  case "$spec" in
+    *://*) printf '%s%s' "$PLATFORMIO_CORE_DIR" "$PIO_FORK_CORE_SUFFIX" ;;
+    *)     printf '%s' "$PLATFORMIO_CORE_DIR" ;;
+  esac
+}
+
 build_target() {
   local target="$1" pio_env="$2" chip_family="$3" has_ota="$4"
   local build_dir="${FIRMWARE_ROOT}/.pio/build/${pio_env}"
@@ -476,16 +546,21 @@ build_target() {
   local firmware="${build_dir}/firmware.bin"
   local asset_name="jkbmsr-${target}-${VERSION}.bin"
   local sha
+  # The fork's env must not share a core dir with the official-platform envs --
+  # see the platform-isolation block above.
+  local core_dir
+  core_dir="$(core_dir_for_env "$pio_env")"
 
   TARGET_CHIP_FAMILY["$target"]="$chip_family"
   TARGET_HAS_OTA["$target"]="$has_ota"
 
   info "--- ${target} (pio env: ${pio_env}, ${chip_family}, OTA: ${has_ota})"
+  info "    PLATFORMIO_CORE_DIR=${core_dir}"
 
   if [ "$SKIP_BUILD" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
     info "skipping build (--skip-build); reusing ${firmware}"
   elif [ "$DRY_RUN" -eq 1 ]; then
-    plan "pio run -e ${pio_env}"
+    plan "pio run -e ${pio_env}   (PLATFORMIO_CORE_DIR=${core_dir})"
     if [ "$pio_env" = "dev" ]; then
       plan "pio test -e dev --without-uploading --without-testing   (compile only)"
       plan "pio run -e dev --target clean && pio run -e dev        (rebuild the release application after the test compile)"
@@ -500,7 +575,7 @@ build_target() {
     return 0
   else
     info "pio run -e ${pio_env}"
-    "$PIO_BIN" run -e "$pio_env" >"${BUILD_LOG_DIR}/${target}.build.log" 2>&1 \
+    PLATFORMIO_CORE_DIR="$core_dir" "$PIO_BIN" run -e "$pio_env" >"${BUILD_LOG_DIR}/${target}.build.log" 2>&1 \
       || { tail -n 25 "${BUILD_LOG_DIR}/${target}.build.log" | sed 's/^/     /' >&2; die "${target}: pio run -e ${pio_env} failed"; }
 
     if [ "$pio_env" = "dev" ]; then
@@ -509,15 +584,15 @@ build_target() {
       # otherwise pass. The suites that actually RUN are the native host builds
       # in scripts/run-host-tests.sh.
       info "pio test -e dev --without-uploading --without-testing (compile only)"
-      "$PIO_BIN" test -e dev --without-uploading --without-testing >"${BUILD_LOG_DIR}/${target}.tests.log" 2>&1 \
+      PLATFORMIO_CORE_DIR="$core_dir" "$PIO_BIN" test -e dev --without-uploading --without-testing >"${BUILD_LOG_DIR}/${target}.tests.log" 2>&1 \
         || { tail -n 25 "${BUILD_LOG_DIR}/${target}.tests.log" | sed 's/^/     /' >&2; die "${target}: pio test -e dev failed to compile"; }
 
       # The test compile leaves the dev environment linked against the test
       # runner. Rebuild clean so the image that ships is the application, not
       # the test harness -- which the identity check below then proves.
       info "rebuilding the release application after the test compile"
-      "$PIO_BIN" run -e dev --target clean >/dev/null 2>&1
-      "$PIO_BIN" run -e dev >"${BUILD_LOG_DIR}/${target}.rebuild.log" 2>&1 \
+      PLATFORMIO_CORE_DIR="$core_dir" "$PIO_BIN" run -e dev --target clean >/dev/null 2>&1
+      PLATFORMIO_CORE_DIR="$core_dir" "$PIO_BIN" run -e dev >"${BUILD_LOG_DIR}/${target}.rebuild.log" 2>&1 \
         || { tail -n 25 "${BUILD_LOG_DIR}/${target}.rebuild.log" | sed 's/^/     /' >&2; die "${target}: clean rebuild of env:dev failed"; }
     fi
 
@@ -549,8 +624,9 @@ build_target() {
     cp "${build_dir}/partitions.bin" "${out}/release-partitions.bin"
     # `find` rather than a fixed path: the partitions tool ships inside a
     # versioned framework package directory that moves with every platform
-    # update.
-    find "${PLATFORMIO_CORE_DIR:-$HOME/.platformio}/packages/framework-arduinoespressif32/tools/partitions" \
+    # update. Search the core dir this env actually built from, not the base
+    # one -- the fork's boot_app0.bin lives in the fork's isolated core dir.
+    find "${core_dir:-$HOME/.platformio}/packages/framework-arduinoespressif32/tools/partitions" \
       -iname boot_app0.bin -exec cp {} "${out}/release-boot_app0.bin" \; 2>/dev/null || true
     [ -f "${out}/release-boot_app0.bin" ] || die "${target}: boot_app0.bin not found under framework-arduinoespressif32/tools/partitions"
   fi
@@ -1213,6 +1289,7 @@ fi
 
 note "build and stage"
 ensure_platformio
+ensure_pio_pip
 for line in $RELEASE_MATRIX; do
   IFS='|' read -r target pio_env chip_family has_ota <<<"$line"
   target_selected "$target" || continue
