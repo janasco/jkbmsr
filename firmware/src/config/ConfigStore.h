@@ -31,6 +31,13 @@ struct DeviceConfig {
   // Wi-Fi provisioning and required by the backend to bind this device to a
   // user account (anti-spoof; see docs/phase1-provisioning-spec.md).
   String claimCode;
+  // Account-bound claim token, written over USB/Improv by the web flasher while
+  // the owner is signed in (Improv command SetClaimToken). Presented once on
+  // FIRST registration (POST /device/register) so the gateway binds itself to
+  // that account, then cleared. Empty on devices flashed before this existed or
+  // when the token never reached the device — the claim-code path above still
+  // works in that case.
+  String claimToken;
   // Highest firmware version this device has ever run. OTA refuses anything
   // not strictly newer than this (anti-rollback). Persisted in NVS.
   String firmwareVersionFloor;

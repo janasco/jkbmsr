@@ -34,7 +34,8 @@ bool ProvisioningManager::poll(
     const ConnectFn& tryConnect,
     String& outSsid,
     String& outPassword,
-    const ScanFn& scanNetworks) {
+    const ScanFn& scanNetworks,
+    const ClaimTokenFn& onClaimToken) {
   if (io_ == nullptr) {
     return false;
   }
@@ -82,6 +83,21 @@ bool ProvisioningManager::poll(
       case Command::RequestScan:
         sendWifiNetworks(scanNetworks);
         break;
+      case Command::SetClaimToken: {
+        String token;
+        if (!improv::parseClaimToken(cmdData, cmdLen, token)) {
+          sendError(Error::InvalidRpcPacket);
+          break;
+        }
+        if (onClaimToken) {
+          onClaimToken(token);
+        }
+        // Acknowledge only after the caller has persisted it, so the browser's
+        // "sent" state means "stored", not merely "transmitted".
+        const String ack[] = {String("stored")};
+        sendRpcResult(Command::SetClaimToken, ack, 1);
+        break;
+      }
       case Command::WifiSettings: {
         bool done = false;
         handleWifiSettings(cmdData, cmdLen, tryConnect, outSsid, outPassword, done);

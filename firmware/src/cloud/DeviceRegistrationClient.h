@@ -34,6 +34,7 @@ class DeviceRegistrationClient {
       const String& boardProfile,
       const String& firmwareVersion,
       const String& claimCode,
+      const String& claimToken,
       DeviceRegistrationResult& result);
   bool loginDevice(
       const String& deviceId,

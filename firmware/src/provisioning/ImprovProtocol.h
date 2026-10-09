@@ -46,6 +46,11 @@ enum class Command : uint8_t {
   RequestState = 0x02,
   RequestDeviceInfo = 0x03,
   RequestScan = 0x04,
+  // Custom command, deliberately outside the Improv spec's 0x01–0x05 range:
+  // the browser flasher hands the gateway an account-bound claim token over the
+  // same serial session, which the gateway persists and presents on first
+  // registration. Unknown to stock Improv clients, which simply won't send it.
+  SetClaimToken = 0x20,
 };
 
 // Incremental byte parser. Feed one received byte at a time; feed() returns
@@ -85,6 +90,10 @@ uint8_t encodeRpcResult(Command command, const String* strings, size_t count, ui
 // Parse a WIFI_SETTINGS command payload ([ssidLen][ssid][passLen][pass]).
 // Returns false if the buffer is malformed.
 bool parseWifiSettings(const uint8_t* cmdData, uint8_t cmdLen, String& ssid, String& password);
+
+// Parse a SET_CLAIM_TOKEN command payload ([tokenLen][token]). Returns false if
+// the buffer is malformed or the token is empty.
+bool parseClaimToken(const uint8_t* cmdData, uint8_t cmdLen, String& token);
 
 }  // namespace improv
 }  // namespace jkbmsr

@@ -101,6 +101,22 @@ void buildScanPacket(std::vector<uint8_t>& out) {
   out.assign(packet, packet + written);
 }
 
+void buildClaimTokenPacket(const String& token, std::vector<uint8_t>& out) {
+  const uint8_t tokenLen = static_cast<uint8_t>(token.length());
+  uint8_t rpc[improv::kMaxData];
+  size_t pos = 0;
+  rpc[pos++] = static_cast<uint8_t>(Command::SetClaimToken);
+  rpc[pos++] = static_cast<uint8_t>(1 + tokenLen);
+  rpc[pos++] = tokenLen;
+  for (uint8_t i = 0; i < tokenLen; ++i) {
+    rpc[pos++] = static_cast<uint8_t>(token[i]);
+  }
+  uint8_t packet[improv::kMaxData + 16];
+  const size_t written =
+      improv::buildPacket(PacketType::RpcCommand, rpc, static_cast<uint8_t>(pos), packet);
+  out.assign(packet, packet + written);
+}
+
 size_t countRpcResults(const std::vector<uint8_t>& tx, Command command, bool emptyOnly = false) {
   improv::Parser parser;
   size_t count = 0;
@@ -240,24 +256,79 @@ void test_config_store_claim_code_round_trip() {
   DeviceConfig original = store.load();
   const String savedDeviceId = original.deviceId;
   const String savedClaim = original.claimCode;
+  const String savedToken = original.claimToken;
   const String savedSsid = original.wifiSsid;
 
   original.deviceId = "jkbmsr-test-device";
   original.claimCode = "TESTCODE";
+  original.claimToken = "account.claim.token";
   original.wifiSsid = "roundtrip-ssid";
   TEST_ASSERT_TRUE(store.save(original));
 
   DeviceConfig loaded = store.load();
   TEST_ASSERT_EQUAL_STRING("jkbmsr-test-device", loaded.deviceId.c_str());
   TEST_ASSERT_EQUAL_STRING("TESTCODE", loaded.claimCode.c_str());
+  TEST_ASSERT_EQUAL_STRING("account.claim.token", loaded.claimToken.c_str());
   TEST_ASSERT_EQUAL_STRING("roundtrip-ssid", loaded.wifiSsid.c_str());
   TEST_ASSERT_TRUE(loaded.wifiConfigured());
 
   // Restore prior NVS contents so a hardware test run is not destructive.
   original.deviceId = savedDeviceId;
   original.claimCode = savedClaim;
+  original.claimToken = savedToken;
   original.wifiSsid = savedSsid;
   store.save(original);
+}
+
+// The flash-time account token is delivered over the same Improv serial session
+// as Wi-Fi credentials. The load-bearing property: a well-formed command
+// invokes the persistence callback and is acknowledged; a malformed one is
+// rejected without touching the callback or the Wi-Fi handshake state. Older
+// firmware that never implemented this command simply reports UnknownRpcCommand
+// and the browser falls back to the claim-code path.
+void test_claim_token_is_persisted_via_callback() {
+  FakeStream stream;
+  ProvisioningManager manager;
+  manager.begin(stream, "jkbmsr-tok", "CLAIM123", false);
+
+  std::vector<uint8_t> packet;
+  buildClaimTokenPacket("account-claim-token", packet);
+  stream.clearTx();
+  stream.inject(packet.data(), packet.size());
+
+  String received;
+  String ssid;
+  String password;
+  const bool done = manager.poll(
+      [](const String&, const String&) { return false; }, ssid, password, {},
+      [&](const String& token) { received = token; });
+
+  TEST_ASSERT_FALSE(done);
+  TEST_ASSERT_EQUAL_STRING("account-claim-token", received.c_str());
+  TEST_ASSERT_EQUAL_UINT32(1, countRpcResults(stream.tx(), Command::SetClaimToken));
+  TEST_ASSERT_EQUAL(static_cast<int>(State::Ready), static_cast<int>(manager.state()));
+}
+
+void test_claim_token_malformed_is_rejected() {
+  FakeStream stream;
+  ProvisioningManager manager;
+  manager.begin(stream, "jkbmsr-tok2", "CLAIM124", false);
+
+  // tokenLen claims 5 bytes but only 2 follow.
+  uint8_t rpc[] = {static_cast<uint8_t>(Command::SetClaimToken), 3, 5, 'a', 'b'};
+  uint8_t packet[improv::kMaxData + 16];
+  const size_t written = improv::buildPacket(PacketType::RpcCommand, rpc, sizeof(rpc), packet);
+  stream.clearTx();
+  stream.inject(packet, written);
+
+  bool called = false;
+  String ssid;
+  String password;
+  manager.poll([](const String&, const String&) { return false; }, ssid, password, {},
+               [&](const String&) { called = true; });
+
+  TEST_ASSERT_FALSE(called);
+  TEST_ASSERT_TRUE(txContainsError(stream.tx(), Error::InvalidRpcPacket));
 }
 
 void test_provisioning_success_path() {
@@ -434,6 +505,8 @@ void setup() {
   RUN_TEST(test_claim_code_length_and_alphabet);
   RUN_TEST(test_claim_code_non_repeating);
   RUN_TEST(test_config_store_claim_code_round_trip);
+  RUN_TEST(test_claim_token_is_persisted_via_callback);
+  RUN_TEST(test_claim_token_malformed_is_rejected);
   RUN_TEST(test_provisioning_success_path);
   RUN_TEST(test_provisioning_error_retry_path);
   RUN_TEST(test_open_wifi_network_accepts_empty_password);
