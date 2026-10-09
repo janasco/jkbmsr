@@ -61,6 +61,9 @@ SUITES=(
   "test_seplos_ble_decoder:src/bms/SeplosBleDecoder.cpp"
   "test_tianpower_bms_decoder:src/bms/TianpowerBmsDecoder.cpp"
   "test_version_compare:src/ota/VersionCompare.cpp"
+  # Pure Wi-Fi connect/retry/restart timing logic (src/network/WifiRetryPolicy.h
+  # is header-only, so no extra source is needed).
+  "test_wifi_retry"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the

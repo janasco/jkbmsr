@@ -18,6 +18,16 @@ constexpr uint32_t kDefaultTelemetryIntervalMs = 60000;
 // correctly-entered password was reported back to the user as a connect
 // failure.
 constexpr uint32_t kWifiConnectTimeoutMs = 25000;
+// Remote-Wi-Fi connect/retry/restart policy (see network/WifiRetryPolicy.h).
+// After a saved/desired network fails for kWifiConnectWindowMs, the gateway
+// restarts and tries again — repeatedly, per the product requirement that it
+// must never sit permanently in setup/AP mode. Every
+// kWifiRestartsBeforeProvisioning failed boots it opens the local AP for a
+// bounded window so a person on site can still fix the credentials.
+constexpr uint32_t kWifiConnectWindowMs = 180000;      // ~3 minutes of attempts per boot
+constexpr uint32_t kWifiRetryDelayMs = 5000;           // pause between attempts
+constexpr int kWifiRestartsBeforeProvisioning = 5;
+constexpr uint32_t kLocalProvisioningWindowMs = 300000;  // bounded AP window (5 min)
 // TLS handshake cap. The verified handshake (bundle-based chain validation)
 // is heavier than the old insecure path, and flaky WiFi (RV/off-grid) can
 // stall it; bound it so a hung handshake can't wedge the loop.

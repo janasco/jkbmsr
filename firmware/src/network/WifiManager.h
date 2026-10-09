@@ -18,12 +18,17 @@ class WifiManager {
   bool connected() const;
   size_t scan(WifiScanResult* results, size_t capacity);
   String currentSsid() const;
+  // Human-readable detail from the most recent failed connect(), for reporting
+  // to the cloud (e.g. "connect timed out; WiFi.status()=6"). Cleared on a
+  // successful connect.
+  String lastError() const { return lastError_; }
 
  private:
   // Guards against Improv Serial and the SoftAP captive portal -- polled in
   // parallel by runProvisioning() -- racing a scan against a connect
   // attempt on the same STA interface. See WifiManager::scan().
   bool connecting_ = false;
+  String lastError_;
 };
 
 }  // namespace jkbmsr
