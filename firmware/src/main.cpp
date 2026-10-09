@@ -44,6 +44,7 @@
 #include "debug/DebugLog.h"
 #include "device/DeviceIdentity.h"
 #include "network/WifiManager.h"
+#include "network/WifiRetryPolicy.h"
 #if JKBMSR_HAS_OTA
 #include "ota/OtaClient.h"
 #include "esp_ota_ops.h"
@@ -92,12 +93,10 @@ time_t lastTelemetryEpoch = 0;
 uint32_t lastConfigFetchMs = 0;
 uint32_t lastOtaCheckMs = 0;
 bool firstOtaCheckDone = false;
-uint32_t lastReconnectAttemptMs = 0;
 uint32_t lastCloudBootstrapAttemptMs = 0;
 uint32_t lastHeartbeatMs = 0;
 uint32_t identityDiscoveryUntilMs = 0;
 uint32_t lastDeviceAuthMs = 0;
-int failedReconnects = 0;
 int activeBmsRxPin = -1;
 int activeBmsTxPin = -1;
 uint32_t activeBmsBaudRate = 0;
@@ -152,11 +151,10 @@ BmsBleClient& bleClientForVendor(const String& vendor) {
 }
 #endif
 
-// How often to retry a dropped WiFi link, and how many consecutive failures
-// before we assume the stored credentials are stale (router moved/renamed) and
-// reopen provisioning so the device is recoverable without a reflash.
-constexpr uint32_t kReconnectIntervalMs = 30000;
-constexpr int kMaxReconnectsBeforeProvisioning = 5;
+// Retry cadence while offline is now owned by network/WifiRetryPolicy.h +
+// connectWithRetry()/recoverFromWifiFailure() below: try for
+// kWifiConnectWindowMs, then restart and retry, opening the local AP for a
+// bounded window every kWifiRestartsBeforeProvisioning failed boots.
 constexpr uint32_t kProvisioningRetryTimeoutMs = 300000;
 constexpr uint32_t kCloudBootstrapRetryMs = 30000;
 constexpr uint32_t kRemoteConfigIntervalMs = 60000;
@@ -334,11 +332,66 @@ bool runProvisioning(uint32_t timeoutMs) {
   captivePortal.end();
   setLoggingEnabled(true);
   if (connected) {
+    // Credentials came from the local path (Improv Serial / captive portal),
+    // not a cloud push. Flag it so the backend can yield a stale remote target
+    // to a person who fixed the device on site; cleared once reported.
+    config.wifiLocalProvisioned = true;
+    config.wifiRestartCount = 0;
+    configStore.save(config);
     logInfo("WiFi provisioned and connected");
   } else {
     logWarn("Provisioning window closed without credentials");
   }
   return connected;
+}
+
+// Attempts to join the saved/desired Wi-Fi for up to kWifiConnectWindowMs,
+// retrying every kWifiRetryDelayMs. Returns true on success. The window is
+// what lets the caller tell "slow to associate" apart from "this network does
+// not work" and restart rather than waiting forever.
+bool connectWithRetry() {
+  WifiRetryPolicy policy(WifiRetryTimings{kWifiConnectWindowMs, kWifiRetryDelayMs});
+  policy.beginWindow(millis());
+  while (!policy.windowExpired(millis())) {
+    if (policy.attemptDue(millis())) {
+      policy.noteAttempt(millis());
+      if (wifiManager.connect(config.wifiSsid, config.wifiPassword, kWifiConnectTimeoutMs)) {
+        config.wifiRestartCount = 0;
+        return true;
+      }
+    }
+    delay(50);
+  }
+  logWarn("WiFi connect window elapsed after " + String(policy.attempts()) + " attempt(s)");
+  return false;
+}
+
+// Called after a full connect window failed. Below the restart threshold it
+// restarts the gateway immediately (the requested "restart and try again").
+// At the threshold it opens the local AP for a bounded window so a person on
+// site can still fix the credentials, then resumes the retry loop. Returns
+// true only when that local provisioning window produced a working connection
+// (the restart branches do not return).
+bool recoverFromWifiFailure() {
+  config.wifiRestartCount += 1;
+  if (config.wifiRestartCount <= static_cast<uint32_t>(kWifiRestartsBeforeProvisioning)) {
+    logWarn("WiFi unreachable; restarting to retry (restart " + String(config.wifiRestartCount) + ")");
+    configStore.save(config);
+    delay(1000);
+    ESP.restart();
+    return false;
+  }
+
+  config.wifiRestartCount = 0;
+  configStore.save(config);
+  logWarn("WiFi still unreachable after repeated restarts; opening local provisioning");
+  if (!runProvisioning(kLocalProvisioningWindowMs)) {
+    logWarn("Local provisioning window closed without connecting; restarting to retry");
+    delay(1000);
+    ESP.restart();
+    return false;
+  }
+  return true;
 }
 
 void normalizeBmsUartConfig(DeviceConfig& target) {
@@ -537,6 +590,29 @@ void processRemoteWifiActions(const RemoteWifiActions& actions) {
   ESP.restart();
 }
 
+// Applies a persistent remote Wi-Fi target delivered by GET /device/config.
+// Called only while online. Re-applies exactly once per revision (the applied
+// revision is persisted in NVS), then restarts to attempt the new network
+// from a clean radio state; connectWithRetry()/recoverFromWifiFailure() then
+// keep retrying it. Secured and open networks both work: an open target has an
+// empty password, which WifiManager::connect sends as a nullptr passphrase.
+void applyRemoteWifiTarget(const RemoteWifiActions& actions) {
+  if (actions.desiredRevision.length() == 0) return;
+  if (actions.desiredRevision == config.wifiDesiredRevision) return;
+  if (actions.desiredSsid.length() == 0) return;
+
+  logInfo("Applying remote WiFi target: " + actions.desiredSsid +
+          (actions.desiredOpen ? " (open)" : ""));
+  config.wifiSsid = actions.desiredSsid;
+  config.wifiPassword = actions.desiredOpen ? String("") : actions.desiredPassword;
+  config.wifiDesiredRevision = actions.desiredRevision;
+  config.wifiLocalProvisioned = false;
+  config.wifiRestartCount = 0;
+  configStore.save(config);
+  delay(1000);
+  ESP.restart();
+}
+
 void processRemoteOtaAction(const RemoteWifiActions& actions) {
   if (actions.otaUpdateRequestId.length() == 0) return;
 #if JKBMSR_HAS_OTA
@@ -651,13 +727,14 @@ void setup() {
   applyBmsUartConfig();
 
   // A device with no stored WiFi credentials enters provisioning instead of
-  // idling forever unable to connect. Otherwise connect with what we have; the
-  // loop() reconnect path recovers stale credentials.
+  // idling forever unable to connect. A device WITH credentials tries them for
+  // a bounded window; if that fails it restarts and retries (opening the local
+  // AP every few boots), rather than falling straight back to setup mode.
   bool online = false;
   if (!config.wifiConfigured()) {
     online = runProvisioning(0);
   } else {
-    online = wifiManager.connect(config.wifiSsid, config.wifiPassword, kWifiConnectTimeoutMs);
+    online = connectWithRetry();
     if (online) {
       // A web flash preserves NVS. In that case Wi-Fi and cloud credentials
       // already exist, so the normal provisioning flow would never return the
@@ -668,15 +745,10 @@ void setup() {
       provisioner.begin(Serial, config.deviceId, config.claimCode, false, true);
       identityDiscoveryUntilMs = millis() + kIdentityDiscoveryWindowMs;
     } else {
-      // A web flash intentionally preserves NVS. If those saved credentials
-      // are stale or were entered incorrectly, do not leave the freshly
-      // flashed board offline with no Improv listener. Preserve its logical
-      // identity/secret, discard only Wi-Fi, and reopen provisioning so the
-      // browser can scan and submit a replacement network immediately.
-      logWarn("Saved WiFi connection failed; reopening provisioning");
-      clearWifiCredentials(config);
-      configStore.save(config);
-      online = runProvisioning(0);
+      // The saved/desired network did not come up. Recover rather than sit in
+      // setup mode: restart and retry, with a bounded local AP window every
+      // few attempts so the device stays fixable on site.
+      online = recoverFromWifiFailure();
     }
   }
 
@@ -714,7 +786,6 @@ void loop() {
 
   resetTrigger.poll();
   if (applyResetTrigger()) {
-    failedReconnects = 0;
     if (runProvisioning(0)) {
       ensureDeviceAuth(true);
     }
@@ -722,28 +793,27 @@ void loop() {
     return;
   }
 
-  // WiFi recovery: while offline, retry periodically. After repeated failures
-  // the stored credentials are probably stale (router moved/renamed), so
-  // reopen provisioning for a bounded window rather than looping dead.
+  // WiFi recovery: while offline, run the same bounded connect window as boot.
+  // If it fails, recoverFromWifiFailure() restarts the gateway (retrying
+  // forever) and periodically opens the local AP so the device stays fixable.
   if (!wifiManager.connected()) {
-    if (millis() - lastReconnectAttemptMs >= kReconnectIntervalMs) {
-      lastReconnectAttemptMs = millis();
-      if (config.wifiConfigured() &&
-          wifiManager.connect(config.wifiSsid, config.wifiPassword, kWifiConnectTimeoutMs)) {
-        failedReconnects = 0;
+    if (config.wifiConfigured()) {
+      if (connectWithRetry()) {
         if (ensureSystemClock()) {
           ensureDeviceAuth(true);
         }
         lastCloudBootstrapAttemptMs = millis();
-      } else if (++failedReconnects >= kMaxReconnectsBeforeProvisioning) {
-        failedReconnects = 0;
-        if (runProvisioning(kProvisioningRetryTimeoutMs)) {
-          if (ensureSystemClock()) {
-            ensureDeviceAuth(true);
-          }
-          lastCloudBootstrapAttemptMs = millis();
+      } else if (recoverFromWifiFailure()) {
+        if (ensureSystemClock()) {
+          ensureDeviceAuth(true);
         }
+        lastCloudBootstrapAttemptMs = millis();
       }
+    } else if (runProvisioning(kProvisioningRetryTimeoutMs)) {
+      if (ensureSystemClock()) {
+        ensureDeviceAuth(true);
+      }
+      lastCloudBootstrapAttemptMs = millis();
     }
     delay(10);
     return;
@@ -851,8 +921,21 @@ void loop() {
     if (remoteConfigClient.fetch(config.deviceToken, config, &wifiActions)) {
       applyBmsUartConfig();
       configStore.save(config);
+      // Apply a changed persistent target first — it restarts the gateway, so
+      // the one-shot actions below would otherwise race the reboot.
+      applyRemoteWifiTarget(wifiActions);
       processRemoteWifiActions(wifiActions);
       processRemoteOtaAction(wifiActions);
+    }
+    // Report our own Wi-Fi state while we can reach the cloud, so the backend
+    // can tell "reached the cloud on the new network" apart from silence.
+    // Best-effort: a failure here is not retried until the next cycle.
+    remoteConfigClient.reportWifiState(
+        config.deviceToken, "connected", wifiManager.currentSsid(),
+        wifiManager.lastError(), config.wifiLocalProvisioned);
+    if (config.wifiLocalProvisioned) {
+      config.wifiLocalProvisioned = false;
+      configStore.save(config);
     }
   }
 
