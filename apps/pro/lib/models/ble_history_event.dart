@@ -1,6 +1,6 @@
 /// A single successful BLE poll, reused from telemetry rather than a
 /// separate history table. Maps exactly to the
-/// `/api/v1/dashboard/devices/:deviceId/ble/history` response schema
+/// `/v1/dashboard/devices/:deviceId/ble/history` response schema
 /// (same endpoint jkbmsr-web's BlePollHistoryPanel uses).
 class BleHistoryEvent {
   final String timestamp;

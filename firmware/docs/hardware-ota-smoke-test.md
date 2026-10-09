@@ -114,7 +114,7 @@ DEVICE_ID=<device-id> DEVICE_SECRET=<device-secret> ./scripts/test-hardware-ota-
    - captures the reboot log
    - finds `JKBMSR firmware starting`
    - logs into the production device API
-   - polls `GET /api/v1/ota/latest`
+   - polls `GET /v1/ota/latest`
 
 You can also provide an already issued device token:
 

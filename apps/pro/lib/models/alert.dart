@@ -1,5 +1,5 @@
 /// Data model representing a gateway/battery alert.
-/// Maps exactly to the `/api/v1/dashboard/alerts` response list item schema.
+/// Maps exactly to the `/v1/dashboard/alerts` response list item schema.
 class Alert {
   final String id;
   final String deviceId;

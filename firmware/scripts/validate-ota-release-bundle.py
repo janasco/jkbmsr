@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument("--sha256", required=True)
     parser.add_argument("--signing-key-id", required=True)
     parser.add_argument("--signature-algorithm", required=True)
-    parser.add_argument("--download-url", default="/api/v1/ota/firmware")
+    parser.add_argument("--download-url", default="/v1/ota/firmware")
     args = parser.parse_args()
 
     release_dir = args.release_dir.resolve()

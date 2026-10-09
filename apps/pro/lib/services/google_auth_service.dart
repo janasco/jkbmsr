@@ -1,7 +1,7 @@
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Wraps native "Sign in with Google" and returns the ID token that
-/// POST /api/v1/user/google verifies.
+/// POST /v1/user/google verifies.
 ///
 /// `_serverClientId` must stay equal to jkbmsr-web's NEXT_PUBLIC_GOOGLE_CLIENT_ID
 /// (and the API worker's GOOGLE_CLIENT_ID), since the backend checks the

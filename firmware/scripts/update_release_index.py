@@ -58,7 +58,7 @@ def main() -> None:
             "version": version,
             "targetHardware": target_hardware,
             "releasedAt": released_at,
-            "downloadUrl": "/api/v1/ota/firmware",
+            "downloadUrl": "/v1/ota/firmware",
             "sha256": sha256,
             "signature": signature,
             "signingKeyId": key_id,

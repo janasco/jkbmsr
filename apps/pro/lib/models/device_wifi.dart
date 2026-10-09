@@ -17,7 +17,7 @@ class WifiNetwork {
 }
 
 /// The gateway's WiFi status plus any in-flight scan/change request.
-/// Maps exactly to the `/api/v1/dashboard/devices/:deviceId/wifi` response
+/// Maps exactly to the `/v1/dashboard/devices/:deviceId/wifi` response
 /// schema — scan and change are both async (the gateway picks the request
 /// up on its own poll cycle), so this is a snapshot to be re-fetched, not a
 /// synchronous result.

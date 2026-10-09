@@ -169,7 +169,7 @@ class APIClient with RequestDeduplicationMixin {
   /// keychain so a later session expiry can re-login silently after an
   /// biometric check (see BiometricRelogin).
   Future<User> login(String email, String password) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/login');
+    final url = Uri.parse('$baseUrl/v1/user/login');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -185,7 +185,7 @@ class APIClient with RequestDeduplicationMixin {
   /// own "sign in with a code" flow and for completing registration
   /// verification, since the backend serves both from the same endpoint.
   Future<void> requestOtpCode(String email) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/otp/request');
+    final url = Uri.parse('$baseUrl/v1/user/otp/request');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -198,7 +198,7 @@ class APIClient with RequestDeduplicationMixin {
   /// completes registration verification when called right after an
   /// EmailVerificationRequiredException, or signs in directly otherwise.
   Future<User> verifyOtpCode(String email, String code) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/otp/verify');
+    final url = Uri.parse('$baseUrl/v1/user/otp/verify');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -214,7 +214,7 @@ class APIClient with RequestDeduplicationMixin {
   /// JKBMSR session, via the same backend endpoint the website's Google
   /// button uses.
   Future<User> loginWithGoogle(String idToken) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/google');
+    final url = Uri.parse('$baseUrl/v1/user/google');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -228,7 +228,7 @@ class APIClient with RequestDeduplicationMixin {
 
   /// Exchanges a stored biometric unlock token for a fresh session.
   Future<User> biometricLogin(String unlockToken) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/biometric/login');
+    final url = Uri.parse('$baseUrl/v1/user/biometric/login');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -243,7 +243,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Requests an emailed verification code, for enabling biometric unlock
   /// without entering the account password.
   Future<void> requestBiometricOtp() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/biometric/otp/request');
+    final url = Uri.parse('$baseUrl/v1/user/biometric/otp/request');
     final response = await _client.post(url, headers: await _headers());
     _handleResponse(response);
   }
@@ -251,7 +251,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Enables biometric unlock, verified by the account password OR an emailed
   /// code. Returns the long-lived unlock token to store in the keystore.
   Future<String> enableBiometric({String? password, String? otp}) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/biometric/enable');
+    final url = Uri.parse('$baseUrl/v1/user/biometric/enable');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -266,14 +266,14 @@ class APIClient with RequestDeduplicationMixin {
 
   /// Revokes this account's biometric unlock tokens server-side.
   Future<void> disableBiometric() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/biometric/disable');
+    final url = Uri.parse('$baseUrl/v1/user/biometric/disable');
     final response = await _client.post(url, headers: await _headers());
     _handleResponse(response);
   }
 
   /// Performs user registration.
   Future<User> register(String email, String password) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/register');
+    final url = Uri.parse('$baseUrl/v1/user/register');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -291,7 +291,7 @@ class APIClient with RequestDeduplicationMixin {
   /// password-authenticated session (an OTP or Google session already proved
   /// live ownership of the account out-of-band).
   Future<String> getAuthMethod() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/me');
+    final url = Uri.parse('$baseUrl/v1/user/me');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return (data['user']?['authMethod'] as String?) ?? 'password';
@@ -303,7 +303,7 @@ class APIClient with RequestDeduplicationMixin {
   /// push tokens, and the account itself. [currentPassword] is required only
   /// for a password-authenticated session; pass null otherwise.
   Future<int> deleteAccount({required String confirmEmail, String? currentPassword}) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/me');
+    final url = Uri.parse('$baseUrl/v1/user/me');
     final response = await _client.delete(
       url,
       headers: await _headers(),
@@ -326,7 +326,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('device_list', () async {
       const cacheKey = 'device_list';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices');
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices');
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -348,7 +348,7 @@ class APIClient with RequestDeduplicationMixin {
   /// fallback, its raw device secret. Throws with the server's error message
   /// on invalid codes, unverified email, or a device claimed by another account.
   Future<void> claimDevice(String deviceId, {String? claimCode, String? deviceSecret}) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/devices/claim');
+    final url = Uri.parse('$baseUrl/v1/user/devices/claim');
     final body = <String, dynamic>{'deviceId': deviceId};
     if (claimCode != null && claimCode.isNotEmpty) body['claimCode'] = claimCode;
     if (deviceSecret != null && deviceSecret.isNotEmpty) body['deviceSecret'] = deviceSecret;
@@ -362,7 +362,7 @@ class APIClient with RequestDeduplicationMixin {
 
   /// Updates the user-facing name of a device owned by the signed-in account.
   Future<String> updateDeviceName(String deviceId, String name) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId');
     final response = await _client.put(
       url,
       headers: await _headers(),
@@ -378,7 +378,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('device_detail_$deviceId', () async {
       final cacheKey = 'device_detail_$deviceId';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId');
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId');
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -414,7 +414,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('telemetry_recent_history_${deviceId}_$hours', () async {
       final cacheKey = 'telemetry_recent_history_$deviceId';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/telemetry/history')
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/telemetry/history')
             .replace(queryParameters: {'hours': '$hours', 'limit': '$limit'});
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response) as Map<String, dynamic>;
@@ -461,7 +461,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('telemetry_history_${deviceId}_$from-$to', () async {
       final cacheKey = 'telemetry_history_${deviceId}_${from}_$to';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/telemetry/monthly-history')
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/telemetry/monthly-history')
             .replace(queryParameters: {'from': from, 'to': to});
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response) as Map<String, dynamic>;
@@ -490,7 +490,7 @@ class APIClient with RequestDeduplicationMixin {
     required String from,
     required String to,
   }) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/telemetry/export')
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/telemetry/export')
         .replace(queryParameters: {'from': from, 'to': to});
     final response = await _client.get(url, headers: await _headers());
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -514,7 +514,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('alerts_${status}_$offset', () async {
       final cacheKey = 'alerts_${status}_${offset ~/ (limit == 0 ? 1 : limit)}';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/alerts').replace(queryParameters: {
+        final url = Uri.parse('$baseUrl/v1/dashboard/alerts').replace(queryParameters: {
           'status': status,
           'limit': '$limit',
           'offset': '$offset',
@@ -547,7 +547,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Throws with the server's message if the alert doesn't exist or belongs
   /// to a gateway this account can't access (404 / 403).
   Future<String> resolveAlert(String alertId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/alerts/$alertId/resolve');
+    final url = Uri.parse('$baseUrl/v1/dashboard/alerts/$alertId/resolve');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['resolvedAt'] as String? ?? '';
@@ -560,7 +560,7 @@ class APIClient with RequestDeduplicationMixin {
         ? '?deviceId=${Uri.encodeQueryComponent(deviceId)}'
         : '';
     final url =
-        Uri.parse('$baseUrl/api/v1/dashboard/alerts/resolve-all$query');
+        Uri.parse('$baseUrl/v1/dashboard/alerts/resolve-all$query');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['resolvedCount'] as int? ?? 0;
@@ -570,7 +570,7 @@ class APIClient with RequestDeduplicationMixin {
   /// [resolveAlert], this cannot be undone. Returns the deleted alert id as
   /// reported by the server (falls back to the id passed in).
   Future<String> deleteAlert(String alertId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/alerts/$alertId');
+    final url = Uri.parse('$baseUrl/v1/dashboard/alerts/$alertId');
     final response = await _client.delete(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['deleted'] as String? ?? alertId;
@@ -584,7 +584,7 @@ class APIClient with RequestDeduplicationMixin {
     final query = deviceId != null
         ? '?deviceId=${Uri.encodeQueryComponent(deviceId)}'
         : '';
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/alerts/resolved$query');
+    final url = Uri.parse('$baseUrl/v1/dashboard/alerts/resolved$query');
     final response = await _client.delete(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['deletedCount'] as int? ?? 0;
@@ -597,7 +597,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('device_config_$deviceId', () async {
       final cacheKey = 'device_config_$deviceId';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/config');
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/config');
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -614,7 +614,7 @@ class APIClient with RequestDeduplicationMixin {
 
   /// Updates settings configurations for a specific gateway.
   Future<bool> updateDeviceConfig(String deviceId, Map<String, dynamic> configBody) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/config');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/config');
     final response = await _client.put(
       url,
       headers: await _headers(),
@@ -629,7 +629,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Fetches everyone the owner has given view-only access to (owner-only;
   /// the API returns 403 for a shared, non-owning viewer).
   Future<({List<DeviceShare> shares, int maxShares})> getDeviceShares(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/shares');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/shares');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response);
     final list = data['shares'] as List<dynamic>? ?? [];
@@ -643,7 +643,7 @@ class APIClient with RequestDeduplicationMixin {
   /// the server's message on failure (no account with that email, already
   /// shared, or the per-device share cap reached).
   Future<DeviceShare> addDeviceShare(String deviceId, String email) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/shares');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/shares');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -656,7 +656,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Revokes a previously-granted share. Idempotent from the caller's
   /// perspective: a 404 here just means it was already revoked.
   Future<void> revokeDeviceShare(String deviceId, String userId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/shares/$userId');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/shares/$userId');
     final response = await _client.delete(url, headers: await _headers());
     _handleResponse(response);
   }
@@ -666,7 +666,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Fetches the gateway's current WiFi status plus any in-flight scan or
   /// change request. Owner-only.
   Future<DeviceWifiState> getDeviceWifi(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return DeviceWifiState.fromJson(data['wifi'] as Map<String, dynamic>);
@@ -676,7 +676,7 @@ class APIClient with RequestDeduplicationMixin {
   /// request up on its own poll cycle, typically within a minute. Poll
   /// [getDeviceWifi] afterward for `scanCompletedAt` to know when done.
   Future<String> requestWifiScan(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/scan');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi/scan');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['requestId'] as String;
@@ -686,7 +686,7 @@ class APIClient with RequestDeduplicationMixin {
   /// previous network automatically if the new one can't reach JKBMSR
   /// Cloud — poll [getDeviceWifi] for `changeStatus` to track the result.
   Future<void> requestWifiChange(String deviceId, String ssid, String password) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/change');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi/change');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -699,7 +699,7 @@ class APIClient with RequestDeduplicationMixin {
   /// last cloud-reported WiFi state, and the unreachable-alert episode.
   /// Owner-only. The password is never included in the response.
   Future<DeviceWifiTargetState> getDeviceWifiTarget(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi/target');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response);
     return DeviceWifiTargetState.fromJson(data as Map<String, dynamic>);
@@ -714,7 +714,7 @@ class APIClient with RequestDeduplicationMixin {
     String password = '',
     bool isOpen = false,
   }) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi/target');
     final response = await _client.put(
       url,
       headers: await _headers(),
@@ -727,7 +727,7 @@ class APIClient with RequestDeduplicationMixin {
   /// gateway keeps whatever network it is on; only the absence of a target on
   /// its next config poll changes.
   Future<void> clearDeviceWifiTarget(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/wifi/target');
     final response = await _client.delete(url, headers: await _headers());
     _handleResponse(response);
   }
@@ -740,7 +740,7 @@ class APIClient with RequestDeduplicationMixin {
   /// because it is the only thing that says the server actually recorded it.
   Future<bool> acknowledgeDeviceOfflineAlerts(String deviceId) async {
     final url =
-        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/acknowledge');
+        Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/alerts/acknowledge');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['acknowledged'] as bool? ?? true;
@@ -753,7 +753,7 @@ class APIClient with RequestDeduplicationMixin {
   /// were re-enabled when nothing changed.
   Future<bool> clearDeviceOfflineAlertsAcknowledge(String deviceId) async {
     final url =
-        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/acknowledge');
+        Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/alerts/acknowledge');
     final response = await _client.delete(url, headers: await _headers());
     if (response.statusCode == 404 || response.statusCode == 405) {
       throw AlertActionUnavailableException();
@@ -770,7 +770,7 @@ class APIClient with RequestDeduplicationMixin {
     required bool muted,
   }) async {
     final url =
-        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/mute');
+        Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/alerts/mute');
     final response = await _client.put(
       url,
       headers: await _headers(),
@@ -787,7 +787,7 @@ class APIClient with RequestDeduplicationMixin {
   /// history rows or ones from a reissued-in-place token just show as
   /// informational and won't offer a sign-out action.
   Future<List<RecentSession>> getRecentSessions() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/sessions');
+    final url = Uri.parse('$baseUrl/v1/user/sessions');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response);
     final list = data['logins'] as List<dynamic>? ?? [];
@@ -798,7 +798,7 @@ class APIClient with RequestDeduplicationMixin {
   /// own current session (the caller should then clear local auth and
   /// return to login, since there's no valid token left to continue with).
   Future<bool> revokeSession(String sessionId) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/sessions/$sessionId/revoke');
+    final url = Uri.parse('$baseUrl/v1/user/sessions/$sessionId/revoke');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['wasCurrent'] as bool? ?? false;
@@ -808,7 +808,7 @@ class APIClient with RequestDeduplicationMixin {
   /// returns a fresh token for the current session (same one — the server
   /// reissues in place rather than logging this device out too).
   Future<String> revokeOtherSessions() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/sessions/revoke');
+    final url = Uri.parse('$baseUrl/v1/user/sessions/revoke');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['token'] as String;
@@ -818,7 +818,7 @@ class APIClient with RequestDeduplicationMixin {
   /// has already expired — pure housekeeping so the Recent Sign-ins list
   /// doesn't grow forever with stale rows. Returns how many were removed.
   Future<int> clearExpiredSessions() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/sessions/clear-expired');
+    final url = Uri.parse('$baseUrl/v1/user/sessions/clear-expired');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['clearedCount'] as int? ?? 0;
@@ -827,7 +827,7 @@ class APIClient with RequestDeduplicationMixin {
   /// Empties the sign-in history — expired and signed-out records alike — while
   /// keeping the current session. Returns how many rows were removed.
   Future<int> clearAllSessions() async {
-    final url = Uri.parse('$baseUrl/api/v1/user/sessions/clear-all');
+    final url = Uri.parse('$baseUrl/v1/user/sessions/clear-all');
     final response = await _client.post(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['clearedCount'] as int? ?? 0;
@@ -840,7 +840,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('ota_history_$deviceId', () async {
       final cacheKey = 'ota_history_$deviceId';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/ota/history?limit=$limit');
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/ota/history?limit=$limit');
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -863,7 +863,7 @@ class APIClient with RequestDeduplicationMixin {
     return deduplicate('ble_history_$deviceId', () async {
       final cacheKey = 'ble_history_$deviceId';
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/ble/history');
+        final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/ble/history');
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -884,14 +884,14 @@ class APIClient with RequestDeduplicationMixin {
   /// command and returns a request id; the device performs the check on its
   /// next poll.
   Future<Map<String, dynamic>> requestOtaCheck(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/ota/check');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/ota/check');
     final response = await _client.post(url, headers: await _headers());
     return _handleResponse(response) as Map<String, dynamic>;
   }
 
   /// Reads the current queued OTA command state for a gateway.
   Future<Map<String, dynamic>?> getOtaCommand(String deviceId) async {
-    final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/ota/command');
+    final url = Uri.parse('$baseUrl/v1/dashboard/devices/$deviceId/ota/command');
     final response = await _client.get(url, headers: await _headers());
     final data = _handleResponse(response) as Map<String, dynamic>;
     return data['command'] as Map<String, dynamic>?;
@@ -916,7 +916,7 @@ class APIClient with RequestDeduplicationMixin {
         query['rolloutChannel'] = rolloutChannel;
       }
       try {
-        final url = Uri.parse('$baseUrl/api/v1/dashboard/firmware/releases').replace(queryParameters: query);
+        final url = Uri.parse('$baseUrl/v1/dashboard/firmware/releases').replace(queryParameters: query);
         final response = await _client.get(url, headers: await _headers());
         final data = _handleResponse(response);
         await CacheService.instance.cacheData(cacheKey, data);
@@ -947,7 +947,7 @@ class APIClient with RequestDeduplicationMixin {
     required bool offlineAlerts,
     required bool warningAlerts,
   }) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/notifications/register');
+    final url = Uri.parse('$baseUrl/v1/user/notifications/register');
     final response = await _client.post(
       url,
       headers: await _headers(),
@@ -965,7 +965,7 @@ class APIClient with RequestDeduplicationMixin {
 
   /// Removes a device token from the signed-in account, e.g. on sign-out.
   Future<void> unregisterPushToken(String token) async {
-    final url = Uri.parse('$baseUrl/api/v1/user/notifications/register');
+    final url = Uri.parse('$baseUrl/v1/user/notifications/register');
     final request = http.Request('DELETE', url)
       ..headers.addAll(await _headers())
       ..body = jsonEncode({'token': token});

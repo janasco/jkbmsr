@@ -34,7 +34,7 @@ void main() {
       final deleted = await APIClient().deleteAlert('a1');
 
       expect(captured.method, 'DELETE');
-      expect(captured.url.path, '/api/v1/dashboard/alerts/a1');
+      expect(captured.url.path, '/v1/dashboard/alerts/a1');
       expect(deleted, 'a1');
     });
 
@@ -67,7 +67,7 @@ void main() {
       final count = await APIClient().deleteResolvedAlerts();
 
       expect(captured.method, 'DELETE');
-      expect(captured.url.path, '/api/v1/dashboard/alerts/resolved');
+      expect(captured.url.path, '/v1/dashboard/alerts/resolved');
       expect(captured.url.queryParameters, isEmpty);
       expect(count, 7);
     });
@@ -85,7 +85,7 @@ void main() {
       final count = await APIClient().deleteResolvedAlerts(deviceId: 'gw-1');
 
       expect(captured.method, 'DELETE');
-      expect(captured.url.path, '/api/v1/dashboard/alerts/resolved');
+      expect(captured.url.path, '/v1/dashboard/alerts/resolved');
       expect(captured.url.queryParameters['deviceId'], 'gw-1');
       expect(count, 2);
     });

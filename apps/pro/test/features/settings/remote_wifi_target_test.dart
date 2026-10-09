@@ -92,16 +92,16 @@ void main() {
         final path = request.url.path;
         final method = request.method;
 
-        if (path == '/api/v1/dashboard/devices') {
+        if (path == '/v1/dashboard/devices') {
           return _json({'devices': [_device()]}, 200);
         }
-        if (path == '/api/v1/dashboard/devices/gw-1/config') {
+        if (path == '/v1/dashboard/devices/gw-1/config') {
           return _json({'config': <String, dynamic>{}}, 200);
         }
-        if (path == '/api/v1/dashboard/devices/gw-1/shares') {
+        if (path == '/v1/dashboard/devices/gw-1/shares') {
           return _json({'shares': [], 'maxShares': 5}, 200);
         }
-        if (path == '/api/v1/dashboard/devices/gw-1/wifi') {
+        if (path == '/v1/dashboard/devices/gw-1/wifi') {
           return _json({
             'wifi': {
               'currentSsid': 'OldNet',
@@ -111,7 +111,7 @@ void main() {
             },
           }, 200);
         }
-        if (path == '/api/v1/dashboard/devices/gw-1/wifi/target') {
+        if (path == '/v1/dashboard/devices/gw-1/wifi/target') {
           if (targetRouteAbsent) return _json({'error': 'Not found'}, 404);
           if (method == 'PUT') {
             lastPut = request;
@@ -145,7 +145,7 @@ void main() {
             },
           }, 200);
         }
-        if (path == '/api/v1/user/sessions') {
+        if (path == '/v1/user/sessions') {
           return _json({'logins': []}, 200);
         }
         return _json({'error': 'not found'}, 404);
@@ -300,7 +300,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(lastDelete, isNotNull);
-    expect(lastDelete!.url.path, '/api/v1/dashboard/devices/gw-1/wifi/target');
+    expect(lastDelete!.url.path, '/v1/dashboard/devices/gw-1/wifi/target');
     expect(find.text('No remote target set. The gateway keeps using its current network.'), findsOneWidget);
     expect(find.byKey(_clearKey), findsNothing);
 

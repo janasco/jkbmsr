@@ -47,7 +47,7 @@ D1_DATABASE="jkbmsr"
 CLOUDFLARE_API_BASE="https://api.cloudflare.com/client/v4"
 
 PUBLIC_BASE_URL="https://cdn.jkbmsr.com"
-DOWNLOAD_URL="/api/v1/ota/firmware"
+DOWNLOAD_URL="/v1/ota/firmware"
 
 # Pinned for the same reason PlatformIO is: the workflow pinned
 # `wrangler@4.107.0`, and a moving wrangler tag is how a publish path breaks

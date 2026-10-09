@@ -20,7 +20,7 @@ Use this template for `firmware-v<version>` releases.
 - [ ] Workflow uploaded firmware binary
 - [ ] Workflow uploaded checksum
 - [ ] D1 latest firmware row updated
-- [ ] `GET /api/v1/ota/latest` verified
+- [ ] `GET /v1/ota/latest` verified
 - [ ] Download checksum header verified
 
 ## Known Limitations

@@ -131,7 +131,7 @@ bool DeviceRegistrationClient::registerDevice(
   if (claimToken.length() > 0) {
     document["claimToken"] = claimToken;
   }
-  if (!postJson(apiBaseUrl_ + "/api/v1/device/register", document, result)) {
+  if (!postJson(apiBaseUrl_ + "/v1/device/register", document, result)) {
     return false;
   }
 
@@ -168,7 +168,7 @@ bool DeviceRegistrationClient::loginDevice(
   capabilities["uart"] = true;
   capabilities["ble"] = kHasBle;
   capabilities["ota"] = kHasOta;
-  if (!postJson(apiBaseUrl_ + "/api/v1/device/login", document, result)) {
+  if (!postJson(apiBaseUrl_ + "/v1/device/login", document, result)) {
     return false;
   }
 

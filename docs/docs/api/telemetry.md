@@ -1,7 +1,7 @@
 # Telemetry API
 
 ```text
-POST /api/v1/telemetry
+POST /v1/telemetry
 ```
 
 Uploads JK-BMS telemetry from an authenticated ESP32 gateway.

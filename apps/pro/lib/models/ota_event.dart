@@ -1,5 +1,5 @@
 /// Data model representing a single gateway OTA event/log.
-/// Maps exactly to the `/api/v1/dashboard/devices/:deviceId/ota/history` response schema.
+/// Maps exactly to the `/v1/dashboard/devices/:deviceId/ota/history` response schema.
 class OtaEvent {
   final int id;
   final String lastResult;

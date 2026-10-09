@@ -3,7 +3,7 @@
 The ESP32 checks JKBMSR Cloud for firmware updates.
 
 ```text
-GET /api/v1/ota/latest
+GET /v1/ota/latest
 ```
 
 The response includes:
@@ -17,7 +17,7 @@ The response includes:
 The firmware download is fetched from the authenticated endpoint:
 
 ```text
-GET /api/v1/ota/firmware/:firmwareId
+GET /v1/ota/firmware/:firmwareId
 ```
 
 Expected response headers:
@@ -26,7 +26,7 @@ Expected response headers:
 - `X-Firmware-Target`
 - `X-Firmware-SHA256`
 
-Expected signed metadata fields on `/api/v1/ota/latest`:
+Expected signed metadata fields on `/v1/ota/latest`:
 
 - `signature`
 - `signingKeyId`

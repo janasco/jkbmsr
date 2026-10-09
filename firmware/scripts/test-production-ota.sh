@@ -29,7 +29,7 @@ PY
 )"
 
 echo "Registering simulated device ${DEVICE_ID} against ${API_BASE_URL}"
-register_response="$(curl -fsS "${API_BASE_URL}/api/v1/device/register" -H 'Content-Type: application/json' -d "${register_payload}")"
+register_response="$(curl -fsS "${API_BASE_URL}/v1/device/register" -H 'Content-Type: application/json' -d "${register_payload}")"
 printf '%s' "${register_response}" > "${tmpdir}/register.json"
 
 device_token="$(python3 - <<'PY' "${tmpdir}/register.json"
@@ -50,7 +50,7 @@ PY
 
 echo "Registered device secret length: ${#device_secret}"
 echo "Requesting live OTA metadata"
-ota_response="$(curl -fsS "${API_BASE_URL}/api/v1/ota/latest" -H "Authorization: Bearer ${device_token}")"
+ota_response="$(curl -fsS "${API_BASE_URL}/v1/ota/latest" -H "Authorization: Bearer ${device_token}")"
 printf '%s' "${ota_response}" > "${tmpdir}/ota.json"
 
 python3 - <<'PY' "${tmpdir}/ota.json"

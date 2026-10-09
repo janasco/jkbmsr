@@ -1,5 +1,5 @@
 /// Data model representing a JKBMSR device.
-/// Maps exactly to the `/api/v1/dashboard/devices` response schema.
+/// Maps exactly to the `/v1/dashboard/devices` response schema.
 class Device {
   final String id;
   final String name;

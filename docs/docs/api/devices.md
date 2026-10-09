@@ -3,7 +3,7 @@
 ## Register
 
 ```text
-POST /api/v1/device/register
+POST /v1/device/register
 ```
 
 Used by a new ESP32 gateway to register with JKBMSR Cloud after Wi‑Fi is configured.
@@ -22,7 +22,7 @@ Returns device JWT / refresh material and initial config.
 ## Login
 
 ```text
-POST /api/v1/device/login
+POST /v1/device/login
 ```
 
 Used by a registered ESP32 gateway to receive a fresh JWT (`deviceId` + `deviceSecret`).
@@ -30,7 +30,7 @@ Used by a registered ESP32 gateway to receive a fresh JWT (`deviceId` + `deviceS
 ## Owner claim
 
 ```text
-POST /api/v1/user/devices/claim
+POST /v1/user/devices/claim
 ```
 
 Requires a customer Bearer token.
@@ -55,8 +55,8 @@ Legacy: `deviceSecret` instead of `claimCode` only when the device has no claim-
 ## Dashboard Device History
 
 ```text
-GET /api/v1/dashboard/devices/:deviceId/telemetry/history
-GET /api/v1/dashboard/devices/:deviceId/ota/history
+GET /v1/dashboard/devices/:deviceId/telemetry/history
+GET /v1/dashboard/devices/:deviceId/ota/history
 ```
 
 Used by the authenticated dashboard to show recent telemetry trends and persistent OTA runtime events for a visible device.

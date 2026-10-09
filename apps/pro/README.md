@@ -94,11 +94,11 @@ https://api.jkbmsr.com
 
 Relevant endpoints already available:
 
-- `POST /api/v1/user/login`
-- `GET /api/v1/dashboard/devices`
-- `GET /api/v1/dashboard/devices/:deviceId`
-- `GET /api/v1/dashboard/alerts`
-- `GET /api/v1/ota/latest`
+- `POST /v1/user/login`
+- `GET /v1/dashboard/devices`
+- `GET /v1/dashboard/devices/:deviceId`
+- `GET /v1/dashboard/alerts`
+- `GET /v1/ota/latest`
 
 ## Documentation
 

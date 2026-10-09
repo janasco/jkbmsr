@@ -25,11 +25,11 @@ steps in Phase 4 that this environment can't complete on its own (see
 
 ## Phase 3: Backlog — complete (code)
 
-- Device claim/onboarding against `POST /api/v1/user/devices/claim`.
+- Device claim/onboarding against `POST /v1/user/devices/claim`.
 - Real push notification provider (Firebase Cloud Messaging): permission
   request, token retrieval/refresh, background handler, foreground toast.
 - Alert preferences, synced to JKBMSR Cloud per-token
-  (`POST /api/v1/user/notifications/register`), not just stored locally.
+  (`POST /v1/user/notifications/register`), not just stored locally.
 - Alert history (resolved alerts, paginated) alongside the existing active
   list.
 - Firmware release visibility screen, linked from OTA.

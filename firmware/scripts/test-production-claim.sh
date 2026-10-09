@@ -50,7 +50,7 @@ PY
 )"
 
 echo "1) Registering device with claimCode"
-curl -fsS "${API_BASE_URL}/api/v1/device/register" \
+curl -fsS "${API_BASE_URL}/v1/device/register" \
   -H 'Content-Type: application/json' \
   -d "${register_payload}" > "${tmpdir}/register.json"
 
@@ -76,7 +76,7 @@ print(json.dumps({
 }))
 PY
 )"
-  curl -fsS "${API_BASE_URL}/api/v1/user/register" \
+  curl -fsS "${API_BASE_URL}/v1/user/register" \
     -H 'Content-Type: application/json' \
     -d "${user_payload}" > "${tmpdir}/user.json"
 
@@ -106,7 +106,7 @@ print(json.dumps({"deviceId": "${DEVICE_ID}", "claimCode": "${CLAIM_CODE}"}))
 PY
 )"
     blocked_status="$(curl -sS -o "${tmpdir}/blocked.json" -w '%{http_code}' \
-      "${API_BASE_URL}/api/v1/user/devices/claim" \
+      "${API_BASE_URL}/v1/user/devices/claim" \
       -H "Authorization: Bearer ${user_token}" \
       -H 'Content-Type: application/json' \
       -d "${claim_payload}")"
@@ -167,7 +167,7 @@ PY
 )"
 
 claim_status="$(curl -sS -o "${tmpdir}/claim.json" -w '%{http_code}' \
-  "${API_BASE_URL}/api/v1/user/devices/claim" \
+  "${API_BASE_URL}/v1/user/devices/claim" \
   -H "Authorization: Bearer ${user_token}" \
   -H 'Content-Type: application/json' \
   -d "${claim_payload}")"
@@ -192,7 +192,7 @@ print(json.dumps({
 }))
 PY
 )"
-curl -fsS "${API_BASE_URL}/api/v1/device/register" \
+curl -fsS "${API_BASE_URL}/v1/device/register" \
   -H 'Content-Type: application/json' \
   -d "${bad_register}" > /dev/null
 
@@ -205,7 +205,7 @@ print(json.dumps({
 PY
 )"
 bad_status="$(curl -sS -o "${tmpdir}/bad-claim.json" -w '%{http_code}' \
-  "${API_BASE_URL}/api/v1/user/devices/claim" \
+  "${API_BASE_URL}/v1/user/devices/claim" \
   -H "Authorization: Bearer ${user_token}" \
   -H 'Content-Type: application/json' \
   -d "${bad_claim}")"
@@ -223,7 +223,7 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     print(json.load(fh)["token"])
 PY
 )"
-curl -fsS "${API_BASE_URL}/api/v1/ota/latest" \
+curl -fsS "${API_BASE_URL}/v1/ota/latest" \
   -H "Authorization: Bearer ${device_token}" > "${tmpdir}/ota.json"
 
 python3 - <<'PY' "${tmpdir}/ota.json" "${FIRMWARE_VERSION}"

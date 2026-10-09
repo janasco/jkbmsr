@@ -1,7 +1,7 @@
 # Device Config API
 
 ```text
-GET /api/v1/device/config
+GET /v1/device/config
 ```
 
 Returns remote configuration for an authenticated ESP32 gateway.
