@@ -2,9 +2,22 @@
   "version": "0.9.2",
   "targetHardware": "esp32-classic-4mb",
   "releasedAt": "2026-10-09T06:30:34Z",
+  "githubReleaseTag": "firmware-v0.9.2",
+  "artifacts": {
+    "firmware": "./firmware.bin",
+    "checksum": "./firmware.sha256",
+    "metadata": "./firmware-metadata.json",
+    "releaseNotes": "./RELEASE_NOTES.md",
+    "flashManifest": "./flash-manifest.json"
+  },
+  "otaMetadata": {
+  "version": "0.9.2",
+  "targetHardware": "esp32-classic-4mb",
+  "releasedAt": "2026-10-09T06:30:34Z",
   "downloadUrl": "/v1/ota/firmware",
   "sha256": "8682f2fac2cbfb6ab6e3cb6f5712933aafa3ff856242fb5dbef1f6320cbfc65b",
   "signature": "MEUCIQDBn4HIP3Dq1yMObwkmbdNcTX1XICv1xtV7t9OmOL2BOQIgA15Rh3eMYOMg47H0Z88QXvTu4R+OEvtXhgvAlFjakFA=",
   "signingKeyId": "jkbmsr-ota-p256-20261009",
   "signatureAlgorithm": "ecdsa-p256-sha256"
+}
 }

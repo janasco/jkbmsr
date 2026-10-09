@@ -1,0 +1,23 @@
+{
+  "name": "JKBMSR Gateway",
+  "version": "0.9.2",
+  "new_install_improv_wait_time": 20,
+  "builds": [
+    {
+      "chipFamily": "ESP8266",
+      "targetHardware": "esp8266-uart-lite",
+      "capabilities": {
+        "wifi": true,
+        "uart": true,
+        "ble": false,
+        "ota": false
+      },
+      "parts": [
+        {
+          "path": "./firmware.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

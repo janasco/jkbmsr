@@ -1,10 +1,10 @@
 {
-  "currentVersion": "0.9.1",
+  "currentVersion": "0.9.2",
   "targetHardware": "esp32-c3-4mb",
-  "releasedAt": "2026-09-22T02:18:12Z",
+  "releasedAt": "2026-10-09T06:30:34Z",
   "publicBaseUrl": "https://cdn.jkbmsr.com",
-  "artifactDirectory": "./v0.9.1/",
-  "checksumFile": "./v0.9.1/firmware.sha256",
-  "releaseManifest": "./v0.9.1/release.json",
-  "flashManifest": "./v0.9.1/flash-manifest.json"
+  "artifactDirectory": "./v0.9.2/",
+  "checksumFile": "./v0.9.2/firmware.sha256",
+  "releaseManifest": "./v0.9.2/release.json",
+  "flashManifest": "./v0.9.2/flash-manifest.json"
 }
