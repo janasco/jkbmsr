@@ -14,6 +14,11 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.42
+
+- Set a gateway's Wi-Fi remotely from Settings, Wi-Fi — no need to be on site. The gateway picks it up on its next check-in, and we'll alert you if it can't reach the network.
+- Added Check for updates to the About menu.
+
 ## v1.3.41
 
 - The dashboard now shows a live countdown to the next expected update ("Next update in …"), based on your gateway's check-in interval.
