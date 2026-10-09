@@ -92,14 +92,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      // Live radar sweep while a scan is running; static
-                      // glyph when idle.
-                      child: isScanning
-                          ? const Padding(
-                              padding: EdgeInsets.all(3),
-                              child: ScanRadar(size: 34, color: Color(0xFF0284C7)),
-                            )
-                          : const Icon(Icons.radar_rounded, color: Color(0xFF0284C7), size: 20),
+                      // Static identity glyph. The scanning animation lives
+                      // ONLY in the big centred ScanRadar in the empty-state
+                      // card below; this small header icon used to run its own
+                      // radar sweep while a scan was live, so two scanners
+                      // animated at once. It is deliberately not animated now
+                      // (and no longer changes size between idle/scanning), so
+                      // exactly one scanner animates during a scan.
+                      child: const Icon(Icons.radar_rounded, color: Color(0xFF0284C7), size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -197,6 +197,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   child: Center(
                     child: Column(
                       children: [
+                        // The one and only animated scanner: the big centred
+                        // radar is the single element allowed to sweep while a
+                        // scan runs (the small header icon is static).
                         isScanning
                             ? const ScanRadar(size: 64, color: Color(0xFF10B981))
                             : const Icon(

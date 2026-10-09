@@ -58,7 +58,9 @@ void main() {
 
     // The radar/label still render, and placeholder cards fill the result area
     // until the first device is found.
-    expect(find.byType(ScanRadar), findsWidgets);
+    expect(find.byType(ScanRadar), findsOneWidget,
+        reason: 'exactly one scanner animates during a scan — the big centred '
+            'radar; the small header glyph is static');
     expect(find.byType(JkSkeleton), findsWidgets);
   });
 
@@ -72,7 +74,9 @@ void main() {
     await tester.pumpWidget(_wrap(DevicesScreen(onConnected: () {})));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(ScanRadar), findsWidgets);
+    expect(find.byType(ScanRadar), findsOneWidget,
+        reason: 'exactly one scanner animates during a scan — the big centred '
+            'radar; the small header glyph is static');
     expect(find.text('SCAN AGAIN'), findsOneWidget);
     expect(find.text('SCAN FOR DEVICES'), findsNothing);
   });
@@ -117,7 +121,9 @@ void main() {
     BleBmsService().debugSetScanningState(true);
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('SCAN AGAIN'), findsOneWidget);
-    expect(find.byType(ScanRadar), findsWidgets);
+    expect(find.byType(ScanRadar), findsOneWidget,
+        reason: 'exactly one scanner animates during a scan — the big centred '
+            'radar; the small header glyph is static');
 
     BleBmsService().debugSetScanningState(false);
     await tester.pump(const Duration(milliseconds: 200));
