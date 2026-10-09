@@ -16,6 +16,7 @@ import '../../services/secure_credential_store.dart';
 import '../../models/device.dart';
 import '../../models/device_share.dart';
 import '../../models/device_wifi.dart';
+import '../../models/device_wifi_target.dart';
 import '../../models/recent_session.dart';
 import '../../models/user.dart';
 import '../../models/bms_vendor.dart';
@@ -187,6 +188,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _wifiSsidController = TextEditingController();
   final _wifiPasswordController = TextEditingController();
 
+  // Persistent remote WiFi target — the "set it and forget it" counterpart to
+  // the interactive change above. Loaded alongside _wifi for the owner.
+  DeviceWifiTargetState? _wifiTarget;
+  bool _wifiTargetLoading = false;
+  bool _wifiTargetBusy = false;
+  bool _wifiTargetOpen = false;
+  bool _wifiTargetPasswordVisible = false;
+  final _wifiTargetSsidController = TextEditingController();
+  final _wifiTargetPasswordController = TextEditingController();
+
   // Dashboard & Display Settings
   bool _batteryAnimationsEnabled = true;
   String _dashboardTemplate = 'default';
@@ -323,6 +334,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _wifiSsidController.removeListener(_onWifiSsidChanged);
     _wifiSsidController.dispose();
     _wifiPasswordController.dispose();
+    _wifiTargetSsidController.dispose();
+    _wifiTargetPasswordController.dispose();
     _bmsRxPinController.dispose();
     _bmsTxPinController.dispose();
     _bmsBleAddressController.dispose();
@@ -408,6 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (matchedDevice?.isOwner ?? false) {
         _loadShares();
         _loadWifi();
+        _loadWifiTarget();
       }
     } catch (e) {
       setState(() {
@@ -695,6 +709,126 @@ class _SettingsScreenState extends State<SettingsScreen> {
       JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
     } finally {
       if (mounted) setState(() => _wifiActionBusy = false);
+    }
+  }
+
+  // Loads the persistent remote WiFi target. A failure here (route absent on an
+  // older API, or a transient network error) leaves _wifiTarget null, which the
+  // card renders as an "unavailable" note rather than blocking the rest of the
+  // WiFi section.
+  Future<void> _loadWifiTarget() async {
+    if (_activeDeviceId == null) return;
+    setState(() => _wifiTargetLoading = true);
+    try {
+      final state = await _apiClient.getDeviceWifiTarget(_activeDeviceId!);
+      if (!mounted) return;
+      setState(() {
+        _wifiTarget = state;
+        _wifiTargetLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _wifiTargetLoading = false);
+    }
+  }
+
+  // Security-sensitive: a plaintext WiFi password is sent here (and stored
+  // encrypted server-side), so setting one always goes through an explicit
+  // confirmation that says so. Validation mirrors jkbmsr-api's route.
+  void _confirmSetWifiTarget() {
+    if (_activeDeviceId == null) return;
+    final ssid = _wifiTargetSsidController.text.trim();
+    if (ssid.isEmpty || ssid.length > 32) {
+      JKBMSRToast.show(context, 'Network name must be between 1 and 32 characters', isError: true);
+      return;
+    }
+    final isOpen = _wifiTargetOpen;
+    final password = _wifiTargetPasswordController.text;
+    if (!isOpen && password.isEmpty) {
+      JKBMSRToast.show(context, 'Enter the WiFi password, or turn on "Open network"', isError: true);
+      return;
+    }
+    if (password.length > 63) {
+      JKBMSRToast.show(context, 'WiFi password must be 63 characters or fewer', isError: true);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return JKBMSRDialog(
+          title: 'Set remote WiFi target?',
+          content: isOpen
+              ? 'The gateway will be told to join "$ssid", an OPEN network with no password. Anyone '
+                  'nearby could also join it. It applies this on its next check-in — a gateway that is '
+                  'offline or can\'t reach the cloud won\'t receive it until then. If it can\'t connect, '
+                  'it keeps retrying and we\'ll alert you.'
+              : 'The gateway will be told to join "$ssid". Your WiFi password is sent once and stored '
+                  'encrypted on the server — it is never shown again in the app. The gateway applies '
+                  'this on its next check-in; one that is offline or can\'t reach the cloud won\'t '
+                  'receive it until then. If it can\'t connect, it keeps retrying and we\'ll alert you.',
+          confirmText: 'Set',
+          onConfirm: () async {
+            Navigator.pop(context);
+            await _setWifiTarget(ssid, password, isOpen);
+          },
+          onCancel: () => Navigator.pop(context),
+        );
+      },
+    );
+  }
+
+  Future<void> _setWifiTarget(String ssid, String password, bool isOpen) async {
+    if (_activeDeviceId == null) return;
+    setState(() => _wifiTargetBusy = true);
+    try {
+      await _apiClient.setDeviceWifiTarget(_activeDeviceId!, ssid: ssid, password: password, isOpen: isOpen);
+      _wifiTargetPasswordController.clear();
+      _wifiTargetSsidController.clear();
+      await _loadWifiTarget();
+      await _loadWifi();
+      if (!mounted) return;
+      JKBMSRToast.show(context, 'Remote WiFi target saved. The gateway applies it on its next check-in.');
+    } catch (e) {
+      if (!mounted) return;
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _wifiTargetBusy = false);
+    }
+  }
+
+  void _confirmClearWifiTarget() {
+    if (_activeDeviceId == null) return;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return JKBMSRDialog(
+          title: 'Clear remote WiFi target?',
+          content: 'The gateway will stop being told which network to join, and the unreachable alerts '
+              'stop. No password is sent. The gateway keeps the network it is currently on.',
+          confirmText: 'Clear',
+          onConfirm: () async {
+            Navigator.pop(context);
+            await _clearWifiTarget();
+          },
+          onCancel: () => Navigator.pop(context),
+        );
+      },
+    );
+  }
+
+  Future<void> _clearWifiTarget() async {
+    if (_activeDeviceId == null) return;
+    setState(() => _wifiTargetBusy = true);
+    try {
+      await _apiClient.clearDeviceWifiTarget(_activeDeviceId!);
+      await _loadWifiTarget();
+      if (!mounted) return;
+      JKBMSRToast.show(context, 'Remote WiFi target cleared.');
+    } catch (e) {
+      if (!mounted) return;
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _wifiTargetBusy = false);
     }
   }
 
@@ -1457,7 +1591,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'gateway':
         return [_gatewayNameCard()];
       case 'wifi':
-        return [_wifiCard()];
+        return [
+          _wifiCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          _remoteWifiTargetCard(),
+        ];
       case 'firmware':
         return [_firmwareOtaCard()];
       case 'dashboard':
@@ -1761,6 +1899,232 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: JKBMSRTypography.bodySecondary.copyWith(color: context.colors.critical),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // SQLite stores datetime('now') as "YYYY-MM-DD HH:MM:SS" in UTC. Render a
+  // short readable local form; unparseable input falls through as-is rather
+  // than showing a fabricated time.
+  static String _formatWhen(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    final iso = raw.contains('T') ? raw : raw.replaceFirst(' ', 'T');
+    final parsed = DateTime.tryParse('${iso}Z');
+    if (parsed == null) return raw;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final local = parsed.toLocal();
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    return '${local.day} ${months[local.month - 1]} ${local.year}, $hh:$mm';
+  }
+
+  // The persistent "set it and forget it" remote WiFi target. Kept separate
+  // from _wifiCard because it is a different lifecycle: the interactive change
+  // above is a one-shot the gateway verifies and may roll back, while this
+  // target is stored server-side and re-delivered on every poll until cleared.
+  Widget _remoteWifiTargetCard() {
+    final loaded = _wifiTarget != null;
+    final target = _wifiTarget?.target;
+    final reported = _wifiTarget?.reported;
+    final alert = _wifiTarget?.alert;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(JKBMSRTokens.space24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cloud_sync_outlined, size: 20, color: context.colors.accent),
+                const SizedBox(width: JKBMSRTokens.space8),
+                Expanded(child: Text('Remote WiFi target', style: JKBMSRTypography.cardHeading)),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space8),
+            Text(
+              'Set the network you want this gateway on from anywhere — no need to be on site. It applies '
+              'the target on its next check-in and keeps retrying.',
+              style: JKBMSRTypography.bodySecondary,
+            ),
+            const SizedBox(height: JKBMSRTokens.space16),
+
+            // --- What the owner asked for ---
+            if (_wifiTargetLoading && !loaded)
+              const JKBMSRSkeleton(height: 48, borderRadius: JKBMSRTokens.radius8)
+            else if (!loaded)
+              Text('Remote target settings are unavailable right now.', style: JKBMSRTypography.bodySecondary)
+            else if (target == null)
+              Text(
+                'No remote target set. The gateway keeps using its current network.',
+                style: JKBMSRTypography.bodySecondary,
+              )
+            else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(JKBMSRTokens.space12),
+                decoration: BoxDecoration(
+                  color: context.colors.inset,
+                  borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+                  border: Border.all(color: context.colors.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          target.isOpen ? Icons.lock_open_outlined : Icons.lock_outline,
+                          size: 16,
+                          color: context.colors.textMuted,
+                        ),
+                        const SizedBox(width: JKBMSRTokens.space8),
+                        Expanded(
+                          child: Text(
+                            target.ssid,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: JKBMSRTypography.body,
+                          ),
+                        ),
+                        Text(
+                          target.isOpen ? 'Open' : 'Secured',
+                          style: JKBMSRTypography.label.copyWith(color: context.colors.textMuted),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: JKBMSRTokens.space4),
+                    Text(
+                      target.isOpen
+                          ? 'No password. Anyone nearby can join this network.'
+                          : 'Password stored encrypted — it is never shown again.',
+                      style: JKBMSRTypography.bodySecondary,
+                    ),
+                    if ((target.setAt ?? '').isNotEmpty) ...[
+                      const SizedBox(height: JKBMSRTokens.space4),
+                      Text('Set ${_formatWhen(target.setAt)}', style: JKBMSRTypography.bodySecondary),
+                    ],
+                  ],
+                ),
+              ),
+              if (alert?.active ?? false) ...[
+                const SizedBox(height: JKBMSRTokens.space12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning_amber_outlined, size: 18, color: context.colors.warning),
+                    const SizedBox(width: JKBMSRTokens.space8),
+                    Expanded(
+                      child: Text(
+                        "The gateway hasn't reached this network yet. "
+                        '${alert!.count > 0 ? "We've alerted you ${alert.count} time${alert.count == 1 ? '' : 's'}. " : ''}'
+                        'It keeps retrying on its own.',
+                        style: JKBMSRTypography.bodySecondary.copyWith(color: context.colors.warning),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+
+            // --- What the gateway last reported ---
+            const SizedBox(height: JKBMSRTokens.space16),
+            Text(
+              'Last reported by the gateway',
+              style: JKBMSRTypography.label.copyWith(color: context.colors.textMuted),
+            ),
+            const SizedBox(height: JKBMSRTokens.space4),
+            if (!loaded)
+              Text('—', style: JKBMSRTypography.bodySecondary)
+            else if (reported == null)
+              Text("The gateway hasn't reported its WiFi state yet.", style: JKBMSRTypography.bodySecondary)
+            else ...[
+              Text(
+                reported.ssid.isNotEmpty ? '${reported.stateLabel} — ${reported.ssid}' : reported.stateLabel,
+                style: JKBMSRTypography.body,
+              ),
+              if ((reported.at ?? '').isNotEmpty)
+                Text('at ${_formatWhen(reported.at)}', style: JKBMSRTypography.bodySecondary),
+              if (reported.error.isNotEmpty)
+                Text(
+                  reported.error,
+                  style: JKBMSRTypography.bodySecondary.copyWith(color: context.colors.critical),
+                ),
+              if (reported.localProvisioned)
+                Text('Set up on site.', style: JKBMSRTypography.bodySecondary),
+            ],
+
+            // --- Controls ---
+            const SizedBox(height: JKBMSRTokens.space16),
+            TextField(
+              key: const ValueKey('remote-wifi-target-ssid'),
+              controller: _wifiTargetSsidController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(labelText: 'Remote network name (SSID)'),
+            ),
+            const SizedBox(height: JKBMSRTokens.space4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Open network'),
+              subtitle: const Text('No password — anyone nearby can join.'),
+              value: _wifiTargetOpen,
+              onChanged: _wifiTargetBusy
+                  ? null
+                  : (value) => setState(() {
+                        _wifiTargetOpen = value;
+                        // The open-network path is explicit: there is no
+                        // password field and no password to send.
+                        if (value) _wifiTargetPasswordController.clear();
+                      }),
+            ),
+            if (!_wifiTargetOpen) ...[
+              TextField(
+                key: const ValueKey('remote-wifi-target-password'),
+                controller: _wifiTargetPasswordController,
+                obscureText: !_wifiTargetPasswordVisible,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'WiFi password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _wifiTargetPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: context.colors.textMuted,
+                    ),
+                    tooltip: _wifiTargetPasswordVisible ? 'Hide password' : 'Show password',
+                    onPressed: () => setState(() => _wifiTargetPasswordVisible = !_wifiTargetPasswordVisible),
+                  ),
+                ),
+              ),
+            ] else ...[
+              Text(
+                'No password will be sent for an open network.',
+                style: JKBMSRTypography.bodySecondary,
+              ),
+            ],
+            const SizedBox(height: JKBMSRTokens.space16),
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: JKBMSRTokens.space8,
+              runSpacing: JKBMSRTokens.space8,
+              children: [
+                if (loaded && target != null)
+                  TextButton(
+                    key: const ValueKey('remote-wifi-target-clear'),
+                    onPressed: _wifiTargetBusy ? null : _confirmClearWifiTarget,
+                    child: const Text('Clear target'),
+                  ),
+                ElevatedButton(
+                  key: const ValueKey('remote-wifi-target-set'),
+                  onPressed: (_wifiTargetBusy || !loaded) ? null : _confirmSetWifiTarget,
+                  child: _wifiTargetBusy
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Set remote target'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
