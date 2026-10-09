@@ -1433,11 +1433,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      // Grouped category rows mirroring _buildSettingsList: group headings and
+      // icon + label + chevron rows, then the pinned Logout action.
       return Scaffold(
         backgroundColor: context.colors.canvas,
-        body: const Padding(
-          padding: EdgeInsets.all(JKBMSRTokens.space16),
-          child: JKBMSRSkeleton(height: 280, borderRadius: JKBMSRTokens.radius8),
+        body: ListView(
+          padding: const EdgeInsets.all(JKBMSRTokens.space16),
+          children: [
+            const SizedBox(height: JKBMSRTokens.space8),
+            for (var group = 0; group < 2; group++) ...[
+              const Padding(
+                padding: EdgeInsets.only(
+                    left: JKBMSRTokens.space4,
+                    bottom: JKBMSRTokens.space8),
+                child: JKBMSRSkeleton(width: 84, height: 12),
+              ),
+              for (var row = 0; row < 3; row++) ...[
+                const _SettingsRowSkeleton(),
+                const SizedBox(height: JKBMSRTokens.space8),
+              ],
+              const SizedBox(height: JKBMSRTokens.space8),
+            ],
+            const SizedBox(height: JKBMSRTokens.space8),
+            const JKBMSRSkeleton(
+                height: 50, borderRadius: JKBMSRTokens.radius8),
+          ],
         ),
       );
     }
@@ -1706,9 +1726,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space16),
-            if (_sessionsLoading)
-              const JKBMSRSkeleton(height: 60)
-            else if (_sessions.isEmpty)
+            if (_sessionsLoading) ...[
+              for (var i = 0; i < 2; i++) const _SessionSkeleton(),
+            ] else if (_sessions.isEmpty)
               Text('No sign-in history recorded yet.', style: JKBMSRTypography.bodySecondary)
             else
               Column(
@@ -1953,7 +1973,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // --- What the owner asked for ---
             if (_wifiTargetLoading && !loaded)
-              const JKBMSRSkeleton(height: 48, borderRadius: JKBMSRTokens.radius8)
+              const _WifiTargetSkeleton()
             else if (!loaded)
               Text('Remote target settings are unavailable right now.', style: JKBMSRTypography.bodySecondary)
             else if (target == null)
@@ -2759,9 +2779,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: JKBMSRTypography.bodySecondary,
             ),
             const SizedBox(height: JKBMSRTokens.space16),
-            if (_sharesLoading)
-              const JKBMSRSkeleton(height: 40)
-            else if (_shares.isEmpty)
+            if (_sharesLoading) ...[
+              for (var i = 0; i < 2; i++) ...[
+                const JKBMSRSkeletonListRow(
+                    leadingSize: 0, trailingWidth: 20, titleHeight: 14),
+                const SizedBox(height: JKBMSRTokens.space8),
+              ],
+            ] else if (_shares.isEmpty)
               Text('Not shared with anyone yet.', style: JKBMSRTypography.bodySecondary)
             else
               ..._shares.map((share) => Padding(
@@ -3152,6 +3176,74 @@ class _SessionBadge extends StatelessWidget {
         label,
         style: JKBMSRTypography.label.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+}
+
+/// A settings category row silhouette: icon, label and chevron, at the same
+/// card radius and 16dp padding as [_settingsRow].
+class _SettingsRowSkeleton extends StatelessWidget {
+  const _SettingsRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      children: [
+        Row(
+          children: const [
+            JKBMSRSkeleton(
+                width: 22, height: 22, borderRadius: JKBMSRTokens.radius4),
+            SizedBox(width: JKBMSRTokens.space16),
+            Expanded(child: JKBMSRSkeleton(height: 14)),
+            SizedBox(width: JKBMSRTokens.space8),
+            JKBMSRSkeleton(
+                width: 20, height: 20, borderRadius: JKBMSRTokens.radius4),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One sign-in session row silhouette: two lines of text and the sign-out
+/// control, on the same inset surface and radius as [_SessionTile].
+class _SessionSkeleton extends StatelessWidget {
+  const _SessionSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: JKBMSRTokens.space8),
+      padding: const EdgeInsets.all(JKBMSRTokens.space12),
+      decoration: BoxDecoration(
+        color: context.colors.inset,
+        borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+        border: Border.all(color: context.colors.line),
+      ),
+      child: const JKBMSRSkeletonListRow(
+        leadingSize: 0,
+        trailingWidth: 16,
+        titleHeight: 14,
+      ),
+    );
+  }
+}
+
+/// The remote-WiFi-target block silhouette: a lock/name line and sub-line on
+/// the inset surface the loaded container uses.
+class _WifiTargetSkeleton extends StatelessWidget {
+  const _WifiTargetSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      borderRadius: JKBMSRTokens.radius8,
+      color: context.colors.inset,
+      padding: const EdgeInsets.all(JKBMSRTokens.space12),
+      children: const [
+        JKBMSRSkeletonListRow(
+            leadingSize: 16, leadingIsCircle: false, trailingWidth: 0),
+      ],
     );
   }
 }

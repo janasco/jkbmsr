@@ -142,10 +142,28 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
           padding: const EdgeInsets.all(JKBMSRTokens.space16),
           children: [
             if (_isLoading) ...[
-              const JKBMSRSkeleton(height: 80),
-              const SizedBox(height: JKBMSRTokens.space16),
-              const JKBMSRSkeleton(height: 40, width: 200),
-              const SizedBox(height: JKBMSRTokens.space16),
+              // "Individual Cell Voltages" heading.
+              const JKBMSRSkeleton(width: 200, height: 18),
+              const SizedBox(height: JKBMSRTokens.space12),
+              // Summary card: Max / Min / Imbalance columns.
+              JKBMSRSkeletonCard(
+                padding: const EdgeInsets.all(JKBMSRTokens.space12),
+                color: context.colors.inset,
+                children: [
+                  Row(
+                    children: const [
+                      Expanded(child: JKBMSRSkeleton(height: 28)),
+                      SizedBox(width: JKBMSRTokens.space12),
+                      Expanded(child: JKBMSRSkeleton(height: 28)),
+                      SizedBox(width: JKBMSRTokens.space12),
+                      Expanded(child: JKBMSRSkeleton(height: 28)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: JKBMSRTokens.space12),
+              // Per-cell tiles: number circle, voltage line and indicator bar,
+              // at the same 64dp extent the loaded grid uses.
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -153,11 +171,40 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
                   crossAxisCount: 2,
                   crossAxisSpacing: JKBMSRTokens.space12,
                   mainAxisSpacing: JKBMSRTokens.space12,
-                  childAspectRatio: 2.8,
+                  mainAxisExtent: 64,
                 ),
                 itemCount: 8,
-                itemBuilder: (context, index) => const JKBMSRSkeleton(height: 60),
-              )
+                itemBuilder: (context, index) => JKBMSRSkeletonCard(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: JKBMSRTokens.space12,
+                      vertical: JKBMSRTokens.space8),
+                  children: [
+                    Row(
+                      children: const [
+                        JKBMSRSkeleton(
+                            width: 28,
+                            height: 28,
+                            borderRadius: JKBMSRTokens.radiusFull),
+                        SizedBox(width: JKBMSRTokens.space12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              JKBMSRSkeleton(width: 64, height: 14),
+                              SizedBox(height: JKBMSRTokens.space4),
+                              JKBMSRSkeleton(
+                                  width: 56,
+                                  height: 20,
+                                  borderRadius: JKBMSRTokens.radius4),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ] else if (_error != null && _cells.isEmpty) ...[
               JKBMSREmptyState(
                 icon: Icons.error_outline,

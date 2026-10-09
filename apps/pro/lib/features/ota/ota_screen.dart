@@ -161,7 +161,7 @@ class _OTAScreenState extends State<OTAScreen> {
       body: _isLoading
           ? const Padding(
               padding: EdgeInsets.all(JKBMSRTokens.space16),
-              child: JKBMSRSkeleton(height: 280, borderRadius: JKBMSRTokens.radius8),
+              child: _OtaCardSkeleton(),
             )
           : RefreshIndicator(
               onRefresh: _loadOtaData,
@@ -322,6 +322,51 @@ class _OTAScreenState extends State<OTAScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// Loading silhouette of the OTA card: title, description, the current/latest
+/// version rows, the "View Firmware Releases" link and the action row —
+/// mirroring the loaded [Card]'s section order and 24dp padding.
+class _OtaCardSkeleton extends StatelessWidget {
+  const _OtaCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      padding: const EdgeInsets.all(JKBMSRTokens.space24),
+      children: [
+        const JKBMSRSkeleton(height: 18, width: 240),
+        const SizedBox(height: JKBMSRTokens.space8),
+        const JKBMSRSkeleton(height: 12),
+        const SizedBox(height: JKBMSRTokens.space8),
+        const JKBMSRSkeleton(height: 12, width: 200),
+        const SizedBox(height: JKBMSRTokens.space24),
+        Row(
+          children: const [
+            JKBMSRSkeleton(width: 96, height: 14),
+            Spacer(),
+            JKBMSRSkeleton(width: 56, height: 14),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space12),
+        Row(
+          children: const [
+            JKBMSRSkeleton(width: 140, height: 14),
+            Spacer(),
+            JKBMSRSkeleton(width: 40, height: 14),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space12),
+        const JKBMSRSkeleton(width: 170, height: 16),
+        const SizedBox(height: JKBMSRTokens.space32),
+        Align(
+          alignment: Alignment.centerRight,
+          child: const JKBMSRSkeleton(
+              width: 130, height: 40, borderRadius: JKBMSRTokens.radius8),
+        ),
+      ],
     );
   }
 }

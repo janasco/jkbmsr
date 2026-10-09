@@ -202,9 +202,40 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
             Text('Cloud Service History', style: JKBMSRTypography.sectionHeading),
             const SizedBox(height: JKBMSRTokens.space12),
             if (_isLoading) ...[
-              const JKBMSRSkeleton(height: 40, width: 240),
+              // Time-range segmented control.
+              const JKBMSRSkeleton(
+                  height: 48, borderRadius: JKBMSRTokens.radius8),
+              const SizedBox(height: JKBMSRTokens.space12),
+              // Retention note (inset surface).
+              JKBMSRSkeletonCard(
+                borderRadius: JKBMSRTokens.radius8,
+                color: context.colors.inset,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: JKBMSRTokens.space12,
+                    vertical: JKBMSRTokens.space8),
+                children: const [
+                  JKBMSRSkeleton(height: 12),
+                  SizedBox(height: JKBMSRTokens.space8),
+                  JKBMSRSkeleton(width: 220, height: 12),
+                ],
+              ),
               const SizedBox(height: JKBMSRTokens.space16),
-              const JKBMSRSkeleton(height: 200),
+              // One chart card per metric (Voltage, Current, SOC, Power), each
+              // mirroring _chart's label + 100dp plot area.
+              for (var i = 0; i < 4; i++) ...[
+                JKBMSRSkeletonCard(
+                  borderRadius: JKBMSRTokens.radius8,
+                  color: context.colors.inset,
+                  padding: const EdgeInsets.all(JKBMSRTokens.space12),
+                  children: const [
+                    JKBMSRSkeleton(width: 90, height: 12),
+                    SizedBox(height: JKBMSRTokens.space8),
+                    JKBMSRSkeleton(
+                        height: 100, borderRadius: JKBMSRTokens.radius4),
+                  ],
+                ),
+                const SizedBox(height: JKBMSRTokens.space12),
+              ],
             ] else if (_cloudServiceRequired) ...[
               JKBMSREmptyState(
                 icon: Icons.lock_outline,
