@@ -71,6 +71,10 @@ bool RemoteConfigClient::fetch(const String& token, DeviceConfig& config, Remote
     wifiActions->changeRequestId = document["wifiChange"]["requestId"] | "";
     wifiActions->candidateSsid = document["wifiChange"]["ssid"] | "";
     wifiActions->candidatePassword = document["wifiChange"]["password"] | "";
+    wifiActions->desiredSsid = document["wifiDesired"]["ssid"] | "";
+    wifiActions->desiredPassword = document["wifiDesired"]["password"] | "";
+    wifiActions->desiredOpen = document["wifiDesired"]["isOpen"] | false;
+    wifiActions->desiredRevision = document["wifiDesired"]["revision"] | "";
     wifiActions->otaUpdateRequestId = document["otaUpdateRequestId"] | "";
   }
   logInfo("Remote config applied");
@@ -119,6 +123,19 @@ bool RemoteConfigClient::reportWifiChange(const String& token, const String& req
   document["status"] = status;
   document["currentSsid"] = currentSsid;
   document["message"] = message;
+  return postWifiStatus(apiBaseUrl_, token, document);
+}
+
+bool RemoteConfigClient::reportWifiState(const String& token, const String& state,
+                                         const String& currentSsid, const String& lastError,
+                                         bool localProvisioned) {
+  JsonDocument document;
+  document["state"] = state;
+  document["currentSsid"] = currentSsid;
+  document["lastError"] = lastError;
+  if (localProvisioned) {
+    document["localProvisioned"] = true;
+  }
   return postWifiStatus(apiBaseUrl_, token, document);
 }
 

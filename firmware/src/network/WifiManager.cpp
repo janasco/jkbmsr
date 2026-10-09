@@ -41,7 +41,10 @@ bool WifiManager::connect(const String& ssid, const String& password, uint32_t t
     // early value) from "associated fine but DHCP never finished" (status
     // is WL_IDLE_STATUS/WL_DISCONNECTED despite the driver's own log
     // already having reported L2 association) -- see kWifiConnectTimeoutMs.
-    logWarn("WiFi connect timed out; WiFi.status()=" + String(WiFi.status()));
+    lastError_ = "connect timed out; WiFi.status()=" + String(WiFi.status());
+    logWarn("WiFi " + lastError_);
+  } else {
+    lastError_ = "";
   }
   return connectedNow;
 }

@@ -12,6 +12,21 @@ struct DeviceConfig {
   String wifiPassword;
   String deviceToken;
   String deviceSecret;
+  // Opaque revision of the last remote Wi-Fi target this gateway applied
+  // (server-side device_wifi_configs.desired_revision). The gateway persists
+  // it and re-applies a target only when /device/config delivers a different
+  // value, so a steady poll does not restart the gateway.
+  String wifiDesiredRevision;
+  // True when the current credentials came from the LOCAL provisioning path
+  // (Improv Serial / captive portal) rather than a cloud push, and the flag
+  // has not yet been reported to the cloud. Cleared after a successful report.
+  // Lets the backend yield a stale remote target to a person who fixed the
+  // device on site (see backend services/wifiConfigs.ts).
+  bool wifiLocalProvisioned = false;
+  // Consecutive boots where joining the saved network failed. Persisted so the
+  // restart loop can periodically open the local AP instead of rebooting
+  // forever with no human access. Reset on a successful connection.
+  uint32_t wifiRestartCount = 0;
   // Per-device claim secret, minted on first boot. Handed to the browser after
   // Wi-Fi provisioning and required by the backend to bind this device to a
   // user account (anti-spoof; see docs/phase1-provisioning-spec.md).

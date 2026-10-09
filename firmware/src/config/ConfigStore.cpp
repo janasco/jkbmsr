@@ -48,6 +48,9 @@ DeviceConfig ConfigStore::load() {
   config.deviceToken = document["deviceToken"] | "";
   config.deviceSecret = document["deviceSecret"] | "";
   config.claimCode = document["claimCode"] | "";
+  config.wifiDesiredRevision = document["wifiDesiredRevision"] | "";
+  config.wifiLocalProvisioned = document["wifiLocalProvisioned"] | config.wifiLocalProvisioned;
+  config.wifiRestartCount = document["wifiRestartCount"] | config.wifiRestartCount;
   config.telemetryIntervalMs = document["telemetryIntervalMs"] | config.telemetryIntervalMs;
   config.otaEnabled = document["otaEnabled"] | config.otaEnabled;
   config.bmsVendor = document["bmsVendor"] | config.bmsVendor;
@@ -72,6 +75,9 @@ DeviceConfig ConfigStore::load() {
   config.deviceToken = prefs.getString("jwt", "");
   config.deviceSecret = prefs.getString("dev_secret", "");
   config.claimCode = prefs.getString("claim_code", "");
+  config.wifiDesiredRevision = prefs.getString("wifi_des_rev", "");
+  config.wifiLocalProvisioned = prefs.getBool("wifi_local", config.wifiLocalProvisioned);
+  config.wifiRestartCount = prefs.getUInt("wifi_restart", config.wifiRestartCount);
   config.telemetryIntervalMs = prefs.getUInt("interval_ms", config.telemetryIntervalMs);
   config.otaEnabled = prefs.getBool("ota_enabled", config.otaEnabled);
   config.bmsVendor = prefs.getString("bms_vendor", config.bmsVendor);
@@ -96,6 +102,9 @@ bool ConfigStore::save(const DeviceConfig& config) {
   document["deviceToken"] = config.deviceToken;
   document["deviceSecret"] = config.deviceSecret;
   document["claimCode"] = config.claimCode;
+  document["wifiDesiredRevision"] = config.wifiDesiredRevision;
+  document["wifiLocalProvisioned"] = config.wifiLocalProvisioned;
+  document["wifiRestartCount"] = config.wifiRestartCount;
   document["telemetryIntervalMs"] = config.telemetryIntervalMs;
   document["otaEnabled"] = false;
   document["bmsVendor"] = config.bmsVendor;
@@ -129,6 +138,9 @@ bool ConfigStore::save(const DeviceConfig& config) {
   ok &= prefs.putString("jwt", config.deviceToken) > 0;
   ok &= prefs.putString("dev_secret", config.deviceSecret) > 0;
   ok &= prefs.putString("claim_code", config.claimCode) > 0;
+  ok &= prefs.putString("wifi_des_rev", config.wifiDesiredRevision) > 0;
+  ok &= prefs.putBool("wifi_local", config.wifiLocalProvisioned) > 0;
+  ok &= prefs.putUInt("wifi_restart", config.wifiRestartCount) > 0;
   ok &= prefs.putUInt("interval_ms", config.telemetryIntervalMs) > 0;
   ok &= prefs.putBool("ota_enabled", config.otaEnabled) > 0;
   ok &= prefs.putString("bms_vendor", config.bmsVendor) > 0;
