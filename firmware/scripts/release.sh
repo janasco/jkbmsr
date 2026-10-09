@@ -934,9 +934,13 @@ JSON
 # release-breaking difference. Catch it here rather than after the push.
 assert_public_key_is_committable() {
   local path="releases/ota/keys/public/${OTA_SIGNING_KEY_ID}.pem"
-  local ignored
-  ignored=$(git -C "$REPO_ROOT" check-ignore -v -- "$path" 2>/dev/null || true)
-  if [ -n "$ignored" ]; then
+  # `git check-ignore -v` prints the matching pattern for a NEGATION (`!…`) too,
+  # so non-empty output does NOT mean "ignored" -- a `.gitignore` that correctly
+  # un-ignores the public key produced a false FATAL here. Ask the exit status
+  # instead: `-q` exits 0 only when the path really is ignored, 1 when it is not.
+  if git -C "$REPO_ROOT" check-ignore -q -- "$path" 2>/dev/null; then
+    local ignored
+    ignored=$(git -C "$REPO_ROOT" check-ignore -v -- "$path" 2>/dev/null || true)
     cat >&2 <<MSG
 
 release.sh: FATAL: the OTA public key would NOT be committed.
