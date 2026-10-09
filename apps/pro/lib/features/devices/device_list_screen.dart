@@ -474,8 +474,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                   3,
                   (index) => const Padding(
                         padding: EdgeInsets.only(bottom: JKBMSRTokens.space12),
-                        child: JKBMSRSkeleton(
-                            height: 80, borderRadius: JKBMSRTokens.radius8),
+                        child: _DeviceCardSkeleton(),
                       ))
             else if (_error != null && _devices.isEmpty)
               JKBMSREmptyState(
@@ -687,7 +686,12 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
           ],
         ),
         if (_alertsLoading)
-          const JKBMSRSkeleton(height: 60)
+          Column(
+            children: List.generate(
+              3,
+              (index) => const _RecentAlertSkeleton(),
+            ),
+          )
         else if (recent.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space8),
@@ -723,10 +727,32 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
             onSelected: (value) => setState(() => _alertPeriod = value),
           ),
           const SizedBox(height: JKBMSRTokens.space16),
-          if (_alertsLoading)
+          if (_alertsLoading) ...[
             const JKBMSRSkeleton(
-                height: 12, borderRadius: JKBMSRTokens.radiusFull)
-          else if (total == 0)
+                height: 12, borderRadius: JKBMSRTokens.radiusFull),
+            const SizedBox(height: JKBMSRTokens.space16),
+            // Three legend rows (Critical / Warning / Resolved): swatch, label
+            // and count, matching _AlertLegendRow.
+            for (var i = 0; i < 3; i++) ...[
+              Row(
+                children: const [
+                  JKBMSRSkeleton(
+                      width: 10,
+                      height: 10,
+                      borderRadius: JKBMSRTokens.radiusFull),
+                  SizedBox(width: JKBMSRTokens.space8),
+                  Expanded(
+                    child: JKBMSRSkeleton(
+                        height: 14, borderRadius: JKBMSRTokens.radius4),
+                  ),
+                  SizedBox(width: JKBMSRTokens.space12),
+                  JKBMSRSkeleton(
+                      width: 56, height: 14, borderRadius: JKBMSRTokens.radius4),
+                ],
+              ),
+              const SizedBox(height: JKBMSRTokens.space8),
+            ],
+          ] else if (total == 0)
             Padding(
               padding:
                   const EdgeInsets.symmetric(vertical: JKBMSRTokens.space8),
@@ -781,6 +807,72 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                 color: context.colors.accent),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Loading silhouette of one gateway [Card]: the name and id lines on the
+/// left, the SOC/voltage pair and a status pill on the right — the same 16dp
+/// padding and corner radius the loaded card uses, so the list does not jump
+/// when the gateways arrive.
+class _DeviceCardSkeleton extends StatelessWidget {
+  const _DeviceCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  JKBMSRSkeleton(height: 16, width: 150),
+                  SizedBox(height: JKBMSRTokens.space4),
+                  JKBMSRSkeleton(height: 12, width: 104),
+                ],
+              ),
+            ),
+            const SizedBox(width: JKBMSRTokens.space12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: const [
+                JKBMSRSkeleton(height: 14, width: 64),
+                SizedBox(height: JKBMSRTokens.space4),
+                JKBMSRSkeleton(height: 12, width: 44),
+              ],
+            ),
+            const SizedBox(width: JKBMSRTokens.space16),
+            const JKBMSRSkeleton(
+                width: 60, height: 22, borderRadius: JKBMSRTokens.radiusFull),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One row of the Recent Alerts mini-list: severity mark, device + message
+/// lines and a timestamp — mirroring [_RecentAlertTile]'s inset surface.
+class _RecentAlertSkeleton extends StatelessWidget {
+  const _RecentAlertSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: JKBMSRTokens.space8),
+      padding: const EdgeInsets.all(JKBMSRTokens.space12),
+      decoration: BoxDecoration(
+        color: context.colors.inset,
+        borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+      ),
+      child: const JKBMSRSkeletonListRow(
+        leadingSize: 20,
+        leadingIsCircle: false,
+        trailingWidth: 72,
       ),
     );
   }

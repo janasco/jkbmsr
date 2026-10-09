@@ -774,7 +774,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   itemCount: 3,
                   itemBuilder: (context, index) => const Padding(
                     padding: EdgeInsets.only(bottom: JKBMSRTokens.space12),
-                    child: JKBMSRSkeleton(height: 120, borderRadius: JKBMSRTokens.radius8),
+                    child: _AlertCardSkeleton(),
                   ),
                 )
               : _error != null && _activeAlerts.isEmpty
@@ -873,7 +873,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         itemCount: 3,
         itemBuilder: (context, index) => const Padding(
           padding: EdgeInsets.only(bottom: JKBMSRTokens.space12),
-          child: JKBMSRSkeleton(height: 120, borderRadius: JKBMSRTokens.radius8),
+          child: _AlertCardSkeleton(),
         ),
       );
     }
@@ -992,6 +992,56 @@ class _DeleteHistoryDialog extends StatelessWidget {
           style: FilledButton.styleFrom(backgroundColor: context.colors.critical),
           onPressed: onConfirm,
           child: Text(confirmText),
+        ),
+      ],
+    );
+  }
+}
+
+/// Loading silhouette of one alert card: message + severity pill, the gateway
+/// line, the id/timestamp pair and the acknowledge button — mirroring
+/// [_AlertCardContent]'s row order, padding and accent-bordered radius so the
+/// alert list does not jump when the fetch lands.
+class _AlertCardSkeleton extends StatelessWidget {
+  const _AlertCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      borderRadius: JKBMSRTokens.radius12,
+      padding: const EdgeInsets.all(JKBMSRTokens.space16),
+      children: [
+        Row(
+          children: const [
+            Expanded(
+              child: JKBMSRSkeleton(
+                  height: 16, borderRadius: JKBMSRTokens.radius4),
+            ),
+            SizedBox(width: JKBMSRTokens.space8),
+            JKBMSRSkeleton(
+                width: 72,
+                height: 22,
+                borderRadius: JKBMSRTokens.radiusFull),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space8),
+        const JKBMSRSkeleton(
+            height: 12, width: 180, borderRadius: JKBMSRTokens.radius4),
+        const SizedBox(height: JKBMSRTokens.space12),
+        Row(
+          children: const [
+            JKBMSRSkeleton(
+                width: 80, height: 12, borderRadius: JKBMSRTokens.radius4),
+            Spacer(),
+            JKBMSRSkeleton(
+                width: 120, height: 12, borderRadius: JKBMSRTokens.radius4),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: const JKBMSRSkeleton(
+              width: 144, height: 40, borderRadius: JKBMSRTokens.radius8),
         ),
       ],
     );

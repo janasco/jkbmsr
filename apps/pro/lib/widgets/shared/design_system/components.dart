@@ -925,6 +925,174 @@ class _JKBMSRSkeletonState extends State<JKBMSRSkeleton>
 }
 
 // ==========================================
+// 15b. CONTENT-SHAPED SKELETON PRIMITIVES
+// ==========================================
+// JKBMSRSkeleton is a single pulsing block. Used alone it says "loading"
+// without saying *what* is loading, so the placeholder does not resemble the
+// content that replaces it and the layout jumps when data lands. These compose
+// it into the shapes the real screens actually render — the same card radius,
+// panel/inset surface, padding and line counts — so the loading state is a
+// faithful silhouette of the loaded content. None of these animates on its
+// own; each inherits the pulse (and its reduced-motion behaviour) from the
+// JKBMSRSkeleton blocks inside it.
+
+/// A skeleton-filled stand-in for a real [Card]: same panel colour, 1px line
+/// border, corner radius and inner padding, so a loading card occupies the same
+/// footprint as the [Card] it becomes. Pass [children] shaped to mirror the
+/// real card's rows.
+class JKBMSRSkeletonCard extends StatelessWidget {
+  final List<Widget> children;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+
+  /// Surface colour; defaults to the panel colour of a real [Card]. Pass
+  /// `context.colors.inset` to mirror an inset sub-surface.
+  final Color? color;
+  final double? width;
+  final CrossAxisAlignment crossAxisAlignment;
+
+  const JKBMSRSkeletonCard({
+    Key? key,
+    required this.children,
+    this.padding = const EdgeInsets.all(JKBMSRTokens.space16),
+    this.borderRadius = JKBMSRTokens.radius12,
+    this.color,
+    this.width,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color ?? context.colors.panel,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: context.colors.line),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: crossAxisAlignment,
+        children: children,
+      ),
+    );
+  }
+}
+
+/// A silhouette of a common list row: an optional leading icon/avatar square, a
+/// title line and a shorter subtitle line, plus an optional trailing
+/// value/time block. Used for alert rows, sign-in sessions and similar lists.
+class JKBMSRSkeletonListRow extends StatelessWidget {
+  final double leadingSize;
+  final bool leadingIsCircle;
+  final double titleHeight;
+
+  /// Width of the trailing value/time block; 0 hides it.
+  final double trailingWidth;
+
+  const JKBMSRSkeletonListRow({
+    Key? key,
+    this.leadingSize = 20,
+    this.leadingIsCircle = true,
+    this.titleHeight = 14,
+    this.trailingWidth = 64,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (leadingSize > 0) ...[
+          JKBMSRSkeleton(
+            width: leadingSize,
+            height: leadingSize,
+            borderRadius: leadingIsCircle
+                ? JKBMSRTokens.radiusFull
+                : JKBMSRTokens.radius8,
+          ),
+          const SizedBox(width: JKBMSRTokens.space12),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              JKBMSRSkeleton(
+                  height: titleHeight, borderRadius: JKBMSRTokens.radius4),
+              const SizedBox(height: JKBMSRTokens.space8),
+              const JKBMSRSkeleton(
+                  width: 132,
+                  height: 12,
+                  borderRadius: JKBMSRTokens.radius4),
+            ],
+          ),
+        ),
+        if (trailingWidth > 0) ...[
+          const SizedBox(width: JKBMSRTokens.space12),
+          JKBMSRSkeleton(
+              width: trailingWidth,
+              height: 12,
+              borderRadius: JKBMSRTokens.radius4),
+        ],
+      ],
+    );
+  }
+}
+
+/// A silhouette of a small stat/metric tile: a short label line, an optional
+/// icon blob, a larger value line and a short sub-value line — the shape of the
+/// dashboard's 2x2 metric tiles. [showIcon] adds the trailing icon circle.
+class JKBMSRSkeletonStat extends StatelessWidget {
+  final bool showIcon;
+
+  const JKBMSRSkeletonStat({
+    Key? key,
+    this.showIcon = true,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(JKBMSRTokens.space12),
+      decoration: BoxDecoration(
+        color: context.colors.inset,
+        borderRadius: BorderRadius.circular(JKBMSRTokens.radius12),
+        border: Border.all(color: context.colors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: JKBMSRSkeleton(
+                    width: 80, height: 11, borderRadius: JKBMSRTokens.radius4),
+              ),
+              if (showIcon) ...[
+                const SizedBox(width: JKBMSRTokens.space8),
+                const JKBMSRSkeleton(
+                    width: 22,
+                    height: 22,
+                    borderRadius: JKBMSRTokens.radiusFull),
+              ],
+            ],
+          ),
+          const SizedBox(height: JKBMSRTokens.space4),
+          const JKBMSRSkeleton(
+              width: 72, height: 20, borderRadius: JKBMSRTokens.radius4),
+          const SizedBox(height: JKBMSRTokens.space4),
+          const JKBMSRSkeleton(
+              width: 88, height: 11, borderRadius: JKBMSRTokens.radius4),
+        ],
+      ),
+    );
+  }
+}
+
+// ==========================================
 // 16. PAGINATION
 // ==========================================
 class JKBMSRPagination extends StatelessWidget {

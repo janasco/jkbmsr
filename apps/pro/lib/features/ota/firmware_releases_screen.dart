@@ -89,9 +89,16 @@ class _FirmwareReleasesScreenState extends State<FirmwareReleasesScreen> {
       backgroundColor: context.colors.canvas,
       appBar: JKBMSRNavigationBar(title: 'Firmware Releases'),
       body: _isLoading
-          ? const Padding(
-              padding: EdgeInsets.all(JKBMSRTokens.space16),
-              child: JKBMSRSkeleton(height: 280, borderRadius: JKBMSRTokens.radius8),
+          ? ListView(
+              padding: const EdgeInsets.all(JKBMSRTokens.space16),
+              children: [
+                // Three release cards, mirroring the version + verification
+                // header, the Field/Value table and the detail line.
+                for (var i = 0; i < 3; i++) ...[
+                  const _ReleaseCardSkeleton(),
+                  const SizedBox(height: JKBMSRTokens.space12),
+                ],
+              ],
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -200,6 +207,49 @@ class _FirmwareReleasesScreenState extends State<FirmwareReleasesScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// Loading silhouette of one firmware-release card: the version + status
+/// badges, the Field/Value table and the detail line — mirroring the loaded
+/// [Card]'s order and 16dp padding.
+class _ReleaseCardSkeleton extends StatelessWidget {
+  const _ReleaseCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return JKBMSRSkeletonCard(
+      children: [
+        Row(
+          children: const [
+            JKBMSRSkeleton(width: 52, height: 18),
+            SizedBox(width: JKBMSRTokens.space8),
+            JKBMSRSkeleton(
+                width: 60,
+                height: 22,
+                borderRadius: JKBMSRTokens.radiusFull),
+            Spacer(),
+            JKBMSRSkeleton(
+                width: 72,
+                height: 22,
+                borderRadius: JKBMSRTokens.radiusFull),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space12),
+        // Field/Value table: a header plus three rows.
+        for (var i = 0; i < 4; i++) ...[
+          Row(
+            children: const [
+              JKBMSRSkeleton(width: 108, height: 12),
+              Spacer(),
+              JKBMSRSkeleton(width: 92, height: 12),
+            ],
+          ),
+          const SizedBox(height: JKBMSRTokens.space12),
+        ],
+        const JKBMSRSkeleton(height: 12, width: 220),
+      ],
     );
   }
 }

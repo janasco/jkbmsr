@@ -472,17 +472,19 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
             ),
             const SizedBox(height: JKBMSRTokens.space12),
             if (_isLoading) ...[
-              const JKBMSRSkeleton(height: 36, width: 200),
-              const SizedBox(height: JKBMSRTokens.space16),
+              // Device name + status pill, matching the loaded header row.
               Row(
                 children: const [
-                  Expanded(child: JKBMSRSkeleton(height: 100)),
+                  Expanded(child: JKBMSRSkeleton(height: 20)),
                   SizedBox(width: JKBMSRTokens.space12),
-                  Expanded(child: JKBMSRSkeleton(height: 100)),
+                  JKBMSRSkeleton(
+                      width: 72,
+                      height: 24,
+                      borderRadius: JKBMSRTokens.radiusFull),
                 ],
               ),
               const SizedBox(height: JKBMSRTokens.space16),
-              const JKBMSRSkeleton(height: 200),
+              const _DashboardSkeleton(),
             ] else if (_error != null && _device == null) ...[
               JKBMSREmptyState(
                 icon: Icons.error_outline,
@@ -713,5 +715,108 @@ class _BleHistoryTile extends StatelessWidget {
   String _formatDateTime(DateTime dt) {
     final two = (int n) => n.toString().padLeft(2, '0');
     return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+  }
+}
+
+/// Loading silhouette of the dashboard body: the primary metrics card (SOC
+/// banner, a 2x2 metric grid and the cell-imbalance footer) followed by the
+/// Battery & BMS info panel. Mirrors [JKBMSRBatteryMetricsCard] and
+/// [JKBMSRBmsInfoCard] so the page does not jump when telemetry arrives.
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        JKBMSRSkeletonCard(
+          borderRadius: JKBMSRTokens.radius16,
+          children: [
+            // Header: status dot + device name + power-state pill.
+            Row(
+              children: const [
+                JKBMSRSkeleton(
+                    width: 8,
+                    height: 8,
+                    borderRadius: JKBMSRTokens.radiusFull),
+                SizedBox(width: JKBMSRTokens.space8),
+                Expanded(child: JKBMSRSkeleton(height: 16)),
+                SizedBox(width: JKBMSRTokens.space8),
+                JKBMSRSkeleton(
+                    width: 76,
+                    height: 22,
+                    borderRadius: JKBMSRTokens.radiusFull),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space16),
+            // SOC banner: label, headline value and progress bar.
+            JKBMSRSkeletonCard(
+              borderRadius: JKBMSRTokens.radius12,
+              color: context.colors.inset,
+              padding: const EdgeInsets.all(JKBMSRTokens.space12),
+              children: const [
+                JKBMSRSkeleton(width: 116, height: 11),
+                SizedBox(height: JKBMSRTokens.space8),
+                JKBMSRSkeleton(width: 120, height: 30),
+                SizedBox(height: JKBMSRTokens.space12),
+                JKBMSRSkeleton(
+                    height: 8, borderRadius: JKBMSRTokens.radiusFull),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space12),
+            // 2x2 headline metric grid.
+            Row(
+              children: const [
+                Expanded(child: JKBMSRSkeletonStat()),
+                SizedBox(width: JKBMSRTokens.space12),
+                Expanded(child: JKBMSRSkeletonStat()),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space12),
+            Row(
+              children: const [
+                Expanded(child: JKBMSRSkeletonStat()),
+                SizedBox(width: JKBMSRTokens.space12),
+                Expanded(child: JKBMSRSkeletonStat()),
+              ],
+            ),
+            const SizedBox(height: JKBMSRTokens.space12),
+            // Cell-imbalance footer.
+            JKBMSRSkeletonCard(
+              borderRadius: JKBMSRTokens.radius12,
+              color: context.colors.inset,
+              padding: const EdgeInsets.all(JKBMSRTokens.space12),
+              children: const [
+                JKBMSRSkeletonListRow(
+                    leadingSize: 18, leadingIsCircle: false, trailingWidth: 0),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: JKBMSRTokens.space16),
+        // Battery & BMS info panel: heading plus a label/value list.
+        const JKBMSRSkeleton(width: 150, height: 18),
+        const SizedBox(height: JKBMSRTokens.space8),
+        JKBMSRSkeletonCard(
+          borderRadius: JKBMSRTokens.radius16,
+          padding: const EdgeInsets.symmetric(
+              horizontal: JKBMSRTokens.space16, vertical: 4),
+          children: [
+            for (var i = 0; i < 7; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: const [
+                    JKBMSRSkeleton(width: 110, height: 12),
+                    Spacer(),
+                    JKBMSRSkeleton(width: 64, height: 12),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
   }
 }
