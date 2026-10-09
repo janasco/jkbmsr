@@ -248,6 +248,36 @@ The device ID is a random 128-bit value generated on first boot (`DeviceIdentity
 
 Every HTTPS connection to `api.jkbmsr.com` verifies the server certificate chain against an embedded Mozilla root-CA bundle — the firmware no longer uses `setInsecure()`. TLS setup is centralized in `src/net/SecureClient.cpp`. The trust bundle, its provenance, the regeneration script, and the runbook for a Cloudflare CA rotation are documented in [`docs/tls-trust-and-cert-rotation.md`](docs/tls-trust-and-cert-rotation.md).
 
+## Remote WiFi Target
+
+The owner can set a persistent WiFi target from the dashboard
+(`PUT /api/v1/dashboard/devices/:deviceId/wifi/target`: SSID, password, or an
+open-network flag). `GET /api/v1/device/config` re-delivers it on every poll
+with an opaque `revision`; the gateway persists that revision in NVS and
+re-applies the target exactly once (then restarts) so a steady poll does not
+reboot it. An open target has an empty password, which `WifiManager::connect`
+sends as a nullptr passphrase.
+
+On boot with saved/desired credentials, `connectWithRetry()` tries for
+`kWifiConnectWindowMs` (~3 minutes, retried every `kWifiRetryDelayMs`) rather
+than giving up. If that window fails, `recoverFromWifiFailure()` restarts the
+gateway and tries again — repeatedly, per the product requirement that it must
+never sit permanently in setup/AP mode. Every `kWifiRestartsBeforeProvisioning`
+failed boots it opens the local AP/USB provisioning path for a bounded
+`kLocalProvisioningWindowMs` window so a person on site can still fix the
+credentials, then resumes the retry loop. A device with **no** credentials at
+all still opens provisioning, since that is the only way to give it a network.
+
+While the gateway can reach the cloud it reports its own WiFi state
+(`connected` / the SSID / last error) via `POST /api/v1/device/wifi/status`, so
+the backend can distinguish "reached the cloud on the new network" from
+silence. When it cannot reach the cloud at all the backend infers the problem
+from its absence and alerts the owner (see `jkbmsr-api`'s
+`services/wifiAlerts.ts`). A gateway re-provisioned locally onto a different
+network than the cloud target reports `localProvisioned`, and the backend
+clears the stale target rather than dragging the gateway back off the working
+network.
+
 ## OTA Anti-Rollback
 
 Beyond signature + SHA-256 verification, the firmware records the highest version it has ever run (NVS `fw_floor`, managed in `main.cpp`) and refuses any OTA that is not **strictly newer** than that floor — so a correctly-signed *older* release cannot be replayed to force a downgrade to a vulnerable build. Version comparison is in `src/ota/VersionCompare.cpp` (semver, fails closed on unparseable input). This changes rollback operations: to move an already-updated fleet off a bad release you must **roll forward** (publish a higher version), not re-point devices at an older one — see [`docs/ota-rollback.md`](docs/ota-rollback.md).
