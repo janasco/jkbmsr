@@ -69,3 +69,37 @@ Every protocol below was rewritten this project by reading the actual `syssi/esp
 
 **Device info (JK02 frame type `0x03`) and logbook (frame type `0x05`)** are both decoded from the same 300-byte reassembled frame as telemetry. The device-info frame is verified against syssi's `decode_device_info_` (jk_bms_ble.cpp:1583) at offsets 6 (model, 16 B), 22 (hardware version, 8 B), 30 (software version, 8 B), 38 (uptime u32), 42 (power-on count u32), 78 (manufacturing date, 6 B `YYMMDD`, prefixed `20`), 86 (serial number, 11 B). The offsets are independently confirmed by the OEM JK-BMS Android app's device-info screen, which reads the same positions. The frame also carries device/setup passcodes and user data at 46/62/97/102/118 — those are credentials and are deliberately **not** decoded or surfaced. The logbook is genuine BMS-side history, not app-side accumulation: it is requested on demand with command `0xA1` (syssi's `retrieve_logbook` button, `button/__init__.py:28`; independently confirmed by the OEM app's System Log screen, which sends register `161`/`0xA1`) and answered with frame type `0x05`, whose log count is a u32 LE at offset 6 and whose entries follow from offset 11, five bytes each (u32 LE seconds + one event-code byte), capped at 50. Event-code names come from syssi's `LOGBOOK_CODES` table. The BMS sends no absolute wall-clock time for an entry, so it is presented as a relative elapsed offset, exactly as syssi formats it.
 
+### Logbook paging — there is no paging command (verified 2026-10-09)
+
+The app can store more events than the BMS will hand over in one read, so it is
+worth stating plainly what the hardware allows. Re-verified against
+`syssi/esphome-jk-bms`:
+
+- **Source.** `components/jk_bms_ble/jk_bms_ble.cpp`, `decode_logbook_` (line
+  1550): `log_count = jk_get_32bit(6)`, then
+  `for (uint32_t i = 0; i < log_count && i < 50; i++)` reading `ts` at
+  `11 + i * 5` and the event `code` at `11 + i * 5 + 4`. And
+  `components/jk_bms_ble/button/__init__.py`: `CONF_RETRIEVE_LOGBOOK = 0xA1`,
+  dispatched as `write_register(0xA1, 0x00000000, 0x00)` — the register's 4-byte
+  value field is sent as **zero** and carries no offset or page index.
+- **Request.** `AA 55 90 EB A1 …` (20 bytes), exactly as this app builds it.
+- **Response.** One fixed 300-byte frame of type `0x05`. The total
+  `log_count` is a u32 LE at offset 6; entries begin at offset 11 and are five
+  bytes each (u32 LE seconds + one event-code byte). The reference hard-caps
+  decoding at **50 entries per fetch** even when `log_count` is larger.
+- **Capacity is not the limit.** 50 entries × 5 bytes = 250 bytes, ending at
+  offset 261 inside the 300-byte frame — the 50-entry ceiling is the reference's
+  own `i < 50` guard, not a wire-size constraint. No alternative frame length or
+  offset command exists in the reference to reach entries 51+.
+- **Consequence for this app.** There is no way to ask a JK-BMS for its *entire*
+  logbook in one go; it returns the newest bounded window and reports the true
+  total. **No paging command is invented here.** Instead `LogbookStore` unions
+  each fetched window into per-device local JSON storage, de-duplicated by
+  `(seconds, code)`, so repeated fetches accumulate toward the owner's
+  ">1000 records, browse offline" goal. Because the BMS timestamp is a relative
+  offset that resets on a power cycle, two events from different power cycles
+  that share both their offset and their code are treated as the same record —
+  a deliberate, documented limit of having no absolute time in the protocol.
+- **UI consequence.** The Logbook screen reads the local store, not just the
+  last frame, and pages it 50 rows at a time as the user scrolls.
+

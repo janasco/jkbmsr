@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/logbook_screen.dart';
 import '../screens/settings_screen.dart';
 import 'motion_kit.dart';
 
@@ -110,6 +111,23 @@ class BmsDrawer extends StatelessWidget {
                     delayIndex: 1,
                     child: _buildMenuItem(
                     context: context,
+                    icon: Icons.history_rounded,
+                    iconColor: const Color(0xFF7C3AED),
+                    label: 'Logbook',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LogbookScreen()),
+                      );
+                    },
+                  ),
+                  ),
+                  const SizedBox(height: 4),
+                  TileEntrance(
+                    delayIndex: 2,
+                    child: _buildMenuItem(
+                    context: context,
                     icon: Icons.settings_rounded,
                     iconColor: const Color(0xFF8B5CF6),
                     label: 'App settings',
@@ -124,7 +142,7 @@ class BmsDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   TileEntrance(
-                    delayIndex: 2,
+                    delayIndex: 3,
                     child: _buildMenuItem(
                     context: context,
                     icon: Icons.arrow_circle_up_rounded,
@@ -138,7 +156,7 @@ class BmsDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   TileEntrance(
-                    delayIndex: 3,
+                    delayIndex: 4,
                     child: _buildMenuItem(
                     context: context,
                     icon: Icons.favorite_rounded,
@@ -152,7 +170,7 @@ class BmsDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   TileEntrance(
-                    delayIndex: 4,
+                    delayIndex: 5,
                     child: _buildMenuItem(
                     context: context,
                     icon: Icons.info_outline_rounded,
