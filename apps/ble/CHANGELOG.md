@@ -10,6 +10,11 @@ release notes and copied into Google Play Console's "What's new in this
 version" field, which has a hard 500-character limit per release — keep each
 version's bullets within that, combined.
 
+## v4.17.27+47
+
+- The event log now has its own screen, opened from the side menu: your full history is saved on the phone so you can browse it offline and scroll back through everything the BMS has recorded.
+- Only one scanning animation shows while searching for devices.
+
 ## v4.17.26+46
 
 - Screens now show a soft placeholder outline while their data loads, instead of a blank spinner — so the layout appears instantly and doesn't jump when the data arrives.
