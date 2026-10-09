@@ -35,7 +35,7 @@ void main() {
       final acknowledged = await APIClient().acknowledgeDeviceOfflineAlerts('gw-1');
 
       expect(captured.method, 'POST');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/alerts/acknowledge');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/alerts/acknowledge');
       expect(acknowledged, isTrue);
     });
 
@@ -75,7 +75,7 @@ void main() {
       final acknowledged = await APIClient().clearDeviceOfflineAlertsAcknowledge('gw-1');
 
       expect(captured.method, 'DELETE');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/alerts/acknowledge');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/alerts/acknowledge');
       expect(acknowledged, isFalse);
     });
 
@@ -130,7 +130,7 @@ void main() {
       final muted = await APIClient().setDeviceOfflineAlertsMuted('gw-1', muted: true);
 
       expect(captured.method, 'PUT');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/alerts/mute');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/alerts/mute');
       expect(jsonDecode(captured.body), {'muted': true});
       expect(muted, isTrue);
     });

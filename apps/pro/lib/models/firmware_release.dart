@@ -1,6 +1,6 @@
 /// Data model representing a published firmware release, mirroring the same
 /// release-visibility data shown on the web dashboard.
-/// Maps exactly to the `/api/v1/dashboard/firmware/releases` response list item schema.
+/// Maps exactly to the `/v1/dashboard/firmware/releases` response list item schema.
 class FirmwareRelease {
   final int id;
   final String version;

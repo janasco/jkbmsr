@@ -164,7 +164,7 @@ class BmsLinkDiagnostics {
 }
 
 /// Represents real-time battery diagnostics and telemetry data.
-/// Maps exactly to the `/api/v1/dashboard/devices/:deviceId` response schema.
+/// Maps exactly to the `/v1/dashboard/devices/:deviceId` response schema.
 class Telemetry {
   final double voltage;
   final double current;

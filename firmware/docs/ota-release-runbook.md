@@ -36,8 +36,8 @@ This runbook is for maintainers releasing production firmware from `jkbmsr-firmw
    - GitHub release assets
    - optional `jkbmsr-releases` public artifact mirror
    - public release-history index validation when mirroring is enabled
-8. Verify `GET /api/v1/ota/latest` returns the new version and signature metadata.
-9. Verify an authenticated `GET /api/v1/ota/firmware/:firmwareId` returns the expected checksum header.
+8. Verify `GET /v1/ota/latest` returns the new version and signature metadata.
+9. Verify an authenticated `GET /v1/ota/firmware/:firmwareId` returns the expected checksum header.
 10. Verify the public release repository mirrors the same version if cross-repo publishing is enabled.
 11. Record any release issues in the release notes before leaving the release window.
 

@@ -15,7 +15,7 @@ Use it to verify:
 
 - device registration
 - device JWT issuance
-- `GET /api/v1/ota/latest`
+- `GET /v1/ota/latest`
 - OTA metadata signature verification
 - authenticated firmware download
 - SHA-256 checksum verification

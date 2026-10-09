@@ -50,7 +50,7 @@ void main() {
       final state = await APIClient().getDeviceWifiTarget('gw-1');
 
       expect(captured.method, 'GET');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/wifi/target');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/wifi/target');
       expect(state.target!.ssid, 'HomeNet');
       expect(state.target!.isOpen, isFalse);
       expect(state.target!.revision, 'rev-1');
@@ -112,7 +112,7 @@ void main() {
       await APIClient().setDeviceWifiTarget('gw-1', ssid: 'NewNet', password: 's3cret');
 
       expect(captured.method, 'PUT');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/wifi/target');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/wifi/target');
       expect(jsonDecode(captured.body), {
         'ssid': 'NewNet',
         'password': 's3cret',
@@ -172,7 +172,7 @@ void main() {
       await APIClient().clearDeviceWifiTarget('gw-1');
 
       expect(captured.method, 'DELETE');
-      expect(captured.url.path, '/api/v1/dashboard/devices/gw-1/wifi/target');
+      expect(captured.url.path, '/v1/dashboard/devices/gw-1/wifi/target');
     });
 
     test('surfaces the server error message', () async {

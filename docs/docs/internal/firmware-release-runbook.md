@@ -26,7 +26,7 @@ Use this runbook when publishing a production firmware update for JKBMSR.
    - R2 object upload
    - D1 latest firmware metadata
    - GitHub release assets
-   - `/api/v1/ota/latest`
+   - `/v1/ota/latest`
    - authenticated firmware download headers
 
 ## If Something Fails

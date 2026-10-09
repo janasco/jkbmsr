@@ -112,12 +112,12 @@ platformio.ini
 
 ## Cloud APIs Used
 
-- `POST /api/v1/device/register`
-- `POST /api/v1/device/login`
-- `POST /api/v1/telemetry`
-- `GET /api/v1/device/config`
-- `GET /api/v1/ota/latest`
-- `GET /api/v1/ota/firmware/:firmwareId`
+- `POST /v1/device/register`
+- `POST /v1/device/login`
+- `POST /v1/telemetry`
+- `GET /v1/device/config`
+- `GET /v1/ota/latest`
+- `GET /v1/ota/firmware/:firmwareId`
 
 Production API base URL:
 
@@ -194,7 +194,7 @@ Full procedure, required secrets, and the traps encoded in both scripts are in
 5. Run `./scripts/release.sh <version>` — it uploads the binary and checksum,
    signs the OTA metadata, publishes to Cloudflare R2 and updates D1 metadata.
 6. Deploy `releases/` to the `jkbmsr-releases` Pages project (`cdn.jkbmsr.com`).
-7. Verify `GET /api/v1/ota/latest` returns the new version plus signature fields.
+7. Verify `GET /v1/ota/latest` returns the new version plus signature fields.
 8. Download through the authenticated Worker endpoint and confirm SHA-256.
 
 Generated release metadata includes:
@@ -230,7 +230,7 @@ The hardware smoke test does three concrete things:
 
 1. Flashes the current PlatformIO build to the attached board.
 2. Captures the reboot log and verifies the `JKBMSR firmware starting` banner.
-3. Polls `GET /api/v1/ota/latest` when a device token or device credentials are provided.
+3. Polls `GET /v1/ota/latest` when a device token or device credentials are provided.
 
 Blank-board and provisioned-board procedures are documented in:
 
@@ -251,8 +251,8 @@ Every HTTPS connection to `api.jkbmsr.com` verifies the server certificate chain
 ## Remote WiFi Target
 
 The owner can set a persistent WiFi target from the dashboard
-(`PUT /api/v1/dashboard/devices/:deviceId/wifi/target`: SSID, password, or an
-open-network flag). `GET /api/v1/device/config` re-delivers it on every poll
+(`PUT /v1/dashboard/devices/:deviceId/wifi/target`: SSID, password, or an
+open-network flag). `GET /v1/device/config` re-delivers it on every poll
 with an opaque `revision`; the gateway persists that revision in NVS and
 re-applies the target exactly once (then restarts) so a steady poll does not
 reboot it. An open target has an empty password, which `WifiManager::connect`
@@ -269,7 +269,7 @@ credentials, then resumes the retry loop. A device with **no** credentials at
 all still opens provisioning, since that is the only way to give it a network.
 
 While the gateway can reach the cloud it reports its own WiFi state
-(`connected` / the SSID / last error) via `POST /api/v1/device/wifi/status`, so
+(`connected` / the SSID / last error) via `POST /v1/device/wifi/status`, so
 the backend can distinguish "reached the cloud on the new network" from
 silence. When it cannot reach the cloud at all the backend infers the problem
 from its absence and alerts the owner (see `jkbmsr-api`'s

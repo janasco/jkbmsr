@@ -4,10 +4,10 @@ Use this checklist when a device reports a failed OTA update.
 
 ## Cloud Checks
 
-1. Confirm `/api/v1/ota/latest` returns the expected version.
+1. Confirm `/v1/ota/latest` returns the expected version.
 2. Confirm the D1 firmware row has the expected `sha256` and `target_hardware`.
 3. Confirm the R2 object exists for the published key.
-4. Confirm `GET /api/v1/ota/firmware/:firmwareId` returns:
+4. Confirm `GET /v1/ota/firmware/:firmwareId` returns:
    - `200 OK`
    - `X-Firmware-Version`
    - `X-Firmware-Target`

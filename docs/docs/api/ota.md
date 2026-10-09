@@ -1,7 +1,7 @@
 # OTA API
 
 ```text
-GET /api/v1/ota/latest
+GET /v1/ota/latest
 ```
 
 Returns the latest firmware version, release timestamp, download URL, SHA-256 checksum, and OTA metadata signature fields.

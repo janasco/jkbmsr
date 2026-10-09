@@ -86,7 +86,7 @@ PY
 )"
 
   echo "Logging the flashed device into ${API_BASE_URL}"
-  login_response="$(curl -fsS "${API_BASE_URL}/api/v1/device/login" -H 'Content-Type: application/json' -d "${login_payload}")"
+  login_response="$(curl -fsS "${API_BASE_URL}/v1/device/login" -H 'Content-Type: application/json' -d "${login_payload}")"
   DEVICE_TOKEN="$(python3 - <<'PY' "${login_response}"
 import json
 import sys
@@ -97,7 +97,7 @@ fi
 
 if [ -n "${DEVICE_TOKEN}" ]; then
   echo "Polling live OTA metadata for the flashed device"
-  ota_response="$(curl -fsS "${API_BASE_URL}/api/v1/ota/latest" -H "Authorization: Bearer ${DEVICE_TOKEN}")"
+  ota_response="$(curl -fsS "${API_BASE_URL}/v1/ota/latest" -H "Authorization: Bearer ${DEVICE_TOKEN}")"
   printf '%s\n' "${ota_response}"
 else
   echo "Skipping OTA poll because DEVICE_TOKEN or DEVICE_ID+DEVICE_SECRET was not provided"

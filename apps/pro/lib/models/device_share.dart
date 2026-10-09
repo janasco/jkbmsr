@@ -1,5 +1,5 @@
 /// A view-only grant of a gateway to another JKBMSR account.
-/// Maps exactly to entries in the `/api/v1/dashboard/devices/:deviceId/shares`
+/// Maps exactly to entries in the `/v1/dashboard/devices/:deviceId/shares`
 /// response schema.
 class DeviceShare {
   final String userId;

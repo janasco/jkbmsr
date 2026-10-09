@@ -47,7 +47,7 @@ Run this after:
    boot-relative timer until this happens, so alignment can't be checked
    before it).
 3. Note the device's configured interval (`telemetryIntervalSeconds` from
-   its last `GET /api/v1/device/config` response, visible in the log).
+   its last `GET /v1/device/config` response, visible in the log).
 4. Record the wall-clock time of the next 3-4 telemetry sends (look for
    the telemetry POST log line). Confirm each one lands on a clean
    boundary for that interval — e.g. at a 60s interval, every send should

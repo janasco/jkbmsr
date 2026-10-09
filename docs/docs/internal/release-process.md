@@ -23,7 +23,7 @@ Release flow:
 6. Run `firmware/scripts/release.sh`. There is no CI workflow behind this step
    any more; the operator procedure is in `DEPLOY.md` at the root of this
    repository.
-7. Verify `/api/v1/ota/latest` and the authenticated firmware download route.
+7. Verify `/v1/ota/latest` and the authenticated firmware download route.
 
 ## Rollback
 

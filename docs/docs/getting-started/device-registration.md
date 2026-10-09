@@ -5,7 +5,7 @@ Gateways self-register with JKBMSR Cloud after they join Wi‑Fi. Owners then **
 ## Device self-register
 
 ```text
-POST /api/v1/device/register
+POST /v1/device/register
 ```
 
 The gateway sends its device ID, hardware ID, firmware version, and (on `0.1.4+`) a claim code. The cloud stores a hash of the claim code and returns device tokens plus config.
@@ -13,7 +13,7 @@ The gateway sends its device ID, hardware ID, firmware version, and (on `0.1.4+`
 ## Owner claim
 
 ```text
-POST /api/v1/user/devices/claim
+POST /v1/user/devices/claim
 ```
 
 Authenticated customer request:

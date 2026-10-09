@@ -26,7 +26,7 @@ bool RemoteConfigClient::fetch(const String& token, DeviceConfig& config, Remote
   configureSecureClient(client);
 
   HTTPClient http;
-  const String url = apiBaseUrl_ + "/api/v1/device/config";
+  const String url = apiBaseUrl_ + "/v1/device/config";
   if (!http.begin(client, url)) {
     logError("Remote config request could not start");
     return false;
@@ -87,7 +87,7 @@ bool postWifiStatus(const String& apiBaseUrl, const String& token, JsonDocument&
   GatewaySecureClient client;
   configureSecureClient(client);
   HTTPClient http;
-  if (!http.begin(client, apiBaseUrl + "/api/v1/device/wifi/status")) return false;
+  if (!http.begin(client, apiBaseUrl + "/v1/device/wifi/status")) return false;
   http.addHeader("Authorization", "Bearer " + token);
   http.addHeader("Content-Type", "application/json");
   String payload;
@@ -144,7 +144,7 @@ bool RemoteConfigClient::reportOtaCommand(const String& token, const String& req
   GatewaySecureClient client;
   configureSecureClient(client);
   HTTPClient http;
-  if (!http.begin(client, apiBaseUrl_ + "/api/v1/device/ota/status")) return false;
+  if (!http.begin(client, apiBaseUrl_ + "/v1/device/ota/status")) return false;
   http.addHeader("Authorization", "Bearer " + token);
   http.addHeader("Content-Type", "application/json");
   JsonDocument document;

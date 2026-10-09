@@ -21,7 +21,7 @@ bool TelemetryClient::sendPayload(const String& token, const String& payload) {
   configureSecureClient(client);
 
   HTTPClient http;
-  const String url = apiBaseUrl_ + "/api/v1/telemetry";
+  const String url = apiBaseUrl_ + "/v1/telemetry";
   if (!http.begin(client, url)) {
     logError("Telemetry upload request could not start");
     return false;

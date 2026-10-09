@@ -61,7 +61,7 @@ bool readUpdateMetadata(
   configureSecureClient(client);
 
   HTTPClient http;
-  if (!http.begin(client, apiBaseUrl + "/api/v1/ota/latest")) {
+  if (!http.begin(client, apiBaseUrl + "/v1/ota/latest")) {
     logError("OTA metadata request could not start");
     failureReason = "metadata-request-start-failed";
     return false;

@@ -22,7 +22,7 @@ Rollback is a metadata change, not an object overwrite.
 
 1. Set the bad release `is_latest = 0` in D1.
 2. Set the last known good release `is_latest = 1` for the same `target_hardware`.
-3. Verify `GET /api/v1/ota/latest` returns the good version again.
+3. Verify `GET /v1/ota/latest` returns the good version again.
 4. Confirm the firmware download endpoint still serves the expected checksum.
 
 This immediately prevents any device that has not yet updated from taking the

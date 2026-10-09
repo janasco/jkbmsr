@@ -1,5 +1,5 @@
 /// Represents the authenticated user profile and JWT.
-/// Maps exactly to the `/api/v1/user/login` and `/api/v1/user/register` response.
+/// Maps exactly to the `/v1/user/login` and `/v1/user/register` response.
 class User {
   final String id;
   final String email;

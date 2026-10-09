@@ -1,7 +1,7 @@
 /// The persistent remote Wi-Fi target an owner sets from the cloud, plus the
 /// gateway's last cloud-reported Wi-Fi state and the unreachable-alert episode.
 ///
-/// Maps exactly to the `/api/v1/dashboard/devices/:deviceId/wifi/target`
+/// Maps exactly to the `/v1/dashboard/devices/:deviceId/wifi/target`
 /// response schema (see jkbmsr-api's routes/dashboard.ts +
 /// services/wifiConfigs.ts). This is the "set it and forget it" counterpart to
 /// the interactive `/wifi/change` flow: it is stored server-side and re-sent on
