@@ -230,6 +230,80 @@ void main() {
     gateway.dispose();
   });
 
+  // A manual "Check for updates" reports its outcome. The distinction that
+  // matters: a check that reached the source and found nothing is "up to
+  // date"; a check that failed or could not identify the install source is
+  // unverifiable — it must never be reported as current.
+  group('no-update reason (manual-check feedback)', () {
+    test('a Play source that answers "no update" is verifiably up to date',
+        () async {
+      final gateway = _RecordingPlayGateway(
+          status: _playStatus(availability: PlayUpdateAvailability.unavailable));
+      final service = _service(
+        installer: () async => 'com.android.vending',
+        play: gateway,
+      );
+
+      final decision = await service.check();
+
+      expect(decision.route, AppUpdateRoute.none);
+      expect(decision.noUpdate, AppUpdateNoUpdate.upToDate);
+      gateway.dispose();
+    });
+
+    test('a Play check that throws is unverifiable, never "up to date"',
+        () async {
+      final gateway = _RecordingPlayGateway(throwOnCheck: true);
+      final service = _service(
+        installer: () async => 'com.android.vending',
+        play: gateway,
+      );
+
+      final decision = await service.check();
+
+      expect(decision.route, AppUpdateRoute.none);
+      expect(decision.noUpdate, AppUpdateNoUpdate.unavailable);
+      gateway.dispose();
+    });
+
+    test('an up-to-date sideload is verifiably current', () async {
+      final service = _service(
+        installer: () async => 'com.android.packageinstaller',
+        httpClient: MockClient((_) async => _json('{"version":"1.3.36"}')),
+      );
+
+      expect((await service.check()).noUpdate, AppUpdateNoUpdate.upToDate);
+    });
+
+    test('an unreachable release channel is unverifiable, not current',
+        () async {
+      final service = _service(
+        installer: () async => 'com.android.packageinstaller',
+        httpClient: MockClient((_) async => http.Response('nope', 503)),
+      );
+
+      expect((await service.check()).noUpdate, AppUpdateNoUpdate.unavailable);
+    });
+
+    test('a malformed release channel is unverifiable, not current', () async {
+      final service = _service(
+        installer: () async => 'com.android.packageinstaller',
+        httpClient: MockClient((_) async => _json('{}')),
+      );
+
+      expect((await service.check()).noUpdate, AppUpdateNoUpdate.unavailable);
+    });
+
+    test('an unknown installer is unverifiable', () async {
+      final service = _service(installer: () async => null);
+
+      final decision = await service.check();
+
+      expect(decision.route, AppUpdateRoute.none);
+      expect(decision.noUpdate, AppUpdateNoUpdate.unavailable);
+    });
+  });
+
   test('isNewerVersion compares component-wise and rejects malformed input',
       () {
     expect(AppUpdateService.isNewerVersion('1.3.37', '1.3.36'), isTrue);
