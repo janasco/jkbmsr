@@ -15,19 +15,25 @@ import 'shared/design_system/components.dart';
 ///
 /// [contextProvider] is called after the async check so the dialog always uses
 /// a live context, matching the startup call site in `main.dart`.
+///
+/// [manual] is set by the About menu's "Check for updates" row. It changes
+/// only the *nothing-to-offer* case: a manual check reports its outcome
+/// ("you're up to date", or that the source could not be reached) instead of
+/// silently doing nothing. Startup keeps the silent default.
 Future<void> promptForAppUpdate({
   required BuildContext? Function() contextProvider,
   AppUpdateService? service,
+  bool manual = false,
 }) async {
   final updateService = service ?? AppUpdateService();
   final decision = await updateService.check();
-  if (decision.route == AppUpdateRoute.none) return;
 
   final context = contextProvider();
   if (context == null || !context.mounted) return;
 
   switch (decision.route) {
     case AppUpdateRoute.none:
+      if (manual) _showNoUpdateFeedback(context, decision.noUpdate);
       return;
     case AppUpdateRoute.sideloadApk:
       await _showSideloadPrompt(context, decision.version ?? '');
@@ -38,6 +44,24 @@ Future<void> promptForAppUpdate({
         context,
         updateService,
         blocking: decision.blocking,
+      );
+  }
+}
+
+/// Feedback for a *manual* check that found nothing to offer. Reports the one
+/// thing the check actually established: either the source answered and the
+/// app is current, or the source could not be reached and no claim can be
+/// made. Never turns an unverifiable check into "up to date".
+void _showNoUpdateFeedback(BuildContext context, AppUpdateNoUpdate? outcome) {
+  switch (outcome) {
+    case AppUpdateNoUpdate.upToDate:
+      JKBMSRToast.show(context, "You're on the latest version.");
+    case AppUpdateNoUpdate.unavailable:
+    case null:
+      JKBMSRToast.show(
+        context,
+        "Couldn't check for updates right now. Please try again later.",
+        isError: true,
       );
   }
 }
