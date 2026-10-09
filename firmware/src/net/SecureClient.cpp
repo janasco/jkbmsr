@@ -136,13 +136,16 @@ void configureSecureClient(GatewaySecureClient& client) {
   // device, so the symptom is a periodic boot loop rather than a permanent
   // hang — but the gateway still goes dark every time. This also gives the OTA
   // download loop its idle timeout, which README.md had tracked as outstanding.
-  client.setTimeout(kTlsReadTimeoutSeconds * 1000);
-#if defined(ARDUINO_ARCH_ESP8266)
-  // BearSSL::WiFiClientSecure takes no setReadTimeout(); setTimeout() above is
-  // the equivalent on this core.
-#else
-  client.setReadTimeout(kTlsReadTimeoutSeconds);
-#endif
+  // WiFiClientSecure::setTimeout() takes SECONDS on arduino-esp32 — internally
+  // `_timeout = seconds * 1000`. This differs from Stream::setTimeout() (ms) on
+  // the ESP8266 path above, and passing `* 1000` here made the intended 30s read
+  // bound 30 000 000 ms (~8 h), i.e. no bound at all.
+  client.setTimeout(kTlsReadTimeoutSeconds);
+  // No arduino-esp32 core exposes WiFiClientSecure::setReadTimeout() — verified
+  // against both 2.0.17 (official espressif32, pinned above) and 3.3.11 (the C6
+  // pioarduino fork). The two calls above (setHandshakeTimeout for the
+  // negotiation, setTimeout for blocking reads) are the whole available
+  // surface; the previous setReadTimeout() call could not compile on either.
 }
 
 #endif
