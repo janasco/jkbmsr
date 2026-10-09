@@ -14,6 +14,10 @@ Release, meant to be copied directly into Google Play Console's "What's
 new in this version" field (which has a hard 500-character limit per
 release — keep each version's bullets within that, combined).
 
+## v1.3.44
+
+- Behind-the-scenes update to how the app connects to our servers. Nothing changes on your screen.
+
 ## v1.3.43
 
 - Acknowledge an offline alert or mute a gateway's offline alerts right from its dashboard, so you stop getting emails and push for an outage you already know about.
