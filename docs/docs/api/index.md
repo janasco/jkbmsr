@@ -2,10 +2,8 @@
 
 JKBMSR Cloud exposes a REST API under `/v1`.
 
-The older `/api/v1` prefix remains a permanent alias that serves the same
-endpoints (it is not a redirect, so non-GET methods work unchanged). It exists
-for already-installed apps and deployed firmware that hardcode it and cannot be
-updated; new integrations should use `/v1`.
+`/v1` is the only prefix. The legacy `/api/v1` alias was retired and is no
+longer mounted, so `/api/v1/...` now returns `404`.
 
 ## Endpoints
 
