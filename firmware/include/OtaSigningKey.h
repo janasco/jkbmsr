@@ -2,11 +2,11 @@
 
 namespace jkbmsr {
 
-constexpr const char* kOtaSigningKeyId = "jkbmsr-ota-p256-20260705";
+constexpr const char* kOtaSigningKeyId = "jkbmsr-ota-p256-20261009";
 constexpr const char* kOtaSignatureAlgorithm = "ecdsa-p256-sha256";
 constexpr const char* kOtaPublicKeyPem = R"(-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1byxMq3y36fgYhQiF2v0QT/JCo3A
-59km2WVyAxVYpb1aZOI56sLcWUnmbE3LV3aFch+xMSP/yop4fzsnLC5G0A==
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjSdYoRFDH0+MKSuSQHb5a2GDx2ro
+fJRoHq9akpUKR26JsorOWAFc8g0GQVkaMWtSEKRw4tkkMaJn1eXPMJwCuA==
 -----END PUBLIC KEY-----
 )";
 
