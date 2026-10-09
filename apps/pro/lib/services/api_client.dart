@@ -56,6 +56,20 @@ class CloudServiceRequiredException implements Exception {
   String toString() => message;
 }
 
+/// Thrown by [APIClient.clearDeviceOfflineAlertsAcknowledge] when the server
+/// does not expose the re-enable route yet — a 404/405 rather than a real
+/// ownership or connectivity failure. It is deliberately distinct so the UI
+/// can say "not available yet" instead of surfacing a raw "API Call Failed",
+/// and must never be treated as the acknowledge actually having been cleared.
+class AlertActionUnavailableException implements Exception {
+  final String message;
+  AlertActionUnavailableException([
+    this.message = "Re-enabling offline alerts isn't available on this app's server yet.",
+  ]);
+  @override
+  String toString() => message;
+}
+
 /// Centralized API client for communicating with the JKBMSR Cloud REST API.
 /// Coordinates request headers, auth token inclusion, and JSON conversions.
 ///
@@ -716,6 +730,54 @@ class APIClient with RequestDeduplicationMixin {
     final url = Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/wifi/target');
     final response = await _client.delete(url, headers: await _headers());
     _handleResponse(response);
+  }
+
+  // --- Offline alert controls (owner-only) ---
+
+  /// Acknowledges the gateway's current "offline" alert episode so the owner
+  /// stops being alerted about it. Returns the server's echoed `acknowledged`
+  /// value — the caller must adopt that, not assume the request succeeded,
+  /// because it is the only thing that says the server actually recorded it.
+  Future<bool> acknowledgeDeviceOfflineAlerts(String deviceId) async {
+    final url =
+        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/acknowledge');
+    final response = await _client.post(url, headers: await _headers());
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return data['acknowledged'] as bool? ?? true;
+  }
+
+  /// Re-enables offline alerts after an acknowledgement. Returns the server's
+  /// echoed `acknowledged` value (expected false). Throws
+  /// [AlertActionUnavailableException] on 404/405, when the route is not
+  /// deployed yet, so the UI can degrade honestly instead of claiming alerts
+  /// were re-enabled when nothing changed.
+  Future<bool> clearDeviceOfflineAlertsAcknowledge(String deviceId) async {
+    final url =
+        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/acknowledge');
+    final response = await _client.delete(url, headers: await _headers());
+    if (response.statusCode == 404 || response.statusCode == 405) {
+      throw AlertActionUnavailableException();
+    }
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return data['acknowledged'] as bool? ?? false;
+  }
+
+  /// Mutes or unmutes all offline alerts for one gateway. Returns the server's
+  /// echoed `muted` value so the switch reflects what the server actually
+  /// stored rather than what was requested.
+  Future<bool> setDeviceOfflineAlertsMuted(
+    String deviceId, {
+    required bool muted,
+  }) async {
+    final url =
+        Uri.parse('$baseUrl/api/v1/dashboard/devices/$deviceId/alerts/mute');
+    final response = await _client.put(
+      url,
+      headers: await _headers(),
+      body: jsonEncode({'muted': muted}),
+    );
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return data['muted'] as bool? ?? muted;
   }
 
   // --- Sessions ---

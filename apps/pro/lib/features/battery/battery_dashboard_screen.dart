@@ -8,6 +8,7 @@ import '../../widgets/shared/design_system/components.dart';
 import '../../widgets/shared/design_system/next_update_countdown.dart';
 import '../../services/api_client.dart';
 import '../../models/device.dart';
+import '../../models/device_wifi_target.dart';
 import '../../models/telemetry.dart';
 import '../../models/ble_history_event.dart';
 import '../../models/telemetry_history_point.dart';
@@ -25,6 +26,7 @@ import '../../widgets/shared/design_system/dashboard_templates/at_a_glance_strip
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
 import 'widgets/bms_link_banner.dart';
+import 'widgets/offline_alert_controls.dart';
 
 // All 8 of jkbmsr-web's dashboard templates are now ported, plus the
 // mobile-only hero 'Energy Flow' renderer used for the 'default' key. A
@@ -57,6 +59,11 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
   Timer? _pollTimer;
   bool _batteryAnimationsEnabled = true;
   List<TelemetryHistoryPoint> _templateHistory = [];
+  // The owner's per-gateway offline-alert episode plus its ack/mute controls.
+  // Null until loaded (or when the route is unavailable), which the controls
+  // render as "nothing" rather than a false healthy state.
+  WifiAlertState? _wifiAlert;
+  bool _alertActionBusy = false;
 
   @override
   void initState() {
@@ -152,6 +159,15 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
 
       unawaited(_schedulePolling(targetId));
 
+      // Owner-only offline-alert state. It changes on the alert cadence, not
+      // the telemetry one, so like the BLE history it is fetched on the full
+      // load / pull-to-refresh and skipped on the periodic silent polls. A
+      // shared viewer never sees it — the endpoints are owner-only, and so is
+      // the card.
+      if (refreshHistory && (_device?.isOwner ?? false)) {
+        unawaited(_loadWifiAlertState(targetId));
+      }
+
       // BLE connection history changes far less often than telemetry, so
       // periodic silent polls skip it — only the initial load, a manual
       // pull-to-refresh, and coming back from the background refresh it.
@@ -196,6 +212,107 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
         _isLoading = false;
       });
       JKBMSRToast.show(context, _error ?? 'Failed to load battery details', isError: true);
+    }
+  }
+
+  // Loads the gateway's offline-alert episode and the owner's ack/mute state.
+  // A failure (route absent on an older API, a shared viewer, or a transient
+  // network error) leaves the previous value in place; the controls
+  // self-suppress when the state is unknown, so this can never fabricate a
+  // "not muted / not acknowledged" claim it did not measure.
+  Future<void> _loadWifiAlertState(String deviceId) async {
+    try {
+      final state = await _apiClient.getDeviceWifiTarget(deviceId);
+      if (!mounted) return;
+      setState(() {
+        _wifiAlert = state.alert;
+      });
+    } catch (_) {
+      // Intentionally silent: this is secondary chrome on a screen that
+      // already loaded, not a reason to blank the dashboard or toast.
+    }
+  }
+
+  // The acknowledgement has no client-side timestamp, so a non-null marker is
+  // enough for the controls' null/non-null check. The next full refresh
+  // replaces it with the server's authoritative value.
+  String _alertAckMarker() => DateTime.now().toUtc().toIso8601String();
+
+  // Each action adopts the server's echoed value rather than assuming success,
+  // and never flips the control optimistically — on failure the UI still shows
+  // exactly what the server last confirmed.
+
+  Future<void> _acknowledgeOfflineAlert() async {
+    final deviceId = _device?.id;
+    if (deviceId == null || _alertActionBusy) return;
+    JKBMSRHaptics.mediumImpact();
+    setState(() => _alertActionBusy = true);
+    try {
+      final acknowledged = await _apiClient.acknowledgeDeviceOfflineAlerts(deviceId);
+      if (!mounted) return;
+      setState(() {
+        _wifiAlert = _wifiAlert?.copyWith(
+          acknowledgedAt: acknowledged ? _alertAckMarker() : null,
+          clearAcknowledgedAt: !acknowledged,
+        );
+      });
+      JKBMSRToast.show(context, "Acknowledged. We'll stop alerting you about this outage.");
+    } catch (e) {
+      if (!mounted) return;
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _alertActionBusy = false);
+    }
+  }
+
+  Future<void> _reenableOfflineAlerts() async {
+    final deviceId = _device?.id;
+    if (deviceId == null || _alertActionBusy) return;
+    JKBMSRHaptics.mediumImpact();
+    setState(() => _alertActionBusy = true);
+    try {
+      final acknowledged = await _apiClient.clearDeviceOfflineAlertsAcknowledge(deviceId);
+      if (!mounted) return;
+      setState(() {
+        _wifiAlert = _wifiAlert?.copyWith(
+          acknowledgedAt: acknowledged ? _alertAckMarker() : null,
+          clearAcknowledgedAt: !acknowledged,
+        );
+      });
+      JKBMSRToast.show(context, 'Offline alerts re-enabled.');
+    } on AlertActionUnavailableException catch (e) {
+      // The re-enable route may not be deployed yet: say so rather than
+      // claiming alerts are back on, or surfacing a bare "API Call Failed".
+      if (!mounted) return;
+      JKBMSRToast.show(context, e.message, isError: true);
+    } catch (e) {
+      if (!mounted) return;
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _alertActionBusy = false);
+    }
+  }
+
+  Future<void> _setOfflineAlertsMuted(bool muted) async {
+    final deviceId = _device?.id;
+    if (deviceId == null || _alertActionBusy) return;
+    JKBMSRHaptics.lightImpact();
+    setState(() => _alertActionBusy = true);
+    try {
+      final echoed = await _apiClient.setDeviceOfflineAlertsMuted(deviceId, muted: muted);
+      if (!mounted) return;
+      setState(() {
+        _wifiAlert = _wifiAlert?.copyWith(muted: echoed);
+      });
+      JKBMSRToast.show(
+        context,
+        echoed ? 'Offline alerts muted for this gateway.' : 'Offline alerts unmuted.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
+    } finally {
+      if (mounted) setState(() => _alertActionBusy = false);
     }
   }
 
@@ -417,6 +534,21 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                 JKBMSRNextUpdateCountdown(
                   secondsUntilNextExpectedCheckIn: _device!.secondsUntilNextExpectedCheckIn,
                   deviceStatus: _device!.status,
+                ),
+                const SizedBox(height: JKBMSRTokens.space16),
+              ],
+
+              // Owner-only acknowledge / mute controls for the gateway-offline
+              // alert. Self-suppresses for a healthy, un-muted gateway, so it
+              // sits beside the countdown as the per-gateway counterpart to
+              // the cross-device Alerts list rather than permanent chrome.
+              if (_device!.isOwner && OfflineAlertControls.shouldShow(_wifiAlert)) ...[
+                OfflineAlertControls(
+                  alert: _wifiAlert!,
+                  busy: _alertActionBusy,
+                  onAcknowledge: _acknowledgeOfflineAlert,
+                  onReenable: _reenableOfflineAlerts,
+                  onToggleMute: _setOfflineAlertsMuted,
                 ),
                 const SizedBox(height: JKBMSRTokens.space16),
               ],

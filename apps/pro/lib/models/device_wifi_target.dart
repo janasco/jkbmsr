@@ -89,15 +89,26 @@ class WifiReported {
 /// State of the "gateway can't reach the network you set" alert episode.
 /// Absence-based: the backend can't be told by the gateway in real time, so an
 /// active episode means the gateway has gone silent since the target was set.
+///
+/// [acknowledgedAt] and [muted] are the owner's controls over that episode
+/// (see jkbmsr-api's dashboard.ts): acknowledging silences this outage until it
+/// clears or the owner re-enables it, and muting silences all offline alerts for
+/// this gateway until unmuted. Both are parsed defensively — an older API build
+/// that predates them omits the keys entirely, and absence must read as
+/// "not acknowledged / not muted", never as a reason to hide the controls.
 class WifiAlertState {
   final bool active;
   final String? lastSentAt;
   final int count;
+  final bool muted;
+  final String? acknowledgedAt;
 
-  WifiAlertState({
+  const WifiAlertState({
     required this.active,
     this.lastSentAt,
     required this.count,
+    this.muted = false,
+    this.acknowledgedAt,
   });
 
   factory WifiAlertState.fromJson(Map<String, dynamic> json) {
@@ -105,6 +116,34 @@ class WifiAlertState {
       active: json['active'] == true,
       lastSentAt: json['lastSentAt'] as String?,
       count: (json['count'] as num? ?? 0).toInt(),
+      muted: json['muted'] == true,
+      // A non-string here (e.g. an integer timestamp from a future API shape)
+      // must read as "not acknowledged" rather than crashing the whole target
+      // response — the controls then simply don't render, which is safe.
+      acknowledgedAt:
+          json['acknowledgedAt'] is String ? json['acknowledgedAt'] as String : null,
+    );
+  }
+
+  /// Returns a copy with the given fields replaced. Because
+  /// [acknowledgedAt] is nullable, pass [clearAcknowledgedAt] to set it to
+  /// null explicitly (a plain `copyWith(acknowledgedAt: null)` would be
+  /// indistinguishable from "leave it alone").
+  WifiAlertState copyWith({
+    bool? active,
+    String? lastSentAt,
+    int? count,
+    bool? muted,
+    String? acknowledgedAt,
+    bool clearAcknowledgedAt = false,
+  }) {
+    return WifiAlertState(
+      active: active ?? this.active,
+      lastSentAt: lastSentAt ?? this.lastSentAt,
+      count: count ?? this.count,
+      muted: muted ?? this.muted,
+      acknowledgedAt:
+          clearAcknowledgedAt ? null : (acknowledgedAt ?? this.acknowledgedAt),
     );
   }
 }
