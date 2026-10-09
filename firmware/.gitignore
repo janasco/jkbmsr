@@ -28,7 +28,11 @@ out/
 target/
 .pio/
 managed_components/
+# Base core dir plus the per-platform-family isolated dirs release.sh creates
+# (e.g. .platformio-core-pioarduino, so the C6 fork cannot collide with the
+# official espressif32 platform's framework package).
 .platformio-core/
+.platformio-core-*/
 .wrangler/
 
 # ESP-IDF generated sdkconfig (env:idf*). Intentional defaults live in
