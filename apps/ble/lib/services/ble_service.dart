@@ -6,6 +6,7 @@ import '../models/bms_parameter.dart';
 import '../protocols/bms_protocol.dart';
 import 'app_database.dart';
 import 'detection_engine.dart';
+import 'logbook_store.dart';
 
 class BleBmsService {
   static final BleBmsService _instance = BleBmsService._internal();
@@ -738,6 +739,16 @@ class BleBmsService {
     return _writeCommand(BmsProtocolHelper.buildJk02LogbookRequest());
   }
 
+  /// Merges a received logbook frame into the per-device local store so the app
+  /// keeps every event it has ever seen, beyond the single window the BMS
+  /// returns per read. Fire-and-forget: a storage failure must never disturb the
+  /// live BLE session, and the store already swallows IO errors.
+  void _persistLogbook(Jk02Logbook logbook) {
+    final id = _connectedDevice?.remoteId.str;
+    if (id == null || id.isEmpty) return;
+    unawaited(LogbookStore.instance.mergeLogbook(id, logbook));
+  }
+
   /// Requests a fresh settings dump from the connected BMS. Brands without
   /// a verified settings-frame read are no-ops (they stay editor-disabled).
   void requestSettings() {
@@ -1051,11 +1062,14 @@ class BleBmsService {
     } else if (frameType == 0x05) {
       // Logbook — the BMS's own event history, answered only to an explicit
       // 0xA1 request (see requestLogbook()). It is not part of the normal
-      // telemetry stream.
+      // telemetry stream. Every parsed frame is merged into the local store so
+      // the app accumulates history across fetches (the hardware returns at
+      // most one 50-entry window per request — see LogbookStore).
       final logbook = BmsProtocolHelper.parseJk02LogbookFrame(_jkFrameBuffer);
       if (logbook != null) {
         _currentLogbook = logbook;
         _logbookController.add(logbook);
+        _persistLogbook(logbook);
         _addLog("JK-BMS logbook received (${logbook.logCount} entr${logbook.logCount == 1 ? 'y' : 'ies'}).");
       } else {
         _addLog("JK02 logbook frame CRC/parse check failed.");
