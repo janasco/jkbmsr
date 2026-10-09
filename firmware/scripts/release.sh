@@ -565,6 +565,19 @@ build_target() {
   info "--- ${target} (pio env: ${pio_env}, ${chip_family}, OTA: ${has_ota})"
   info "    PLATFORMIO_CORE_DIR=${core_dir}"
 
+  # --skip-build normally reuses .pio/build/<env>. But the C6 leg builds LAST
+  # from a different platform, and PlatformIO clears the other envs' .pio/build
+  # directories when it runs -- so a documented re-publish after a partial
+  # failure found them gone and died on
+  #   sha256sum: .pio/build/dev/firmware.bin: No such file or directory
+  # even though the previous run had staged a complete bundle. Reuse the staged
+  # bundle rather than rebuilding or failing.
+  if [ "$SKIP_BUILD" -eq 1 ] && [ "$DRY_RUN" -eq 0 ] && [ ! -s "$firmware" ] && [ -s "${out}/firmware.bin" ]; then
+    TARGET_SHA["$target"]="$(sha256sum "${out}/firmware.bin" | awk '{print $1}')"
+    info "no .pio/build/${pio_env}; reusing the bundle staged at ${out} (sha256 ${TARGET_SHA[$target]})"
+    return 0
+  fi
+
   if [ "$SKIP_BUILD" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
     info "skipping build (--skip-build); reusing ${firmware}"
   elif [ "$DRY_RUN" -eq 1 ]; then
@@ -1155,8 +1168,14 @@ verify_cdn() {
 import hashlib, sys, urllib.error, urllib.request
 
 url, expected = sys.argv[1], sys.argv[2]
+# Cloudflare's edge answers the default Python-urllib User-Agent with
+# "error code: 1010" (HTTP 403), which is a bot check, not a missing object:
+# an explicit non-default UA passes. Same value scripts/verify-publish.py uses.
+request = urllib.request.Request(
+    url, headers={"User-Agent": "jkbmsr-release-verify/1.0"}
+)
 try:
-    with urllib.request.urlopen(url, timeout=120) as response:
+    with urllib.request.urlopen(request, timeout=120) as response:
         digest = hashlib.sha256()
         for chunk in iter(lambda: response.read(65536), b""):
             digest.update(chunk)
@@ -1337,6 +1356,16 @@ if [ "$DO_PUBLISH" -eq 0 ]; then
   info "The signed metadata for each OTA target is in the stage directory above and validates"
   info "against the published public key. To publish it later:"
   info "    ./scripts/release.sh ${VERSION} --skip-build --yes"
+  # --no-publish must still be able to run the post-deploy HTTP verification:
+  # with --skip-build it reads the staged bundles' SHA-256s and compares them to
+  # what cdn.jkbmsr.com actually serves. Without this the documented
+  #   ./scripts/release.sh ${VERSION} --no-publish --verify-cdn --yes
+  # returned success having verified nothing.
+  if [ "$VERIFY_CDN" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
+    note "verify the published copies over HTTP"
+    info "(--no-publish: this run uploaded nothing; verifying what is already live at ${PUBLIC_BASE_URL})"
+    verify_cdn
+  fi
   exit 0
 fi
 
