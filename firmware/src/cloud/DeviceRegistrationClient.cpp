@@ -98,6 +98,7 @@ bool DeviceRegistrationClient::registerDevice(
     const String& boardProfile,
     const String& firmwareVersion,
     const String& claimCode,
+    const String& claimToken,
     DeviceRegistrationResult& result) {
   if (deviceId.length() == 0 || hardwareId.length() == 0 || hardwareFingerprint.length() == 0 ||
       hardwarePlatform.length() == 0 || targetHardware.length() == 0 || firmwareVersion.length() == 0) {
@@ -123,6 +124,12 @@ bool DeviceRegistrationClient::registerDevice(
   // letting a user account claim this device (anti-spoof).
   if (claimCode.length() > 0) {
     document["claimCode"] = claimCode;
+  }
+  // Account-bound claim token, provisioned over serial by the signed-in
+  // flasher. The backend binds this device to that account and consumes the
+  // token on first registration. Sent only while present; cleared once used.
+  if (claimToken.length() > 0) {
+    document["claimToken"] = claimToken;
   }
   if (!postJson(apiBaseUrl_ + "/api/v1/device/register", document, result)) {
     return false;

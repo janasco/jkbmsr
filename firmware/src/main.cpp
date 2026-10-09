@@ -305,6 +305,17 @@ bool runProvisioning(uint32_t timeoutMs) {
   const auto captiveScanNetworks = [](WifiScanResult* results, size_t capacity) {
     return wifiManager.scan(results, capacity);
   };
+  // Persist an account-bound claim token the moment the signed-in flasher hands
+  // it over, so it survives the Wi-Fi step and is presented at registration.
+  // Logging is suppressed during provisioning (Improv shares UART0 with it), so
+  // this deliberately does not log.
+  const auto persistClaimToken = [](const String& token) {
+    if (token.length() == 0) {
+      return;
+    }
+    config.claimToken = token;
+    configStore.save(config);
+  };
 
   const uint32_t startMs = millis();
   String ssid;
@@ -315,7 +326,7 @@ bool runProvisioning(uint32_t timeoutMs) {
     // lands; credentials capture below takes priority once submitted.
     resetTrigger.poll();
 
-    if (provisioner.poll(tryConnect, ssid, password, scanNetworks) ||
+    if (provisioner.poll(tryConnect, ssid, password, scanNetworks, persistClaimToken) ||
         captivePortal.poll(tryConnect, captiveScanNetworks, ssid, password)) {
       config.wifiSsid = ssid;
       config.wifiPassword = password;
@@ -520,6 +531,11 @@ void ensureDeviceAuth(bool forceRefresh = false) {
     return;
   }
 
+  // Account-bound claim token, provisioned over serial by the signed-in web
+  // flasher. Present only until the first successful registration consumes it;
+  // after that the device authenticates with its rotating secret like any
+  // other deployed gateway.
+  const bool hadClaimToken = config.claimToken.length() > 0;
   if (deviceRegistrationClient.registerDevice(
           config.deviceId,
           deviceIdentity.hardwareId(),
@@ -530,7 +546,14 @@ void ensureDeviceAuth(bool forceRefresh = false) {
           kBoardProfile,
           kFirmwareVersion,
           config.claimCode,
+          config.claimToken,
           result)) {
+    // Registration succeeded, so the backend either bound this account or
+    // refused the token — either way it is single-use and must not be retried.
+    // A failed registration (network error) leaves it in place for the retry.
+    if (hadClaimToken) {
+      config.claimToken = "";
+    }
     applyDeviceAuthResult(result);
     lastDeviceAuthMs = millis();
   }
@@ -781,7 +804,17 @@ void loop() {
   if (identityDiscoveryUntilMs != 0 && static_cast<int32_t>(identityDiscoveryUntilMs - millis()) > 0) {
     String unusedSsid;
     String unusedPassword;
-    provisioner.poll({}, unusedSsid, unusedPassword);
+    // An already-Wi-Fi-configured gateway answers Improv here without opening
+    // the AP. Accept a flash-time account token if one arrives so a re-flash
+    // against a board with saved credentials still records it (it is used only
+    // if the board ever re-registers).
+    provisioner.poll({}, unusedSsid, unusedPassword, {},
+                     [](const String& token) {
+                       if (token.length() > 0 && token != config.claimToken) {
+                         config.claimToken = token;
+                         configStore.save(config);
+                       }
+                     });
   }
 
   resetTrigger.poll();

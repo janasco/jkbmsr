@@ -48,6 +48,7 @@ DeviceConfig ConfigStore::load() {
   config.deviceToken = document["deviceToken"] | "";
   config.deviceSecret = document["deviceSecret"] | "";
   config.claimCode = document["claimCode"] | "";
+  config.claimToken = document["claimToken"] | "";
   config.wifiDesiredRevision = document["wifiDesiredRevision"] | "";
   config.wifiLocalProvisioned = document["wifiLocalProvisioned"] | config.wifiLocalProvisioned;
   config.wifiRestartCount = document["wifiRestartCount"] | config.wifiRestartCount;
@@ -75,6 +76,7 @@ DeviceConfig ConfigStore::load() {
   config.deviceToken = prefs.getString("jwt", "");
   config.deviceSecret = prefs.getString("dev_secret", "");
   config.claimCode = prefs.getString("claim_code", "");
+  config.claimToken = prefs.getString("claim_token", "");
   config.wifiDesiredRevision = prefs.getString("wifi_des_rev", "");
   config.wifiLocalProvisioned = prefs.getBool("wifi_local", config.wifiLocalProvisioned);
   config.wifiRestartCount = prefs.getUInt("wifi_restart", config.wifiRestartCount);
@@ -102,6 +104,7 @@ bool ConfigStore::save(const DeviceConfig& config) {
   document["deviceToken"] = config.deviceToken;
   document["deviceSecret"] = config.deviceSecret;
   document["claimCode"] = config.claimCode;
+  document["claimToken"] = config.claimToken;
   document["wifiDesiredRevision"] = config.wifiDesiredRevision;
   document["wifiLocalProvisioned"] = config.wifiLocalProvisioned;
   document["wifiRestartCount"] = config.wifiRestartCount;
@@ -138,6 +141,7 @@ bool ConfigStore::save(const DeviceConfig& config) {
   ok &= prefs.putString("jwt", config.deviceToken) > 0;
   ok &= prefs.putString("dev_secret", config.deviceSecret) > 0;
   ok &= prefs.putString("claim_code", config.claimCode) > 0;
+  ok &= prefs.putString("claim_token", config.claimToken) > 0;
   ok &= prefs.putString("wifi_des_rev", config.wifiDesiredRevision) > 0;
   ok &= prefs.putBool("wifi_local", config.wifiLocalProvisioned) > 0;
   ok &= prefs.putUInt("wifi_restart", config.wifiRestartCount) > 0;

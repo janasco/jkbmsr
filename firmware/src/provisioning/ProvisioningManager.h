@@ -28,6 +28,10 @@ class ProvisioningManager {
 
   using ConnectFn = std::function<bool(const String& ssid, const String& password)>;
   using ScanFn = std::function<size_t(Network* networks, size_t capacity)>;
+  // Invoked when the host hands the gateway an account-bound claim token over
+  // Improv (command SetClaimToken). The caller persists it; this class carries
+  // no ConfigStore/NVS dependency so it stays native-testable.
+  using ClaimTokenFn = std::function<void(const String& token)>;
 
   // deviceId/claimCode are echoed back to the browser (device info + redirect
   // URL). Safe to call again to restart a session.
@@ -40,12 +44,15 @@ class ProvisioningManager {
 
   // Reads any available bytes and advances the handshake. Returns true exactly
   // once, when credentials have been received AND tryConnect() succeeded, with
-  // outSsid/outPassword filled in for the caller to persist.
+  // outSsid/outPassword filled in for the caller to persist. onClaimToken, when
+  // supplied, is called for every valid SetClaimToken command so the caller can
+  // persist the account binding.
   bool poll(
       const ConnectFn& tryConnect,
       String& outSsid,
       String& outPassword,
-      const ScanFn& scanNetworks = {});
+      const ScanFn& scanNetworks = {},
+      const ClaimTokenFn& onClaimToken = {});
 
   improv::State state() const { return state_; }
 

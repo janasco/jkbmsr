@@ -153,5 +153,22 @@ bool parseWifiSettings(const uint8_t* cmdData, uint8_t cmdLen, String& ssid, Str
   return ssidLen > 0;
 }
 
+bool parseClaimToken(const uint8_t* cmdData, uint8_t cmdLen, String& token) {
+  if (cmdLen < 1) {
+    return false;
+  }
+  const uint8_t tokenLen = cmdData[0];
+  if (tokenLen == 0 || static_cast<size_t>(1) + tokenLen > cmdLen) {
+    return false;
+  }
+
+  token = "";
+  token.reserve(tokenLen);
+  for (uint8_t i = 0; i < tokenLen; ++i) {
+    token += static_cast<char>(cmdData[1 + i]);
+  }
+  return true;
+}
+
 }  // namespace improv
 }  // namespace jkbmsr
