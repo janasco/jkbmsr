@@ -1,27 +1,25 @@
 # Connector Pinout Notes
 
-JKBMSR Mini will use a JST connector for the JK-BMS communication port.
+The JKBMSR Mini gateway talks to the JK-BMS over **Bluetooth (BLE)** — there
+is no wired BMS connection and therefore no BMS connector or pinout to route.
 
-## UART Signals
+## No BMS Connector
 
-The ESP32 side of this connector is fixed by `jkbmsr-firmware` (see
-`devices/JK_UART_GPS_PORT/` in that repo), so the board should route to these
-pins by default (remappable in firmware config, but this is the assumption
-to design the JST footprint against):
+Earlier revisions of this document specified a JST connector wired to the
+JK-BMS UART ("GPS") port. That link has been retired: the firmware is
+BLE-only, so the board carries no BMS interface. The JK-BMS is paired over
+the air; the gateway itself only needs power and a USB-C port for
+programming and service.
 
-| Signal | ESP32 pin | JK-BMS GPS port |
-| --- | --- | --- |
-| RX | GPIO16 | TX |
-| TX | GPIO17 | RX |
-| GND | GND | GND |
+## Board Interfaces
 
-- Baud rate: 115200.
-- Optional regulated power input only if the design explicitly supports it.
-- Never route JK-BMS pack/VBAT voltage to the ESP32 — UART only.
+- USB-C — power, programming, and serial logs.
+- Power input — regulated (buck converter or USB-C); never battery pack
+  voltage directly.
+- Status LEDs and reset/boot buttons.
 
 ## Warnings
 
 - Do not connect battery pack voltage to the ESP32.
-- Confirm the JK-BMS connector pinout before connecting hardware.
-- Confirm voltage levels before connecting UART pins.
-- Wrong wiring can permanently damage the ESP32 or JK-BMS.
+- Use a properly rated power supply.
+- Wrong wiring can permanently damage the ESP32.

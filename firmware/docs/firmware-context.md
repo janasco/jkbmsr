@@ -1,13 +1,13 @@
 # JKBMSR Firmware Context
 
-The firmware connects an ESP32 gateway to a JK-BMS over UART, reads battery data, connects to WiFi, uploads telemetry to JKBMSR Cloud, receives remote configuration, and supports OTA updates.
+The firmware connects an ESP32 gateway to a JK-BMS over Bluetooth (BLE), reads battery data, connects to WiFi, uploads telemetry to JKBMSR Cloud, receives remote configuration, and supports OTA updates.
 
 ## Technology
 
 - ESP32
 - PlatformIO
 - Arduino framework initially
-- UART
+- Bluetooth (BLE)
 - HTTPS
 - JSON
 - NVS storage
@@ -15,7 +15,7 @@ The firmware connects an ESP32 gateway to a JK-BMS over UART, reads battery data
 
 ## Modules
 
-- `src/bms`: JK-BMS UART parser. Do not add non-JK BMS support in version 1.
+- `src/bms`: per-vendor BLE clients and frame decoders. Do not add non-JK BMS support in version 1.
 - `src/network`: WiFi connection and reconnection management.
 - `src/cloud`: device registration, telemetry upload, and remote config clients.
 - `src/ota`: OTA update checks, firmware download, and integrity verification.

@@ -39,10 +39,5 @@ constexpr uint32_t kTlsHandshakeTimeoutSeconds = 20;
 // download over slow links, since this is an *idle* timeout (reset on each
 // chunk) rather than a total-transfer cap.
 constexpr uint32_t kTlsReadTimeoutSeconds = 30;
-constexpr int kJkBmsRxPin = kDefaultBmsRxPin;
-constexpr int kJkBmsTxPin = kDefaultBmsTxPin;
-constexpr uint32_t kJkBmsBaudRate = 115200;
-constexpr uint32_t kMinBmsBaudRate = 9600;
-constexpr uint32_t kMaxBmsBaudRate = 115200;
 
 }  // namespace jkbmsr

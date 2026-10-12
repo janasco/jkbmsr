@@ -8,15 +8,15 @@ namespace jkbmsr {
 // Daly's BLE protocol (service 0xFFF0, notify 0xFFF1, control 0xFFF2 —
 // see DalyBmsBleClient), frame start 0xD2, Modbus-style function/register
 // reads with a CRC16-Modbus checksum. This is a DIFFERENT, incompatible
-// wire protocol from DalyBmsParser's UART 0xA5 framing — same brand, two
-// unrelated protocol families (H/K/M/S-series BLE vs. classic
+// wire protocol from Daly's classic consumer 0xA5-framed UART series — same
+// brand, two unrelated protocol families (H/K/M/S-series BLE vs. classic
 // J/T/A/U/W/ND-series UART). Ported from syssi/esphome-daly-bms's
 // daly_bms_ble.cpp (Apache-2.0) — see docs/third-party-attribution.md.
 //
 // Only the "status" register range (address 0x0000) is implemented — a
 // single request returns cell voltages, temperatures, pack
 // voltage/current/SOC, cycle count, and charge/discharge/balance state all
-// at once (unlike the UART protocol's 5 separate commands). Settings,
+// at once (unlike the classic UART protocol's 5 separate commands). Settings,
 // version, and balancer-switch commands are not implemented, nor is the
 // separate "P81" protocol variant (frame start 0x81/0x51) some Daly BLE
 // units use instead of this one.

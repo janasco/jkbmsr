@@ -11,12 +11,12 @@ Required environment variables:
   RELEASE_VERSION, RELEASE_TARGET_HARDWARE, RELEASE_RELEASED_AT,
   RELEASE_TAG, RELEASE_SHA256, RELEASE_HAS_OTA
   RELEASE_SIGNATURE, RELEASE_SIGNING_KEY_ID, RELEASE_SIGNATURE_ALGORITHM are
-  required only when RELEASE_HAS_OTA=true — a non-OTA target (currently just
-  ESP8266 — USB reflash only, see docs/esp8266-nodemcu-support.md) publishes
+  required only when RELEASE_HAS_OTA=true — a non-OTA target publishes
   neither a firmware-metadata.json nor OTA signing metadata at all, so both
   the "metadata" artifact and "otaMetadata" become null instead of a
-  placeholder value, matching what generate-flash-manifest.py's caller
-  (ota-release.yml) writes into that target's own release.json.
+  placeholder value. Every target in the current matrix has OTA, so the
+  non-OTA branch is currently unreachable; it is kept so a future non-OTA
+  target does not silently get placeholder OTA metadata.
 """
 import json
 import os

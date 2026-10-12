@@ -7,9 +7,6 @@ The JK-BMS protocol implementations in this firmware are ported from
 under the Apache License, Version 2.0
 (https://www.apache.org/licenses/LICENSE-2.0):
 
-- `src/bms/JkBmsParser.{h,cpp}` — UART-TTL (0x4E57) request/response framing,
-  additive checksum, and the positional register map of the
-  "read all registers" (0x06) response.
 - `src/bms/Jk02Decoder.{h,cpp}` — BLE JK02 frame format (0x55AA EB90), 8-bit
   checksum, the 24S/32S cell-info layouts, and the device-info layout.
 - `test/test_jk02_decoder` — the 24S fixture is a device capture documented in
@@ -21,30 +18,13 @@ ESPHome (no Component/sensor framework), telemetry mapped to this project's
 device-info hardware version, and NimBLE-based transport instead of
 esp32_ble_tracker.
 
-## maland16/daly-bms-uart (MIT License)
-
-`src/bms/DalyBmsParser.{h,cpp}` implements Daly's classic 0xA5-framed
-consumer "Smart BMS" UART protocol (J/T/A/U/W/ND series — NOT the newer
-0xD2/Modbus H/K/M/S-series, an incompatible protocol), ported from the frame
-layout and command set documented by
-[maland16/daly-bms-uart](https://github.com/maland16/daly-bms-uart), licensed
-under the MIT License, which itself sources the protocol from Daly's own
-published "UART/485 Communications Protocol V1.2" document.
-
-Changes from upstream: reimplemented as a `BmsUartClient` (see
-`include/bms/BmsUartClient.h`) independent of the Arduino library's own
-class shape, telemetry mapped directly to `BatteryTelemetry`. Only 5 of the
-9 documented commands are implemented in this first pass — see
-`devices/DALY_UART_0xA5/README.md` for exactly which, and what's deliberately
-left for a follow-up.
-
 ## syssi/esphome-daly-bms (Apache License 2.0)
 
 `src/bms/DalyD2Decoder.{h,cpp}` and `src/bms/DalyBmsBleClient.{h,cpp}`
 implement Daly's H/K/M/S-series BLE protocol (frame start `0xD2`,
 Modbus-style function/register reads, CRC16-Modbus checksum) — a
-**different, incompatible protocol from `DalyBmsParser`'s UART protocol
-above**, despite being the same brand. Ported from
+**different, incompatible protocol from Daly's classic consumer 0xA5-framed
+UART series**, despite being the same brand. Ported from
 [syssi/esphome-daly-bms](https://github.com/syssi/esphome-daly-bms)'s
 `components/daly_bms_ble/daly_bms_ble.cpp` (`decode_status_data_()`),
 licensed under the Apache License, Version 2.0.
@@ -63,15 +43,16 @@ see `devices/DALY_BLE_D2/README.md`.
 (0xDD...0x77 framing), ported from
 [syssi/esphome-jbd-bms](https://github.com/syssi/esphome-jbd-bms)'s
 `components/jbd_bms/jbd_bms.cpp`, licensed under the Apache License,
-Version 2.0. The frame format is byte-identical between UART and BLE
-(confirmed against upstream's separate `components/jbd_bms_ble` component),
-so `src/bms/JbdBmsBleClient.{h,cpp}` (BLE transport, service `0xFF00`/notify
-`0xFF01`/control `0xFF02`, ported from `jbd_bms_ble.cpp`'s UUID defaults)
-reuses this same decoder rather than a second one.
+Version 2.0. The frame format is byte-identical between JBD's wired and BLE
+transports (confirmed against upstream's separate `components/jbd_bms_ble`
+component), so `src/bms/JbdBmsBleClient.{h,cpp}` (BLE transport, service
+`0xFF00`/notify `0xFF01`/control `0xFF02`, ported from `jbd_bms_ble.cpp`'s
+UUID defaults) reuses this same decoder rather than a second one. This
+firmware reaches JBD over BLE only; there is no wired transport.
 
-Changes from upstream: reimplemented as `BmsUartClient`/`BmsBleClient`
-implementations, telemetry mapped directly to `BatteryTelemetry`. Not
-implemented: JBD's write/control command set, and the password-
+Changes from upstream: reimplemented as a `BmsBleClient` implementation plus
+a shared static decoder, telemetry mapped directly to `BatteryTelemetry`.
+Not implemented: JBD's write/control command set, and the password-
 authentication sub-protocol (`0xFF 0xAA`...`0x77` framed) a minority of BLE
 units require — see `devices/JBD_BLE/README.md`.
 

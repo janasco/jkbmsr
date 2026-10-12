@@ -11,10 +11,6 @@ struct DeviceRegistrationResult {
   uint32_t telemetryIntervalMs = 60000;
   bool otaEnabled = true;
   String bmsVendor = "jk";
-  int bmsUartRxPin = 16;
-  int bmsUartTxPin = 17;
-  uint32_t bmsUartBaudRate = 115200;
-  bool bmsUartCaptureEnabled = false;
 };
 
 class DeviceRegistrationClient {

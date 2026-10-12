@@ -20,7 +20,7 @@ body:
     id: hardware
     attributes:
       label: Hardware
-      placeholder: e.g. ESP32-DevKitC, JK-BMS B2A24S over UART
+      placeholder: e.g. ESP32-DevKitC, JK-BMS B2A24S over Bluetooth (BLE)
     validations:
       required: true
   - type: textarea

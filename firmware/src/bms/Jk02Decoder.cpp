@@ -142,7 +142,7 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
   parsed.deltaCellVoltage = parsed.maxCellVoltage - parsed.minCellVoltage;
 
   parsed.packVoltage = static_cast<float>(readU32Le(frame + 118 + off2)) * 0.001f;
-  // Positive current = charging, matching the UART transport's convention.
+  // Positive current = charging, matching the JK-BMS convention.
   parsed.packCurrent =
       static_cast<float>(static_cast<int32_t>(readU32Le(frame + 126 + off2))) * 0.001f;
   parsed.power = parsed.packVoltage * parsed.packCurrent;

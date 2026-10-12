@@ -250,8 +250,7 @@ export default defineConfig({
           { text: "ESP32 Gateway Setup", link: "/getting-started/esp32-gateway-setup" },
           { text: "Firmware Flashing", link: "/getting-started/firmware-flashing" },
           { text: "Device Registration", link: "/getting-started/device-registration" },
-          { text: "JK-BMS Wiring", link: "/getting-started/jk-bms-wiring" },
-          { text: "UART Pinout Warnings", link: "/getting-started/uart-pinout-warnings" },
+          { text: "JK-BMS Connection", link: "/getting-started/jk-bms-wiring" },
         ],
       },
       {

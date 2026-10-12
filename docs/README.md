@@ -80,7 +80,6 @@ docs/
     esp32-gateway-setup.md
     firmware-flashing.md
     jk-bms-wiring.md
-    uart-pinout-warnings.md
   internal/
     architecture.md
     deployment.md

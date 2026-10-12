@@ -1,11 +1,11 @@
 # Daly Smart BMS — D2/Modbus BLE protocol
 
 Compatibility profile for Daly's H/K/M/S-series BLE protocol. This is a
-**different, incompatible protocol** from [`DALY_UART_0xA5`](../DALY_UART_0xA5/)
-— same brand, two unrelated protocol families (this one's frame starts
-`0xD2`; the classic consumer UART series starts `0xA5`). Also distinct from
-the "P81" BLE variant (frame start `0x81`/`0x51`) some "DL-Fxxx"-advertised
-units use instead — not implemented here.
+**different, incompatible protocol** from the classic consumer Daly UART
+series (`0xA5` framing) — same brand, two unrelated protocol families (this
+one's frame starts `0xD2`; the classic consumer UART series starts `0xA5`).
+Also distinct from the "P81" BLE variant (frame start `0x81`/`0x51`) some
+"DL-Fxxx"-advertised units use instead — not implemented here.
 
 - Hardware revisions: the whole D2/Modbus BLE protocol family
 - Protocol family: `DALY_D2_BLE` — Modbus-style function/register-address

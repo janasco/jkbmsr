@@ -6,12 +6,14 @@ The overall JKBMSR product is now in execution with firmware, cloud, web dashboa
 
 ## Role In The System
 
-`jkbmsr-hardware` defines the physical gateway that connects a JK-BMS UART port to JKBMSR Cloud through ESP32 firmware.
+`jkbmsr-hardware` defines the physical gateway that talks to a JK-BMS over
+Bluetooth (BLE) and reports to JKBMSR Cloud through ESP32 firmware.
 
 Planned hardware responsibilities:
 
 - Provide a reliable ESP32 gateway board.
-- Connect safely to JK-BMS UART.
+- Pair with the JK-BMS over Bluetooth (BLE) — no wired BMS connection is
+  required.
 - Provide stable power input.
 - Support USB-C programming and service.
 - Provide status LEDs.
@@ -30,12 +32,11 @@ Planned hardware responsibilities:
 Planned features:
 
 - ESP32
-- UART connection to JK-BMS
+- Bluetooth (BLE) link to JK-BMS
 - Buck converter input
 - USB-C power/programming
 - Status LEDs
 - Reset and boot buttons
-- JST connector for BMS port
 
 ## Future Hardware: JKBMSR Pro
 
@@ -74,17 +75,15 @@ Do not design hardware around Daly, JBD, Seplos, or other BMS vendors yet unless
 
 - Battery systems can be dangerous.
 - Wiring mistakes can damage hardware or create unsafe battery conditions.
-- UART voltage levels must be verified before connection.
 - Power input and grounding need careful validation.
 - Production hardware should be reviewed before field use.
 
 ## Next Work
 
-- Finalize JK-BMS connector pinout assumptions.
+- Finalize the Bluetooth (BLE) pairing assumptions.
 - Choose exact ESP32 module/package.
 - Draft schematic.
 - Draft PCB layout.
 - Validate power input design.
-- Validate UART level compatibility.
 - Create first prototype BOM.
 - Add enclosure CAD once board dimensions stabilize.

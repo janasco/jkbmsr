@@ -17,14 +17,11 @@ Upstream: `docs/hardware-security-hardening-plan.md`,
 
 ## 0. Chip-family prerequisite (read this first)
 
-Every ESP32-family target in `hardware-targets.json` except `esp8266-uart-lite`
-now has an `idf` / `idf-secure` / `idf-secureboot` build (see
-`platformio.ini` and `docs/secure-bringup.md`'s build table) and all of them
-build under `scripts/run-checks.sh` (`esp32-c6-4mb`'s trio in an isolated
-PlatformIO core directory). `esp8266-uart-lite` cannot participate in any of
-this — ESP8266 is a different chip family with no ESP-IDF, no flash
-encryption, and no Secure Boot v2 concept; Phase 3 is structurally an
-ESP32-family-only story.
+Every target in `hardware-targets.json` now has an `idf` / `idf-secure` /
+`idf-secureboot` build (see `platformio.ini` and `docs/secure-bringup.md`'s
+build table) and all of them build under `scripts/run-checks.sh`
+(`esp32-c6-4mb`'s trio in an isolated PlatformIO core directory). Phase 3 is
+structurally an ESP32-family-only story.
 
 **Build tooling existing is not the same as P2-5 being signed off.** The
 functional checklist in `docs/secure-bringup.md` has to be run for real, on

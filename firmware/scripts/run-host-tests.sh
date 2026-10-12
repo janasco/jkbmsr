@@ -44,11 +44,9 @@ FLAGS=(-std=c++17 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -W
 SUITES=(
   "test_ant_bms_decoder:src/bms/AntBmsDecoder.cpp"
   "test_basen_bms_decoder:src/bms/BasenBmsDecoder.cpp"
-  "test_daly_bms_parser:src/bms/DalyBmsParser.cpp:src/debug/DebugLog.cpp"
   "test_daly_d2_decoder:src/bms/DalyD2Decoder.cpp"
   "test_jbd_bms_parser:src/bms/JbdBmsParser.cpp:src/debug/DebugLog.cpp"
   "test_jk02_decoder:src/bms/Jk02Decoder.cpp"
-  "test_jk_bms_parser:src/bms/JkBmsParser.cpp:src/debug/DebugLog.cpp"
   "test_ks_bms_decoder:src/bms/KsBmsDecoder.cpp"
   "test_lolan_bms_decoder:src/bms/LolanBmsDecoder.cpp"
   # Not decoder-only: this one covers the provisioning stack. The WiFi/WebServer/

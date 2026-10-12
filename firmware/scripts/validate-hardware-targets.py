@@ -36,11 +36,8 @@ for target in catalog.get("targets", []):
     if f"env:{environment}" not in parser:
         fail(f"{name} references missing PlatformIO environment {environment!r}")
     capabilities = target.get("capabilities", {})
-    if set(capabilities) != {"wifi", "uart", "ble", "ota"}:
-        fail(f"{name} must declare wifi, uart, ble, and ota capabilities")
-    uart = target.get("defaultUart", {})
-    if set(uart) != {"rxPin", "txPin", "baudRate"} or uart["rxPin"] == uart["txPin"]:
-        fail(f"{name} must declare distinct default UART pins and a baud rate")
+    if set(capabilities) != {"wifi", "ble", "ota"}:
+        fail(f"{name} must declare wifi, ble, and ota capabilities")
     if target.get("releaseStatus") not in {"supported", "experimental"}:
         fail(f"{name} has invalid releaseStatus")
     seen_targets.add(name)

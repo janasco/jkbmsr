@@ -40,5 +40,5 @@ Encrypted prototypes: see `jkbmsr-firmware/docs/secure-bringup.md`
 
 ## Safety
 
-Disconnect the JK-BMS UART cable while flashing if you are unsure about wiring.
+Keep the gateway clear of high-current battery wiring while flashing.
 Do not power the ESP32 directly from battery pack voltage.

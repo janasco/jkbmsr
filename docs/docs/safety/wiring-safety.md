@@ -1,12 +1,15 @@
 # Wiring Safety
 
-Wrong wiring can damage electronics or create a dangerous condition.
+Wrong power wiring can damage electronics or create a dangerous condition.
 
-## Before Connecting
+The gateway reaches the JK-BMS over Bluetooth, so there is no BMS signal
+wiring to get wrong — the only wiring is power.
 
-- Confirm connector orientation.
-- Confirm TX, RX, GND, and power pins.
-- Check voltage with a meter.
+## Before Applying Power
+
+- Use a properly rated buck converter or a USB-C supply.
+- Verify polarity before applying power.
+- Check the supply voltage with a meter.
 - Keep battery pack voltage away from ESP32 GPIO pins.
 
 Never assume wire colors are correct.

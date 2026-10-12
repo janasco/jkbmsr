@@ -16,22 +16,20 @@ namespace jkbmsr {
 // equivalent (that's an arduino-esp32/esp-idf-only API) — nor could it fit
 // the full embedded Mozilla bundle used on ESP32 in this chip's much
 // smaller RAM budget. Two roots are embedded instead of one specifically
-// because this target has no OTA (see platformio.ini's env:esp8266-
-// nodemcu): if the single embedded root ever stopped matching the chain
-// Cloudflare serves for api.jkbmsr.com, every deployed device would lose
-// cloud connectivity permanently with no remote recovery, only a physical
-// USB reflash. The two anchors here are:
+// because this target has no OTA: if the single embedded root ever stopped
+// matching the chain Cloudflare serves for api.jkbmsr.com, every deployed
+// device would lose cloud connectivity permanently with no remote recovery,
+// only a physical USB reflash. The two anchors here are:
 //  1. GlobalSign ECC Root CA - R4 — what api.jkbmsr.com's chain actually
 //     verifies against today: Google Trust Services' "WE1" intermediate is
 //     cross-signed by this GlobalSign root (confirmed via
 //     `openssl verify -partial_chain` against the live chain).
 //  2. ISRG Root X1 (Let's Encrypt) — a second, widely-used anchor as a
 //     hedge against a future CA change, not because it's currently in use.
-// See docs/tls-trust-and-cert-rotation.md and docs/esp8266-nodemcu-
-// support.md for rotation/verification notes. Real cert validation, not a
-// setInsecure() fallback — this header's own history is exactly why:
-// setInsecure() previously accepted any certificate and left every cloud
-// connection open to a trivial man-in-the-middle.
+// See docs/tls-trust-and-cert-rotation.md for rotation/verification notes.
+// Real cert validation, not a setInsecure() fallback — this header's own
+// history is exactly why: setInsecure() previously accepted any certificate
+// and left every cloud connection open to a trivial man-in-the-middle.
 static const char kGlobalSignEccRootR4[] PROGMEM = R"CERT(
 -----BEGIN CERTIFICATE-----
 MIIB3DCCAYOgAwIBAgINAgPlfvU/k/2lCSGypjAKBggqhkjOPQQDAjBQMSQwIgYD

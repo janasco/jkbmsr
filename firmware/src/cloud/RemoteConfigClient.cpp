@@ -60,11 +60,6 @@ bool RemoteConfigClient::fetch(const String& token, DeviceConfig& config, Remote
   config.telemetryIntervalMs = constrain(intervalSeconds, 10U, 3600U) * 1000;
   config.otaEnabled = document["otaEnabled"] | true;
   config.bmsVendor = document["bmsVendor"] | config.bmsVendor;
-  config.bmsUartRxPin = document["bmsUartRxPin"] | config.bmsUartRxPin;
-  config.bmsUartTxPin = document["bmsUartTxPin"] | config.bmsUartTxPin;
-  config.bmsUartBaudRate = document["bmsUartBaudRate"] | config.bmsUartBaudRate;
-  config.bmsUartCaptureEnabled = document["bmsUartCaptureEnabled"] | config.bmsUartCaptureEnabled;
-  config.bmsBleEnabled = document["bmsBleEnabled"] | config.bmsBleEnabled;
   config.bmsBleAddress = document["bmsBleAddress"] | config.bmsBleAddress;
   if (wifiActions != nullptr) {
     wifiActions->scanRequestId = document["wifiScanRequestId"] | "";

@@ -4,13 +4,11 @@ Each subdirectory is a compatibility profile for one BMS model or protocol
 family. This covers nine vendors, selected at runtime by a device's
 `bmsVendor` config field (`"jk"` | `"daly"` | `"jbd"` | `"seplos"` |
 `"ant"` | `"tianpower"` | `"basen"` | `"ks"` | `"lolan"`, default `"jk"`) —
-see `include/bms/BmsUartClient.h` and `include/bms/BmsBleClient.h` for the
-shared interfaces `src/main.cpp` dispatches through. Transport and vendor
-selection are independent for JK/Daly/JBD (every one of them has both a
-UART and BLE profile); the other six are **BLE only** — no UART parser
-exists for them. Profiles identify the protocol and transport used by the
-shared firmware; they do not duplicate the parser or Bluetooth
-implementation.
+see `include/bms/BmsBleClient.h` for the shared interface `src/main.cpp`
+dispatches through. Every profile uses Bluetooth (BLE): the BMS link is
+BLE-only, with no wired UART transport. Profiles identify the protocol and
+transport used by the shared firmware; they do not duplicate the decoder or
+client implementation.
 
 Before changing shared BMS code:
 
@@ -25,9 +23,6 @@ Before changing shared BMS code:
 | --- | --- | --- | --- | --- |
 | [JK_B1A8S10P](JK_B1A8S10P/) | 11.XW | JK02_32S | BLE (FFE0/FFE1, auto-discovery) | hardware-tested |
 | [JK_B2A24S](JK_B2A24S/) | < 11 | JK02_24S | BLE (FFE0/FFE1, auto-discovery) | protocol-verified |
-| [JK_UART_GPS_PORT](JK_UART_GPS_PORT/) | all (software >= 6.0) | 0x4E57_v1 | wired UART-TTL, 115200 baud | synthetic-fixture-only |
-| [DALY_UART_0xA5](DALY_UART_0xA5/) | all (0xA5 protocol family) | DALY_0xA5_UART | wired UART-TTL, 9600 baud | synthetic-fixture-only |
-| [JBD_UART](JBD_UART/) | all (0xDD/0x77 protocol family) | JBD_UART | wired UART-TTL, 9600 baud | synthetic-fixture-only |
 | [DALY_BLE_D2](DALY_BLE_D2/) | all (D2/Modbus BLE protocol family) | DALY_D2_BLE | BLE (FFF0/FFF1/FFF2, auto-discovery) | synthetic-fixture-only |
 | [JBD_BLE](JBD_BLE/) | 0xFF00 default service UUID | JBD_UART | BLE (FF00/FF01/FF02, auto-discovery) | synthetic-fixture-only |
 | [SEPLOS_BLE](SEPLOS_BLE/) | all (1101-SPxx/ZH/MZ BLE protocol family) | SEPLOS_BLE_1101 | BLE (FF00/FF01/FF02, auto-discovery — shares UUIDs with JBD_BLE) | synthetic-fixture-only |

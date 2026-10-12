@@ -7,11 +7,9 @@ set(JKBMSR_SRCS
   "main.cpp"
   "bms/AntBmsDecoder.cpp"
   "bms/BasenBmsDecoder.cpp"
-  "bms/DalyBmsParser.cpp"
   "bms/DalyD2Decoder.cpp"
   "bms/JbdBmsParser.cpp"
   "bms/Jk02Decoder.cpp"
-  "bms/JkBmsParser.cpp"
   "bms/KsBmsDecoder.cpp"
   "bms/LolanBmsDecoder.cpp"
   "bms/SeplosBleDecoder.cpp"
@@ -34,25 +32,21 @@ set(JKBMSR_SRCS
 
 set(JKBMSR_REQUIRES "")
 
-# BLE BMS clients (and the bt component they need) are excluded on chips with
-# no Bluetooth radio -- ESP32-S2 today, via sdkconfig.defaults.no-ble
-# (env:idf-s2 and its secure variants) setting CONFIG_BT_ENABLED=n. Mirrors
-# the plain-Arduino env:esp32-s2-4mb's build_src_filter exclusion of the same
-# four files.
-if(CONFIG_BT_ENABLED)
-  list(APPEND JKBMSR_SRCS
-    "bms/AntBmsBleClient.cpp"
-    "bms/BasenBmsBleClient.cpp"
-    "bms/DalyBmsBleClient.cpp"
-    "bms/JbdBmsBleClient.cpp"
-    "bms/JkBmsBleClient.cpp"
-    "bms/KsBmsBleClient.cpp"
-    "bms/LolanBmsBleClient.cpp"
-    "bms/SeplosBmsBleClient.cpp"
-    "bms/TianpowerBmsBleClient.cpp"
-  )
-  list(APPEND JKBMSR_REQUIRES bt)
-endif()
+# Every remaining build target has a Bluetooth radio, so the BLE BMS clients
+# (and the bt component they need) are always compiled in. Targets without a
+# radio have been removed from the matrix entirely — the BMS link is BLE-only.
+list(APPEND JKBMSR_SRCS
+  "bms/AntBmsBleClient.cpp"
+  "bms/BasenBmsBleClient.cpp"
+  "bms/DalyBmsBleClient.cpp"
+  "bms/JbdBmsBleClient.cpp"
+  "bms/JkBmsBleClient.cpp"
+  "bms/KsBmsBleClient.cpp"
+  "bms/LolanBmsBleClient.cpp"
+  "bms/SeplosBmsBleClient.cpp"
+  "bms/TianpowerBmsBleClient.cpp"
+)
+list(APPEND JKBMSR_REQUIRES bt)
 
 idf_component_register(
   SRCS ${JKBMSR_SRCS}

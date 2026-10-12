@@ -154,8 +154,8 @@ Useful flags:
 | `--no-push` | publish and commit, but leave the commit local |
 | `--verify-cdn` | HTTP-read every published artifact from cdn.jkbmsr.com and compare SHA-256 |
 
-The script publishes, in this order, and only for targets that have an OTA
-channel (`esp8266-uart-lite` does not — USB reflash only):
+The script publishes, in this order, for every gateway target (all of which
+have an OTA channel):
 
 1. **Build** each target, verify the release image really is the application
    (boot banner present, test runner absent), SHA-256 it, and collect

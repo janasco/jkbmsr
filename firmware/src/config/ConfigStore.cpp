@@ -55,11 +55,6 @@ DeviceConfig ConfigStore::load() {
   config.telemetryIntervalMs = document["telemetryIntervalMs"] | config.telemetryIntervalMs;
   config.otaEnabled = document["otaEnabled"] | config.otaEnabled;
   config.bmsVendor = document["bmsVendor"] | config.bmsVendor;
-  config.bmsUartRxPin = document["bmsUartRxPin"] | config.bmsUartRxPin;
-  config.bmsUartTxPin = document["bmsUartTxPin"] | config.bmsUartTxPin;
-  config.bmsUartBaudRate = document["bmsUartBaudRate"] | config.bmsUartBaudRate;
-  config.bmsUartCaptureEnabled = document["bmsUartCaptureEnabled"] | config.bmsUartCaptureEnabled;
-  config.bmsBleEnabled = false;
   config.bmsBleAddress = "";
   return config;
 #else
@@ -83,11 +78,6 @@ DeviceConfig ConfigStore::load() {
   config.telemetryIntervalMs = prefs.getUInt("interval_ms", config.telemetryIntervalMs);
   config.otaEnabled = prefs.getBool("ota_enabled", config.otaEnabled);
   config.bmsVendor = prefs.getString("bms_vendor", config.bmsVendor);
-  config.bmsUartRxPin = prefs.getInt("bms_rx_pin", config.bmsUartRxPin);
-  config.bmsUartTxPin = prefs.getInt("bms_tx_pin", config.bmsUartTxPin);
-  config.bmsUartBaudRate = prefs.getUInt("bms_baud", config.bmsUartBaudRate);
-  config.bmsUartCaptureEnabled = prefs.getBool("bms_capture", config.bmsUartCaptureEnabled);
-  config.bmsBleEnabled = prefs.getBool("bms_ble_en", config.bmsBleEnabled);
   config.bmsBleAddress = prefs.getString("bms_ble_addr", "");
   prefs.end();
   return config;
@@ -111,10 +101,6 @@ bool ConfigStore::save(const DeviceConfig& config) {
   document["telemetryIntervalMs"] = config.telemetryIntervalMs;
   document["otaEnabled"] = false;
   document["bmsVendor"] = config.bmsVendor;
-  document["bmsUartRxPin"] = config.bmsUartRxPin;
-  document["bmsUartTxPin"] = config.bmsUartTxPin;
-  document["bmsUartBaudRate"] = config.bmsUartBaudRate;
-  document["bmsUartCaptureEnabled"] = config.bmsUartCaptureEnabled;
 
   File file = LittleFS.open(kConfigTempPath, "w");
   if (!file) return false;
@@ -148,11 +134,6 @@ bool ConfigStore::save(const DeviceConfig& config) {
   ok &= prefs.putUInt("interval_ms", config.telemetryIntervalMs) > 0;
   ok &= prefs.putBool("ota_enabled", config.otaEnabled) > 0;
   ok &= prefs.putString("bms_vendor", config.bmsVendor) > 0;
-  ok &= prefs.putInt("bms_rx_pin", config.bmsUartRxPin) > 0;
-  ok &= prefs.putInt("bms_tx_pin", config.bmsUartTxPin) > 0;
-  ok &= prefs.putUInt("bms_baud", config.bmsUartBaudRate) > 0;
-  ok &= prefs.putBool("bms_capture", config.bmsUartCaptureEnabled) > 0;
-  ok &= prefs.putBool("bms_ble_en", config.bmsBleEnabled) > 0;
   ok &= prefs.putString("bms_ble_addr", config.bmsBleAddress) > 0;
   prefs.end();
   return ok;

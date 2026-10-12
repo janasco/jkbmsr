@@ -9,7 +9,7 @@ Use this for the first physical board. Encrypted / Secure Boot prototypes are a 
 - ESP32 (USB-C) and a Chrome or Edge browser
 - Wi‑Fi credentials for a 2.4 GHz network
 - A JK BMS Remote account at [app.jkbmsr.com](https://app.jkbmsr.com)
-- Optional: JK-BMS UART wired later (claim works without BMS data)
+- The JK-BMS powered and within Bluetooth (BLE) range of the gateway (claim works without BMS data)
 
 ## Happy path (CDN flash)
 
@@ -19,7 +19,7 @@ Use this for the first physical board. Encrypted / Secure Boot prototypes are a 
 4. The flasher redirects to `https://app.jkbmsr.com/onboard?device=…&code=…`.
 5. Sign in or create an account (the onboard URL is preserved through login/register).
 6. Confirm the prefilled device ID and claim code, then **Claim device**.
-7. Open the dashboard — the gateway should appear. Pack SOC/cells stay empty until UART is wired.
+7. Open the dashboard — the gateway should appear. Pack SOC/cells stay empty until the BMS is in Bluetooth range and the BLE link is up.
 
 ## SoftAP fallback
 
@@ -44,13 +44,13 @@ Expect lines that include:
 | --- | --- | --- |
 | Claim says “Invalid device credentials” right after Wi‑Fi | Device has not finished `POST /device/register` yet | Keep the form open — the dashboard retries for ~90s. Or wait and claim again. |
 | Claim says verify your email (403) | Email verification is enabled in production | Open the verification link, then sign in (return path is preserved when possible). |
-| Device online, SOC 0%, no cells | Claim succeeded; BMS UART not wired or BMS asleep | Wire UART, check baud/pins in device settings. |
+| Device online, SOC 0%, no cells | Claim succeeded; BMS not in Bluetooth range or asleep | Confirm the BMS is powered/awake and within range; check BLE state and address in device diagnostics. |
 | Redirect lost after register | Opened verify email on another device | Sign in on the original browser, or reopen the onboard URL from the flasher. |
 
 ## After claim
 
 1. Confirm the device row on [app.jkbmsr.com/dashboard](https://app.jkbmsr.com/dashboard).
-2. Wire JK-BMS UART (see [JK-BMS wiring](/getting-started/jk-bms-wiring) and [UART pinout warnings](/getting-started/uart-pinout-warnings)).
+2. Confirm the JK-BMS BLE link (see [JK-BMS connection](/getting-started/jk-bms-wiring)).
 3. Confirm live telemetry and optional OTA from device settings.
 
 ## Related

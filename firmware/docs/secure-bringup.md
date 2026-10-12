@@ -19,7 +19,6 @@ Spec: `docs/phase2-encryption-spec.md`. Plan: `docs/hardware-security-hardening-
 | `idf-secure-s3` | ESP32-S3: flash encryption (DEVELOPMENT) + NVS encryption |
 | `idf-secureboot-s3` | Above + Secure Boot v2 signed images (**no chip-revision gate on S3**) |
 | `idf-c3` / `idf-secure-c3` / `idf-secureboot-c3` | Same three-stage progression, ESP32-C3 (no chip-revision gate) |
-| `idf-s2` / `idf-secure-s2` / `idf-secureboot-s2` | Same, ESP32-S2 — also layers `sdkconfig.defaults.no-ble` (no Bluetooth radio on this chip) |
 | `idf-8mb` / `idf-secure-8mb` / `idf-secureboot-8mb` | Same, 8 MB classic-ESP32 board (same silicon/ECO3+ gate as `idf*`, just bigger flash) |
 | `idf-c6` / `idf-secure-c6` / `idf-secureboot-c6` | Same, ESP32-C6 (no chip-revision gate) — **least proven**, built via the community pioarduino platform fork; confirm it actually builds in CI (job `build-c6`) before trusting it |
 

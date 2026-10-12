@@ -16,7 +16,7 @@ struct BmsBleCandidate {
 
 // Shared shape for every vendor's BLE client (JkBmsBleClient,
 // DalyBmsBleClient, JbdBmsBleClient) so main.cpp can dispatch on
-// config.bmsVendor through one interface, mirroring BmsUartClient.h.
+// config.bmsVendor through one interface.
 struct BmsBleStatus {
   bool enabled = false;
   bool connected = false;

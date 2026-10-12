@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 
-#include "HardwareProfile.h"
-
 namespace jkbmsr {
 
 struct DeviceConfig {
@@ -43,17 +41,13 @@ struct DeviceConfig {
   String firmwareVersionFloor;
   uint32_t telemetryIntervalMs = 60000;
   bool otaEnabled = true;
-  // "jk" | "daly" | "jbd" — selects which BmsUartClient main.cpp polls.
-  // Defaults to "jk" so every already-deployed gateway keeps working
-  // unchanged.
+  // "jk" | "daly" | "jbd" | "seplos" | "ant" | "tianpower" | "basen" | "ks" |
+  // "lolan" — selects which BmsBleClient main.cpp polls. Defaults to "jk" so
+  // every already-deployed gateway keeps working unchanged. The BMS link is
+  // Bluetooth (BLE) only; there is no wired transport.
   String bmsVendor = "jk";
-  int bmsUartRxPin = kDefaultBmsRxPin;
-  int bmsUartTxPin = kDefaultBmsTxPin;
-  uint32_t bmsUartBaudRate = 115200;
-  bool bmsUartCaptureEnabled = false;
-  // When enabled with a MAC address, telemetry is read over BLE (JK02
-  // protocol) instead of the UART-TTL link.
-  bool bmsBleEnabled = false;
+  // MAC address to target, or empty for auto-discovery of the strongest
+  // nearby unit advertising the vendor's service.
   String bmsBleAddress;
 
   // True once Wi-Fi credentials have been provisioned. When false the device

@@ -10,8 +10,8 @@ namespace jkbmsr {
 // BLE client for JBD (Jiabaida) BMS packs (service 0xFF00, notify
 // characteristic 0xFF01, write/control characteristic 0xFF02 — the
 // defaults most units use; a minority of rebrand SKUs configure different
-// UUIDs, not handled here). The frame format is byte-identical to
-// JbdBmsParser's UART protocol, so no new decoder exists — this transport
+// UUIDs, not handled here). The frame format matches the JBD wire protocol
+// (see JbdBmsParser), so no new decoder exists — this transport
 // reassembles notification chunks into a complete frame and hands it
 // straight to JbdBmsParser::parseFrame(). Explicitly not implemented: the
 // password-authentication sub-protocol a small minority of JBD BLE units

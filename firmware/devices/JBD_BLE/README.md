@@ -1,18 +1,18 @@
 # JBD-BMS — BLE
 
-Compatibility profile for JBD (Jiabaida) BMS units over BLE. The frame
-format is **byte-identical** to [`JBD_UART`](../JBD_UART/)'s protocol
-(`0xDD`...`0x77` framing, same command bytes) — confirmed by reading
-`syssi/esphome-jbd-bms`'s dedicated `jbd_bms_ble` component alongside its
-UART-only `jbd_bms` component. Because of that, this profile shares the
-**same decoder** as the UART profile (`src/bms/JbdBmsParser.cpp`) — only
-the transport (`src/bms/JbdBmsBleClient.*`) is new.
+Compatibility profile for JBD (Jiabaida) BMS units over BLE. The JBD frame
+format uses `0xDD`...`0x77` framing with the same command bytes as JBD's
+wired protocol — confirmed by reading `syssi/esphome-jbd-bms`'s dedicated
+`jbd_bms_ble` component alongside its UART-only `jbd_bms` component. Because
+of that, this profile shares the **same decoder** across JBD transports
+(`src/bms/JbdBmsParser.cpp`) — only the transport
+(`src/bms/JbdBmsBleClient.*`) is new.
 
 - Hardware revisions: units using the default `0xFF00` service UUID (a
   minority of rebrand SKUs configure different UUIDs upstream; not handled
   here)
-- Protocol family: `JBD_UART` (same protocol id as the UART profile,
-  intentionally — see above)
+- Protocol family: `JBD_UART` (protocol id only — this firmware reaches JBD
+  over BLE, not the wired link)
 - Connection: BLE, service `0xFF00`, notify characteristic `0xFF01`, write
   characteristic `0xFF02`
 

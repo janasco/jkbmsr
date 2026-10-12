@@ -6,37 +6,15 @@
 #include "FirmwareVersion.h"
 #include "HardwareProfile.h"
 #include "bms/BmsBleClient.h"
-#include "bms/BmsUartClient.h"
-#if JKBMSR_HAS_BLE
-#include "bms/DalyBmsBleClient.h"
-#endif
-#include "bms/DalyBmsParser.h"
-#if JKBMSR_HAS_BLE
-#include "bms/JbdBmsBleClient.h"
-#endif
-#include "bms/JbdBmsParser.h"
-#if JKBMSR_HAS_BLE
-#include "bms/JkBmsBleClient.h"
-#endif
-#include "bms/JkBmsParser.h"
-#if JKBMSR_HAS_BLE
-#include "bms/SeplosBmsBleClient.h"
-#endif
-#if JKBMSR_HAS_BLE
 #include "bms/AntBmsBleClient.h"
-#endif
-#if JKBMSR_HAS_BLE
 #include "bms/BasenBmsBleClient.h"
-#endif
-#if JKBMSR_HAS_BLE
+#include "bms/DalyBmsBleClient.h"
+#include "bms/JbdBmsBleClient.h"
+#include "bms/JkBmsBleClient.h"
 #include "bms/KsBmsBleClient.h"
-#endif
-#if JKBMSR_HAS_BLE
 #include "bms/LolanBmsBleClient.h"
-#endif
-#if JKBMSR_HAS_BLE
+#include "bms/SeplosBmsBleClient.h"
 #include "bms/TianpowerBmsBleClient.h"
-#endif
 #include "cloud/DeviceRegistrationClient.h"
 #include "cloud/TelemetryClient.h"
 #include "cloud/RemoteConfigClient.h"
@@ -45,26 +23,17 @@
 #include "device/DeviceIdentity.h"
 #include "network/WifiManager.h"
 #include "network/WifiRetryPolicy.h"
-#if JKBMSR_HAS_OTA
 #include "ota/OtaClient.h"
 #include "esp_ota_ops.h"
-#endif
 #include "ota/VersionCompare.h"
 #include "provisioning/CaptivePortal.h"
 #include "provisioning/ProvisioningManager.h"
 #include "provisioning/ResetTrigger.h"
-#if defined(ARDUINO_ARCH_ESP8266)
-#include <SoftwareSerial.h>
-#endif
 
 using namespace jkbmsr;
 
 ConfigStore configStore;
 WifiManager wifiManager;
-JkBmsParser bmsParser;
-DalyBmsParser dalyBmsParser;
-JbdBmsParser jbdBmsParser;
-#if JKBMSR_HAS_BLE
 JkBmsBleClient bmsBleClient;
 DalyBmsBleClient dalyBmsBleClient;
 JbdBmsBleClient jbdBmsBleClient;
@@ -74,14 +43,11 @@ BasenBmsBleClient basenBmsBleClient;
 KsBmsBleClient ksBmsBleClient;
 LolanBmsBleClient lolanBmsBleClient;
 TianpowerBmsBleClient tianpowerBmsBleClient;
-#endif
 DeviceIdentity deviceIdentity;
 DeviceRegistrationClient deviceRegistrationClient(kApiBaseUrl);
 TelemetryClient telemetryClient(kApiBaseUrl);
 RemoteConfigClient remoteConfigClient(kApiBaseUrl);
-#if JKBMSR_HAS_OTA
 OtaClient otaClient(kApiBaseUrl);
-#endif
 ProvisioningManager provisioner;
 CaptivePortal captivePortal;
 ResetTrigger resetTrigger;
@@ -97,31 +63,13 @@ uint32_t lastCloudBootstrapAttemptMs = 0;
 uint32_t lastHeartbeatMs = 0;
 uint32_t identityDiscoveryUntilMs = 0;
 uint32_t lastDeviceAuthMs = 0;
-int activeBmsRxPin = -1;
-int activeBmsTxPin = -1;
-uint32_t activeBmsBaudRate = 0;
-String activeBmsVendor = "";
 String activeBleVendor = "";
 
-// Selects which UART client main.cpp polls/configures for config.bmsVendor.
-// Unknown/empty values fall back to JK — same default as DeviceConfig itself.
-// Seplos has no UART parser (BLE-only support) and so also falls back to
-// JK here; devices configured with bmsVendor="seplos" must have
-// bmsBleEnabled=true or telemetry will be misdecoded as JK frames.
-BmsUartClient& activeUartClient() {
-  if (config.bmsVendor == "daly") {
-    return dalyBmsParser;
-  }
-  if (config.bmsVendor == "jbd") {
-    return jbdBmsParser;
-  }
-  return bmsParser;
-}
-
-#if JKBMSR_HAS_BLE
-// Same idea as activeUartClient(), for BLE. Takes an explicit vendor string
-// (rather than always reading config.bmsVendor) so it can also resolve the
-// *previous* vendor's client when stopping it during a vendor switch.
+// Selects which BLE client main.cpp polls/configures for config.bmsVendor.
+// Takes an explicit vendor string (rather than always reading
+// config.bmsVendor) so it can also resolve the *previous* vendor's client
+// when stopping it during a vendor switch. Unknown/empty values fall back to
+// JK — same default as DeviceConfig itself.
 BmsBleClient& bleClientForVendor(const String& vendor) {
   if (vendor == "ant") {
     return antBmsBleClient;
@@ -149,7 +97,13 @@ BmsBleClient& bleClientForVendor(const String& vendor) {
   }
   return bmsBleClient;
 }
-#endif
+
+// Every known vendor name, for validation in normalizeBmsConfig().
+bool isKnownBmsVendor(const String& vendor) {
+  return vendor == "jk" || vendor == "daly" || vendor == "jbd" || vendor == "seplos" ||
+         vendor == "ant" || vendor == "tianpower" || vendor == "basen" || vendor == "ks" ||
+         vendor == "lolan";
+}
 
 // Retry cadence while offline is now owned by network/WifiRetryPolicy.h +
 // connectWithRetry()/recoverFromWifiFailure() below: try for
@@ -405,92 +359,27 @@ bool recoverFromWifiFailure() {
   return true;
 }
 
-void normalizeBmsUartConfig(DeviceConfig& target) {
-  if (target.bmsVendor != "jk" && target.bmsVendor != "daly" && target.bmsVendor != "jbd" &&
-      target.bmsVendor != "seplos" && target.bmsVendor != "ant" && target.bmsVendor != "tianpower" &&
-      target.bmsVendor != "basen" && target.bmsVendor != "ks" && target.bmsVendor != "lolan") {
+void normalizeBmsConfig(DeviceConfig& target) {
+  if (!isKnownBmsVendor(target.bmsVendor)) {
     target.bmsVendor = "jk";
-  }
-  if (target.bmsUartRxPin < 0 || target.bmsUartRxPin > kMaxGpioPin) {
-    target.bmsUartRxPin = kJkBmsRxPin;
-  }
-  if (target.bmsUartTxPin < 0 || target.bmsUartTxPin > kMaxGpioPin || target.bmsUartTxPin == target.bmsUartRxPin) {
-    target.bmsUartTxPin = kJkBmsTxPin;
-  }
-  if (target.bmsUartBaudRate < kMinBmsBaudRate || target.bmsUartBaudRate > kMaxBmsBaudRate) {
-    target.bmsUartBaudRate = kJkBmsBaudRate;
   }
 }
 
-void applyBmsUartConfig() {
-  normalizeBmsUartConfig(config);
-  activeUartClient().setRawCaptureEnabled(config.bmsUartCaptureEnabled);
-#if JKBMSR_HAS_BLE
-  if (config.bmsBleEnabled) {
-    // Stop the previously-active vendor's BLE client before starting the
-    // new one on a vendor switch — each vendor has its own NimBLE
-    // connection state, and only one should ever be scanning/connected.
-    if (activeBleVendor.length() > 0 && activeBleVendor != config.bmsVendor) {
-      bleClientForVendor(activeBleVendor).stop();
-    }
-    bleClientForVendor(config.bmsVendor).begin(config.bmsBleAddress);
-    activeBleVendor = config.bmsVendor;
-  } else {
-    bmsBleClient.stop();
-    dalyBmsBleClient.stop();
-    jbdBmsBleClient.stop();
-    seplosBmsBleClient.stop();
-    antBmsBleClient.stop();
-    basenBmsBleClient.stop();
-    ksBmsBleClient.stop();
-    lolanBmsBleClient.stop();
-    tianpowerBmsBleClient.stop();
-    activeBleVendor = "";
+// Starts the BLE client for the configured vendor. The BMS link is Bluetooth
+// (BLE) only — there is no wired transport to configure. Called at boot, after
+// a remote-config or auth update, and after a device-auth refresh so a vendor
+// switch takes effect.
+void applyBmsConfig() {
+  normalizeBmsConfig(config);
+  // Stop the previously-active vendor's BLE client before starting the new
+  // one on a vendor switch — each vendor has its own NimBLE connection state,
+  // and only one should ever be scanning/connected.
+  if (activeBleVendor.length() > 0 && activeBleVendor != config.bmsVendor) {
+    bleClientForVendor(activeBleVendor).stop();
   }
-#else
-  config.bmsBleEnabled = false;
-  activeBleVendor = "";
-#endif
-  // Re-begin() on a vendor change even if pins/baud are numerically
-  // unchanged — the newly active client's own serial_ pointer has never
-  // been set otherwise (each vendor has a distinct BmsUartClient instance).
-  if (activeBmsVendor == config.bmsVendor &&
-      activeBmsRxPin == config.bmsUartRxPin &&
-      activeBmsTxPin == config.bmsUartTxPin &&
-      activeBmsBaudRate == config.bmsUartBaudRate) {
-    return;
-  }
-
-#if defined(ARDUINO_ARCH_ESP8266)
-  // No free hardware UART on ESP8266 for BMS traffic (UART0 is shared with
-  // USB/logs/provisioning, UART1 is TX-only, and there's no Serial2/pin
-  // matrix the way ESP32 has) — see docs/esp8266-nodemcu-support.md.
-  // SoftwareSerial's pins are fixed at construction, so a pin/vendor change
-  // means tearing down and rebuilding it, not just re-calling begin().
-  static SoftwareSerial* bmsSoftSerial = nullptr;
-  delete bmsSoftSerial;
-  bmsSoftSerial = new SoftwareSerial(config.bmsUartRxPin, config.bmsUartTxPin);
-  bmsSoftSerial->begin(config.bmsUartBaudRate);
-  activeUartClient().begin(*bmsSoftSerial);
-#elif defined(ARDUINO_ESP32C3_DEV) || defined(ARDUINO_ESP32S2_DEV)
-  // ESP32-C3 and ESP32-S2 only have UART0 (shared with USB/logs) and UART1 —
-  // no UART2 the way classic ESP32/ESP32-S3 have, so BMS traffic uses UART1
-  // here instead of Serial2 (which doesn't exist on either chip and fails to
-  // link). Pins are freely reassignable via begin(), same as Serial2 below.
-  static HardwareSerial bmsUart1(1);
-  bmsUart1.end();
-  bmsUart1.begin(config.bmsUartBaudRate, SERIAL_8N1, config.bmsUartRxPin, config.bmsUartTxPin);
-  activeUartClient().begin(bmsUart1);
-#else
-  Serial2.end();
-  Serial2.begin(config.bmsUartBaudRate, SERIAL_8N1, config.bmsUartRxPin, config.bmsUartTxPin);
-  activeUartClient().begin(Serial2);
-#endif
-  activeBmsVendor = config.bmsVendor;
-  activeBmsRxPin = config.bmsUartRxPin;
-  activeBmsTxPin = config.bmsUartTxPin;
-  activeBmsBaudRate = config.bmsUartBaudRate;
-  logInfo(config.bmsVendor + "-BMS UART configured");
+  bleClientForVendor(config.bmsVendor).begin(config.bmsBleAddress);
+  activeBleVendor = config.bmsVendor;
+  logInfo(config.bmsVendor + "-BMS BLE configured");
 }
 
 void applyDeviceAuthResult(const DeviceRegistrationResult& result) {
@@ -501,11 +390,7 @@ void applyDeviceAuthResult(const DeviceRegistrationResult& result) {
   config.telemetryIntervalMs = result.telemetryIntervalMs;
   config.otaEnabled = result.otaEnabled;
   config.bmsVendor = result.bmsVendor;
-  config.bmsUartRxPin = result.bmsUartRxPin;
-  config.bmsUartTxPin = result.bmsUartTxPin;
-  config.bmsUartBaudRate = result.bmsUartBaudRate;
-  config.bmsUartCaptureEnabled = result.bmsUartCaptureEnabled;
-  applyBmsUartConfig();
+  applyBmsConfig();
   configStore.save(config);
 }
 
@@ -638,7 +523,6 @@ void applyRemoteWifiTarget(const RemoteWifiActions& actions) {
 
 void processRemoteOtaAction(const RemoteWifiActions& actions) {
   if (actions.otaUpdateRequestId.length() == 0) return;
-#if JKBMSR_HAS_OTA
   if (!config.otaEnabled) {
     remoteConfigClient.reportOtaCommand(
       config.deviceToken, actions.otaUpdateRequestId, "failed", "OTA updates are disabled");
@@ -660,13 +544,6 @@ void processRemoteOtaAction(const RemoteWifiActions& actions) {
     actions.otaUpdateRequestId,
     status.lastCheckSucceeded ? "completed" : "failed",
     status.lastResult);
-#else
-  // This hardware target has no OTA subsystem compiled in at all (see
-  // platformio.ini's env:esp8266-nodemcu) — always refuse rather than
-  // silently ignoring the request.
-  remoteConfigClient.reportOtaCommand(
-    config.deviceToken, actions.otaUpdateRequestId, "failed", "This gateway hardware does not support OTA updates");
-#endif
 }
 
 #ifndef UNIT_TEST
@@ -747,7 +624,7 @@ void setup() {
   // Honor a BOOT long-press observed at startup before attempting Wi-Fi.
   applyResetTrigger();
 
-  applyBmsUartConfig();
+  applyBmsConfig();
 
   // A device with no stored WiFi credentials enters provisioning instead of
   // idling forever unable to connect. A device WITH credentials tries them for
@@ -788,7 +665,6 @@ void setup() {
     logWarn("WiFi not connected");
   }
 
-#if JKBMSR_HAS_OTA
   // Reaching here means setup() ran to completion without crashing or
   // watchdog-resetting -- confirm this image is good so ESP-IDF's rollback
   // logic (CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE, sdkconfig.defaults) doesn't
@@ -797,7 +673,6 @@ void setup() {
   // A no-op (returns ESP_ERR_NOT_SUPPORTED, harmless) on any build whose
   // bootloader was compiled without rollback enabled.
   esp_ota_mark_app_valid_cancel_rollback();
-#endif
 }
 
 void loop() {
@@ -874,33 +749,18 @@ void loop() {
     ensureDeviceAuth(true);
   }
 
-#if JKBMSR_HAS_BLE
-  const bool bleActive = config.bmsBleEnabled;
-  if (bleActive) {
-    bleClientForVendor(config.bmsVendor).loop();
-  }
-#endif
+  // The BMS link is Bluetooth (BLE) only; drive the configured vendor's
+  // client every loop iteration (it owns its own scan/connect state machine).
+  bleClientForVendor(config.bmsVendor).loop();
 
   BatteryTelemetry telemetry;
   if (telemetryDue()) {
-#if JKBMSR_HAS_BLE
-    const bool haveSample =
-        bleActive ? bleClientForVendor(config.bmsVendor).poll(telemetry) : activeUartClient().poll(telemetry);
-#else
-    const bool haveSample = activeUartClient().poll(telemetry);
-#endif
-    // With no BMS answering on UART, still report in at a lower cadence so
+    const bool haveSample = bleClientForVendor(config.bmsVendor).poll(telemetry);
+    // With no BMS answering, still report in at a lower cadence so
     // the dashboard shows the gateway online (BMS link flagged down) instead
     // of "last seen never".
     const bool heartbeatDue = millis() - lastHeartbeatMs >= kHeartbeatIntervalMs;
     if (cloudReady && (haveSample || heartbeatDue)) {
-      const BmsUartStatus parserStatus = activeUartClient().status();
-      telemetry.parserLastFrameAtMs = parserStatus.lastFrameAtMs;
-      telemetry.parserParseErrors = parserStatus.parseErrors;
-      telemetry.parserBytesReceived = parserStatus.bytesReceived;
-      telemetry.parserStaleBytes = parserStatus.staleBytes;
-      telemetry.parserRawCaptureEnabled = parserStatus.rawCaptureEnabled;
-#if JKBMSR_HAS_OTA
       const OtaStatus& otaStatus = otaClient.status();
       telemetry.otaLastCheckAtMs = otaStatus.lastCheckAtMs;
       telemetry.otaLastCheckSucceeded = otaStatus.lastCheckSucceeded;
@@ -908,10 +768,8 @@ void loop() {
       telemetry.otaUpdateApplied = otaStatus.updateApplied;
       telemetry.otaOfferedVersion = otaStatus.offeredVersion;
       telemetry.otaLastResult = otaStatus.lastResult;
-#endif
-#if JKBMSR_HAS_BLE
-      // Whichever vendor's client is current — when BLE is disabled it was
-      // stop()'d above and correctly reports state "disabled" regardless.
+      // Whichever vendor's client is current. It always reports its own
+      // scan/connect/decode state.
       const BmsBleStatus bleStatus = bleClientForVendor(config.bmsVendor).status();
       telemetry.bleState = bleStatus.state;
       telemetry.bleAddress = bleStatus.address;
@@ -933,7 +791,6 @@ void loop() {
         telemetry.bleCandidateRssi[index] = bleStatus.candidates[index].rssi;
         telemetry.bleCandidateAddressTypes[index] = bleStatus.candidates[index].addressType;
       }
-#endif
       if (telemetryClient.upload(config.deviceToken, telemetry)) {
         lastHeartbeatMs = millis();
       } else if (telemetryClient.authRejected()) {
@@ -952,7 +809,7 @@ void loop() {
     lastConfigFetchMs = millis();
     RemoteWifiActions wifiActions;
     if (remoteConfigClient.fetch(config.deviceToken, config, &wifiActions)) {
-      applyBmsUartConfig();
+      applyBmsConfig();
       configStore.save(config);
       // Apply a changed persistent target first — it restarts the gateway, so
       // the one-shot actions below would otherwise race the reboot.
@@ -972,17 +829,15 @@ void loop() {
     }
   }
 
-#if JKBMSR_HAS_OTA
   // First OTA check ~2 minutes after boot (a power cycle is the natural
   // "update now" gesture), then every 6 hours.
   const bool otaCheckDue = firstOtaCheckDone ? millis() - lastOtaCheckMs >= 21600000
                                              : millis() >= 120000;
-  if (cloudReady && kHasOta && config.otaEnabled && config.deviceToken.length() > 0 && otaCheckDue) {
+  if (cloudReady && config.otaEnabled && config.deviceToken.length() > 0 && otaCheckDue) {
     lastOtaCheckMs = millis();
     firstOtaCheckDone = true;
     otaClient.checkForUpdate(config.deviceToken, kFirmwareVersion, config.firmwareVersionFloor);
   }
-#endif
 
   delay(10);
 }

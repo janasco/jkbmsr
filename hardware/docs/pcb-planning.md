@@ -3,12 +3,11 @@
 ## JKBMSR Mini
 
 - ESP32.
-- UART connection to JK-BMS.
+- Bluetooth (BLE) link to JK-BMS — no wired BMS connection required.
 - Buck converter input.
 - USB-C power and programming.
 - Status LEDs.
 - Reset and boot buttons.
-- JST connector for the JK-BMS communication port.
 
 ## JKBMSR Pro
 

@@ -8,8 +8,8 @@ Current production firmware target:
 
 Current product focus:
 
-- JK-BMS over UART
-- ESP32 gateway
+- JK-BMS over Bluetooth (BLE)
+- ESP32-family gateway
 - JKBMSR Cloud backend
 
 Not supported in version 1:

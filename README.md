@@ -19,7 +19,7 @@ it yourself.
 | :--- | :--- |
 | `apps/ble/` | **JK BMS Bluetooth** — Android app that talks to a JK-BMS over Bluetooth. No account, no gateway, no cloud. |
 | `apps/pro/` | **JK BMS Remote** — Android app for gateways running the firmware below. Cloud monitoring and alerts. |
-| `firmware/` | ESP32 gateway firmware. Talks to JK-BMS over UART, uploads telemetry, verifies signed OTA updates. |
+| `firmware/` | ESP32 gateway firmware. Talks to the JK-BMS over Bluetooth (BLE), uploads telemetry, verifies signed OTA updates. |
 | `hardware/` | Hardware notes, pinouts, and planning for DIY ESP32 gateway builds. |
 | `docs/` | Documentation site source. |
 | `support/` | Issue templates and support policy. |
@@ -33,7 +33,7 @@ from the BLE app is a Google Play in-app product, **not** a third app.
 
 ```
    JK-BMS pack
-       │  Bluetooth (BLE app)          UART (gateway)
+       │  Bluetooth (BLE app)          Bluetooth (BLE gateway)
        ▼                                 ▼
   ┌────────────────┐                 ┌──────────────┐
   │JK BMS Bluetooth│                 │   firmware   │  ESP32
@@ -94,11 +94,12 @@ the host map, and the traps that have bitten this project are in
 
 ## Support scope
 
-- JK-BMS only, over Bluetooth (BLE app) or wired UART (gateway).
+- JK-BMS only, over Bluetooth (BLE). Both the Android apps and the ESP32
+  gateway talk to the BMS over Bluetooth; there is no wired transport.
 - No other BMS vendor is supported.
-- Firmware targets ESP32 and ESP8266. See `firmware/platformio.ini` and
-  `releases/firmware/hardware-targets.json` for the list of published targets and
-  which ones have Bluetooth.
+- Firmware targets ESP32-family chips with a Bluetooth radio. See
+  `firmware/platformio.ini` and
+  `releases/firmware/hardware-targets.json` for the list of published targets.
 
 ## Before you open an issue
 

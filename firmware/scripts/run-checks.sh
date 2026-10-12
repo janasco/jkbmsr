@@ -16,8 +16,8 @@
 #   job `host-tests`  -> stage `host-tests`
 #                          ./scripts/run-host-tests.sh, plus the CI's
 #                          two-known-red allowlist gate, reproduced verbatim
-#   job `build`       -> stage `build`, 21 PlatformIO environments
-#   job `build-c6`    -> stage `build`, 4 more (the C6 leg) -- 25 in total,
+#   job `build`       -> stage `build`, 16 PlatformIO environments
+#   job `build-c6`    -> stage `build`, 4 more (the C6 leg) -- 20 in total,
 #                          which is also every [env:] in platformio.ini
 #   `upload-artifact` -> the built .bin is copied into .pio/artifacts/<env>/,
 #                        and a missing binary is a hard failure, which is what
@@ -72,10 +72,8 @@ KNOWN_RED_SUITES=(
 # are folded in here, which is what fail-fast:false across two jobs amounted to.)
 BUILD_MATRIX=$(cat <<'MATRIX'
 dev|yes|yes|no
-esp8266-nodemcu|yes|no|no
 esp32-c3-4mb|yes|no|no
 esp32-s3-4mb|yes|no|no
-esp32-s2-4mb|yes|no|no
 esp32-classic-8mb|yes|no|no
 idf|no|no|no
 idf-secure|yes|no|no
@@ -86,9 +84,6 @@ idf-secureboot-s3|no|no|yes
 idf-c3|no|no|no
 idf-secure-c3|yes|no|no
 idf-secureboot-c3|no|no|yes
-idf-s2|no|no|no
-idf-secure-s2|yes|no|no
-idf-secureboot-s2|no|no|yes
 idf-8mb|no|no|no
 idf-secure-8mb|yes|no|no
 idf-secureboot-8mb|no|no|yes

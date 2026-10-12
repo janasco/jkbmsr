@@ -2,15 +2,14 @@
 
 #include <string.h>
 
-#include "debug/DebugLog.h"
-
 namespace jkbmsr {
 
 namespace {
 
 constexpr uint8_t kFrameStart = 0xDD;
 constexpr uint8_t kFrameEnd = 0x77;
-constexpr uint8_t kCmdRead = 0xA5;
+constexpr uint8_t kCmdHardwareInfo = 0x03;
+constexpr uint8_t kCmdCellInfo = 0x04;
 constexpr size_t kMaxTemperatureSensors = 6;
 
 uint16_t readU16(const uint8_t* p) {
@@ -22,8 +21,7 @@ uint32_t readU32(const uint8_t* p) {
 }
 
 // JBD's checksum is the two's-complement negation of the byte sum (wrapping
-// in 16 bits), computed over the status/length/data span of a response (or
-// address/length/data span of a request).
+// in 16 bits), computed over the status/length/data span of a response.
 uint16_t frameChecksum(const uint8_t* data, size_t length) {
   uint16_t checksum = 0;
   for (size_t index = 0; index < length; ++index) {
@@ -33,109 +31,6 @@ uint16_t frameChecksum(const uint8_t* data, size_t length) {
 }
 
 }  // namespace
-
-void JbdBmsParser::begin(Stream& serial) {
-  serial_ = &serial;
-}
-
-void JbdBmsParser::setRawCaptureEnabled(bool enabled) {
-  status_.rawCaptureEnabled = enabled;
-}
-
-BmsUartStatus JbdBmsParser::status() const {
-  return status_;
-}
-
-void JbdBmsParser::sendReadCommand(uint8_t address) {
-  uint8_t frame[7];
-  frame[0] = kFrameStart;
-  frame[1] = kCmdRead;
-  frame[2] = address;
-  frame[3] = 0x00;  // request data length: reads carry no payload
-  const uint16_t checksum = frameChecksum(frame + 2, 2);
-  frame[4] = static_cast<uint8_t>(checksum >> 8);
-  frame[5] = static_cast<uint8_t>(checksum);
-  frame[6] = kFrameEnd;
-  serial_->write(frame, sizeof(frame));
-  serial_->flush();
-}
-
-size_t JbdBmsParser::receiveFrame(uint8_t* buffer) {
-  size_t length = 0;
-  const uint32_t startedAtMs = millis();
-  while (millis() - startedAtMs < kFrameTimeoutMs) {
-    while (serial_->available() > 0 && length < kBufferSize) {
-      const int value = serial_->read();
-      if (value < 0) {
-        break;
-      }
-      if (length == 0 && static_cast<uint8_t>(value) != kFrameStart) {
-        continue;  // resync on the start byte
-      }
-      buffer[length++] = static_cast<uint8_t>(value);
-      status_.bytesReceived += 1;
-
-      if (length >= 4) {
-        const size_t dataLen = buffer[3];
-        const size_t frameLen = 4 + dataLen + 3;
-        if (frameLen > kBufferSize) {
-          length = 0;  // corrupt length field; resync
-          continue;
-        }
-        if (length >= frameLen) {
-          return frameLen;
-        }
-      }
-    }
-    delay(2);
-  }
-  return 0;
-}
-
-bool JbdBmsParser::poll(BatteryTelemetry& telemetry) {
-  if (serial_ == nullptr) {
-    logWarn("JBD-BMS UART parser is not initialized");
-    return false;
-  }
-
-  telemetry.valid = false;
-  telemetry.source = "uart";
-  telemetry.capturedAtMs = millis();
-
-  uint8_t buffer[kBufferSize];
-  uint8_t successCount = 0;
-
-  sendReadCommand(kCmdHardwareInfo);
-  size_t frameLen = receiveFrame(buffer);
-  if (frameLen > 0) {
-    emitBmsRawCapture("JKBMSR_JBD_UART_FRAME", buffer, frameLen, status_.rawCaptureEnabled);
-  }
-  if (frameLen > 0 && parseFrame(buffer, frameLen, telemetry)) {
-    successCount += 1;
-  } else {
-    status_.parseErrors += 1;
-  }
-
-  sendReadCommand(kCmdCellInfo);
-  frameLen = receiveFrame(buffer);
-  if (frameLen > 0) {
-    emitBmsRawCapture("JKBMSR_JBD_UART_FRAME", buffer, frameLen, status_.rawCaptureEnabled);
-  }
-  if (frameLen > 0 && parseFrame(buffer, frameLen, telemetry)) {
-    successCount += 1;
-  } else {
-    status_.parseErrors += 1;
-  }
-
-  if (successCount == 0) {
-    return false;
-  }
-
-  telemetry.valid = true;
-  telemetry.capturedAtMs = millis();
-  status_.lastFrameAtMs = telemetry.capturedAtMs;
-  return true;
-}
 
 bool JbdBmsParser::parseFrame(const uint8_t* frame, size_t length, BatteryTelemetry& telemetry) {
   if (frame == nullptr || length < 7) {

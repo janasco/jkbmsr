@@ -9,7 +9,6 @@
 #include <WiFiClientSecure.h>
 
 #include "debug/DebugLog.h"
-#include "HardwareProfile.h"
 #include "net/PlatformNetwork.h"
 #include "net/SecureClient.h"
 
@@ -41,10 +40,6 @@ bool parseAuthResponse(const String& payload, DeviceRegistrationResult& result) 
   result.telemetryIntervalMs = constrain(intervalSeconds, 10U, 3600U) * 1000;
   result.otaEnabled = document["config"]["otaEnabled"] | true;
   result.bmsVendor = document["config"]["bmsVendor"] | "jk";
-  result.bmsUartRxPin = document["config"]["bmsUartRxPin"] | kDefaultBmsRxPin;
-  result.bmsUartTxPin = document["config"]["bmsUartTxPin"] | kDefaultBmsTxPin;
-  result.bmsUartBaudRate = document["config"]["bmsUartBaudRate"] | 115200;
-  result.bmsUartCaptureEnabled = document["config"]["bmsUartCaptureEnabled"] | false;
   if (result.token.length() == 0) {
     logError("Device auth response did not include a token");
     return false;
@@ -117,9 +112,11 @@ bool DeviceRegistrationClient::registerDevice(
   document["firmwareVersion"] = firmwareVersion;
   JsonObject capabilities = document["capabilities"].to<JsonObject>();
   capabilities["wifi"] = true;
-  capabilities["uart"] = true;
-  capabilities["ble"] = kHasBle;
-  capabilities["ota"] = kHasOta;
+  // BLE-only product: the gateway talks to the BMS over Bluetooth, never a
+  // wired UART.
+  capabilities["uart"] = false;
+  capabilities["ble"] = true;
+  capabilities["ota"] = true;
   // Bind the claim secret at registration so the backend can require it before
   // letting a user account claim this device (anti-spoof).
   if (claimCode.length() > 0) {
@@ -165,9 +162,11 @@ bool DeviceRegistrationClient::loginDevice(
   document["firmwareVersion"] = firmwareVersion;
   JsonObject capabilities = document["capabilities"].to<JsonObject>();
   capabilities["wifi"] = true;
-  capabilities["uart"] = true;
-  capabilities["ble"] = kHasBle;
-  capabilities["ota"] = kHasOta;
+  // BLE-only product: the gateway talks to the BMS over Bluetooth, never a
+  // wired UART.
+  capabilities["uart"] = false;
+  capabilities["ble"] = true;
+  capabilities["ota"] = true;
   if (!postJson(apiBaseUrl_ + "/v1/device/login", document, result)) {
     return false;
   }

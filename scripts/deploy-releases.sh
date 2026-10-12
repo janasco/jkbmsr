@@ -186,9 +186,9 @@ for latest_json in "${latest_jsons[@]}"; do
   require_file_quiet "firmware/${target_hardware}/v${version}/flash-manifest.json"
 
   # OTA-capable targets ship the full USB/web-serial flash bundle
-  # (bootloader/partitions/boot_app0) and OTA signing material; a
-  # non-OTA target (currently just ESP8266 — USB reflash only, see
-  # firmware/docs/esp8266-nodemcu-support.md) has neither.
+  # (bootloader/partitions/boot_app0) and OTA signing material. Every target
+  # in the current matrix is OTA-capable; a future non-OTA target would have
+  # neither.
   if [ -f "firmware/${target_hardware}/v${version}/firmware-metadata.json" ]; then
     require_file_quiet "firmware/${target_hardware}/v${version}/bootloader.bin"
     require_file_quiet "firmware/${target_hardware}/v${version}/partitions.bin"

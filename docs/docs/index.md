@@ -4,7 +4,7 @@ JK BMS Remote is an independent remote monitoring solution compatible with JK-BM
 
 JK BMS Remote provides professional remote monitoring for JK-BMS systems using an ESP32 gateway and JKBMSR Cloud.
 
-Start with the product overview, then follow the gateway setup and wiring guides.
+Start with the product overview, then follow the gateway setup guides.
 
 Firmware download, checksum verification, OTA validation, OTA safety, and release notes are documented in the Firmware and Safety sections.
 

@@ -9,7 +9,7 @@ using namespace jkbmsr;
 // layout documented in syssi/esphome-jbd-bms: 52.00V, +10.00A (charging),
 // 180/200 Ah, 42 cycles, cell 1 balancing, no errors, 88% SOC, charging
 // only, 16 cells, 2 temperature sensors (25.0C / 26.0C). Not a real device
-// capture — see devices/JBD_UART/fixtures/README.md.
+// capture.
 static const uint8_t kHardwareInfoFrame[] = {
     0xDD, 0x03, 0x00, 0x1B,
     0x14, 0x50,              // total voltage: 5200 -> 52.00V

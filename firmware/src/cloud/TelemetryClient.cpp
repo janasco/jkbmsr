@@ -115,12 +115,6 @@ bool TelemetryClient::upload(const String& token, const BatteryTelemetry& teleme
     bms["softwareVersion"] = telemetry.bmsSoftwareVersion;
     bms["protocolVersion"] = telemetry.protocolVersion;
   }
-  JsonObject parser = document["parser"].to<JsonObject>();
-  parser["lastFrameAtMs"] = telemetry.parserLastFrameAtMs;
-  parser["parseErrors"] = telemetry.parserParseErrors;
-  parser["bytesReceived"] = telemetry.parserBytesReceived;
-  parser["staleBytes"] = telemetry.parserStaleBytes;
-  parser["rawCaptureEnabled"] = telemetry.parserRawCaptureEnabled;
   JsonObject ota = document["ota"].to<JsonObject>();
   ota["lastCheckAtMs"] = telemetry.otaLastCheckAtMs;
   ota["lastCheckSucceeded"] = telemetry.otaLastCheckSucceeded;

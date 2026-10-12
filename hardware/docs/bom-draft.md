@@ -5,7 +5,6 @@
 - ESP32 module.
 - USB-C connector.
 - Buck converter.
-- JST connector for JK-BMS UART.
 - Status LEDs.
 - Current-limiting resistors.
 - Reset button.

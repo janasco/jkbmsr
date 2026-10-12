@@ -18,7 +18,7 @@ struct BatteryTelemetry {
   float cellVoltages[kMaxCellCount] = {};
   uint8_t cellCount = 0;
   // Balance-lead resistance per cell, in Ohms. JK02 BLE only (0.0 on every
-  // slot for UART/other sources — no known way to request it there); zero
+  // slot for other vendors' decoders — no known way to request it there); zero
   // for any slot at or past cellCount, same convention as cellVoltages.
   float wireResistanceOhms[kMaxCellCount] = {};
   float minCellVoltage = 0.0f;
@@ -32,7 +32,7 @@ struct BatteryTelemetry {
   float cycleCapacityAh = 0.0f;
   float fullCapacityAh = 0.0f;
   float remainingCapacityAh = 0.0f;
-  // 0-100 where reported (BLE JK02); 0xFF = not available on this transport.
+  // 0-100 where reported (BLE JK02); 0xFF = not available from this decoder.
   uint8_t stateOfHealth = 0xFF;
   uint32_t errorsBitmask = 0;
   bool chargingEnabled = false;
@@ -41,14 +41,9 @@ struct BatteryTelemetry {
   float balancingCurrent = 0.0f;
   String bmsSoftwareVersion;
   uint8_t protocolVersion = 0;
-  // "uart" or "ble" — which link produced this sample.
-  const char* source = "uart";
+  // Always "ble" — the BMS link is Bluetooth only.
+  const char* source = "ble";
   uint32_t capturedAtMs = 0;
-  uint32_t parserLastFrameAtMs = 0;
-  uint32_t parserParseErrors = 0;
-  uint32_t parserBytesReceived = 0;
-  uint32_t parserStaleBytes = 0;
-  bool parserRawCaptureEnabled = false;
   uint32_t otaLastCheckAtMs = 0;
   bool otaLastCheckSucceeded = false;
   bool otaUpdateAvailable = false;

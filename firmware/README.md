@@ -2,7 +2,7 @@
 
 ESP32 firmware for JKBMSR, the JK Battery Management System Remote gateway.
 
-This repository is now in execution. It contains the PlatformIO firmware that runs on the ESP32 gateway, talks to a JK-BMS over UART, communicates with JKBMSR Cloud over HTTPS JSON APIs, and supports OTA firmware updates.
+This repository is now in execution. It contains the PlatformIO firmware that runs on the ESP32 gateway, talks to a JK-BMS over Bluetooth (BLE), communicates with JKBMSR Cloud over HTTPS JSON APIs, and supports OTA firmware updates.
 
 ## Role In The System
 
@@ -10,7 +10,7 @@ This repository is now in execution. It contains the PlatformIO firmware that ru
 
 It is responsible for:
 
-- Reading JK-BMS telemetry over UART.
+- Reading JK-BMS telemetry over Bluetooth (BLE).
 - Managing local device identity and configuration.
 - Connecting the ESP32 to WiFi.
 - Registering and authenticating with JKBMSR Cloud.
@@ -28,13 +28,6 @@ It is responsible for:
 - PlatformIO environment: `dev`
 - Target board: `esp32dev` (the one published via OTA — see below)
 - Framework: Arduino on ESP32
-- Also builds for `env:esp8266-nodemcu` (`board = nodemcuv2`) — a second,
-  experimental, UART-only target with no BLE and no OTA (USB reflash only).
-  See `docs/esp8266-nodemcu-support.md`; not part of the OTA publish path
-  below, which remains ESP32-only.
-- Also builds for `env:esp32-s2-4mb` (`board = esp32-s2-saola-1`) — ESP32-S2,
-  experimental, UART-only (this chip has no Bluetooth radio at all, so BLE
-  BMS brands/variants are unreachable on it) but keeps OTA, unlike ESP8266.
 - Also builds for `env:esp32-classic-8mb` (`board = esp32dev`, 8 MB flash) —
   same chip/pins/capabilities as `env:dev`, just larger OTA app partitions
   (`partitions-8mb-ota.csv`) for boards with more flash.
@@ -71,7 +64,7 @@ It is responsible for:
 - PlatformIO
 - Arduino framework
 - C++
-- UART for JK-BMS communication
+- Bluetooth (BLE) for JK-BMS communication
 - HTTPS REST APIs
 - JSON payloads
 - NVS/Preferences for local config
@@ -86,7 +79,7 @@ include/
   BatteryTelemetry.h
   FirmwareVersion.h
 src/
-  bms/          JK-BMS UART parsing
+  bms/          Per-vendor BLE clients and frame decoders
   cloud/        Device registration, telemetry, remote config clients
   config/       NVS-backed configuration storage
   debug/        Serial logging helpers
@@ -171,7 +164,7 @@ workflows that used to run on every push are now two scripts you run yourself:
 ```bash
 ./scripts/run-checks.sh --dry-run     # print the plan, build nothing
 ./scripts/run-checks.sh               # validate profiles/targets, run the host
-                                     # unit suites under ASan/UBSan, build all 25
+                                     # unit suites under ASan/UBSan, build all 20
                                      # PlatformIO environments
 ./scripts/release.sh <version> --dry-run
 ./scripts/release.sh <version> --yes  # build, sign, R2, D1, GitHub release, mirror
@@ -284,12 +277,13 @@ Beyond signature + SHA-256 verification, the firmware records the highest versio
 
 ## Scope Rules
 
-- JK-BMS, Daly, JBD, and Seplos are supported — selected per device via
-  `bmsVendor` in device config. See `devices/README.md` for the full
-  compatibility catalog and each vendor's validation-status tier.
-- JK, Daly, and JBD support both UART and BLE. Seplos is **BLE only** — no
-  UART parser exists for it, so Seplos devices must have `bmsBleEnabled =
-  true`.
+- JK-BMS, Daly, JBD, Seplos, ANT, Tianpower, Basen, KS, and Lolan are
+  supported — selected per device via `bmsVendor` in device config. See
+  `devices/README.md` for the full compatibility catalog and each vendor's
+  validation-status tier.
+- Every vendor's BMS link is Bluetooth (BLE) only — there is no wired UART
+  transport. Auto-discovery of the strongest nearby unit is the default;
+  set `bmsBleAddress` to pin an explicit MAC address.
 - Seplos and JBD's BLE profiles share the same service/characteristic UUIDs
   (`0xFF00`/`0xFF01`/`0xFF02`) — configure an explicit `bmsBleAddress` on
   either vendor if units from both might be advertising nearby.
@@ -307,25 +301,21 @@ reboot), WiFi provisioning UX (remote WiFi scan/change from the
 dashboard, QR-code device claiming, captive portal all shipped), and
 hardware-specific pin configuration (`include/HardwareProfile.h` +
 `hardware-targets.json` now give every supported target — classic ESP32,
-ESP32-C3, ESP32-S3, ESP8266 — its own pin defaults, capabilities, and
+ESP32-C3, ESP32-S3, ESP32-C6 — its own pin defaults, capabilities, and
 release pipeline instead of one fixed pin set built only for ESP32).
 
 Still open:
 
-- Exercise JK-BMS parser against real UART frames from more device variants
-  — the UART decoder's only fixture is currently synthetic (matches the
-  documented register spec, not a real capture); see
-  [`devices/JK_UART_GPS_PORT`](devices/JK_UART_GPS_PORT/) for the concrete
-  gap and the capture procedure. `JK_B1A8S10P`'s live bring-up already
-  proved the BLE 32S decode path against real hardware, but the *committed
-  regression fixture* for that layout (`kCellInfo32s`) is still synthetic —
-  see [`devices/JK_B1A8S10P`](devices/JK_B1A8S10P/) for saving a real one.
+- Save a real captured 32S cell-info frame as a committed regression fixture
+  — `JK_B1A8S10P`'s live bring-up already proved the BLE 32S decode path
+  against real hardware, but the committed fixture (`kCellInfo32s`) is still
+  synthetic. See [`devices/JK_B1A8S10P`](devices/JK_B1A8S10P/) for the
+  procedure.
 - Add persistent OTA result reporting across reboot after a successful update.
 - Add an idle-read timeout to the OTA download loop.
-- Validate esp32-c3-4mb/esp32-s3-4mb/esp8266-uart-lite/esp32-s2-4mb/
-  esp32-classic-8mb/esp32-c6-4mb on real hardware — all six build and pass
-  CI but have never run on physical boards; see each target's
-  `releaseStatus` in `hardware-targets.json`.
+- Validate esp32-c3-4mb/esp32-s3-4mb/esp32-classic-8mb/esp32-c6-4mb on real
+  hardware — all four build and pass CI but have never run on physical
+  boards; see each target's `releaseStatus` in `hardware-targets.json`.
 - ESP32-C2 and ESP32-H2 were evaluated and ruled out, not just deferred:
   ESP32-C2 has no Arduino framework support anywhere (not even upstream
   Arduino-ESP32 core, regardless of PlatformIO platform source), and

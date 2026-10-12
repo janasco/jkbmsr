@@ -79,8 +79,6 @@ RELEASE_MATRIX=$(cat <<'MATRIX'
 esp32-classic-4mb|dev|ESP32|true
 esp32-c3-4mb|esp32-c3-4mb|ESP32-C3|true
 esp32-s3-4mb|esp32-s3-4mb|ESP32-S3|true
-esp8266-uart-lite|esp8266-nodemcu|ESP8266|false
-esp32-s2-4mb|esp32-s2-4mb|ESP32-S2|true
 esp32-classic-8mb|esp32-classic-8mb|ESP32|true
 esp32-c6-4mb|esp32-c6-4mb|ESP32-C6|true
 MATRIX
@@ -973,7 +971,7 @@ JSON
 
 Release date: \`${released_at}\`
 
-$([ "$has_ota" = "true" ] && echo "This gateway hardware supports over-the-air updates; this release also went out through the OTA channel." || echo "This gateway hardware has no OTA channel (USB/web-serial reflash only) — see docs/esp8266-nodemcu-support.md.")
+$([ "$has_ota" = "true" ] && echo "This gateway hardware supports over-the-air updates; this release also went out through the OTA channel." || echo "This gateway hardware has no OTA channel (USB/web-serial reflash only).")
 
 This public release mirrors the production artifacts published from \`firmware\`.
 MD
