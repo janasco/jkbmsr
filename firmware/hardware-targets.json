@@ -39,7 +39,7 @@
       "platformioEnvironment": "esp32-s3-16mb",
       "chipFamily": "ESP32-S3",
       "platform": "esp32",
-      "releaseStatus": "experimental",
+      "releaseStatus": "supported",
       "minimumFlashMb": 16,
       "capabilities": { "wifi": true, "ble": true, "ota": true },
       "boardProfiles": ["esp32-s3-devkitc-1"],
