@@ -61,6 +61,11 @@ static inline void unityCheck(bool ok, const char* expr, const char* file, int l
 #define TEST_ASSERT_FLOAT_WITHIN(tol, e, a) \
   unityCheck(std::fabs(static_cast<double>(e) - static_cast<double>(a)) <= static_cast<double>(tol), \
              #e " ~= " #a, __FILE__, __LINE__)
+// Matches Arduino Unity's TEST_ASSERT_EQUAL_FLOAT, which compares within
+// UNITY_FLOAT_PRECISION (1e-5 by default). NaN and infinity fail it.
+#define TEST_ASSERT_EQUAL_FLOAT(e, a) \
+  unityCheck(std::fabs(static_cast<double>(e) - static_cast<double>(a)) <= 1e-5, \
+             #e " == " #a, __FILE__, __LINE__)
 
 // NOTE: delay() deliberately lives in test/host/Arduino.h, not here — several
 // protocol sources include both, and defining it twice is a hard error.

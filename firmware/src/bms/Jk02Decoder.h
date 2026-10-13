@@ -36,4 +36,55 @@ Jk02FrameType jk02FrameTypeOf(const uint8_t* frame, size_t length);
 bool decodeJk02DeviceInfo(const uint8_t* frame, size_t length, Jk02DeviceInfo& out);
 bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, BatteryTelemetry& out);
 
+// --- Raw-capture diagnostics --------------------------------------------
+//
+// When a cell-info frame is dropped or fails to verify/decode, the client
+// logs the raw frame so a capture can come from the board's own serial
+// instead of a phone/nRF Connect session. Two pure helpers live here (rather
+// than only in the BLE client) so the host suite exercises them without the
+// ESP toolchain: hex formatting, and the rate gate that keeps a stream of
+// corrupt or all-zero frames from flooding the log.
+
+// Lowercase hex expansion of `frame`, no separators, no prefix. A full
+// 300-byte frame becomes 600 characters; nullptr yields an empty string.
+String jk02FrameToHex(const uint8_t* frame, size_t length);
+
+// Rate gate for the raw-capture log. Frames arrive at ~1-2/s, so an
+// unconditional log would spam; but the FIRST frame MUST be captured — a
+// suppressed first frame would hide the exact event the log exists for, so
+// `everLogged` is tracked separately from the timestamp instead of treating
+// `lastLoggedAtMs == 0` as "never". Pure: a function of the call timestamps
+// only, so it is host-tested in both directions.
+struct Jk02RawCaptureGate {
+  static constexpr uint32_t kDefaultMinIntervalMs = 5000;
+
+  explicit Jk02RawCaptureGate(uint32_t minIntervalMs = kDefaultMinIntervalMs)
+      : minIntervalMs_(minIntervalMs) {}
+
+  // Returns true when a line is due at `nowMs`; false means suppressed, and
+  // the running suppression count is available for a "+N suppressed" suffix.
+  bool shouldLog(uint32_t nowMs) {
+    if (everLogged_ && nowMs - lastLoggedAtMs_ < minIntervalMs_) {
+      suppressed_ += 1;
+      return false;
+    }
+    everLogged_ = true;
+    lastLoggedAtMs_ = nowMs;
+    return true;
+  }
+
+  uint32_t suppressedCount() const { return suppressed_; }
+  uint32_t takeSuppressedCount() {
+    const uint32_t count = suppressed_;
+    suppressed_ = 0;
+    return count;
+  }
+
+ private:
+  uint32_t minIntervalMs_;
+  bool everLogged_ = false;
+  uint32_t lastLoggedAtMs_ = 0;
+  uint32_t suppressed_ = 0;
+};
+
 }  // namespace jkbmsr

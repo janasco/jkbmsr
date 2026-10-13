@@ -46,6 +46,20 @@ uint8_t jk02Checksum(const uint8_t* data, size_t length) {
   return checksum;
 }
 
+String jk02FrameToHex(const uint8_t* frame, size_t length) {
+  static const char kHexDigits[] = "0123456789abcdef";
+  String out;
+  if (frame == nullptr) {
+    return out;
+  }
+  out.reserve(static_cast<unsigned int>(length * 2));
+  for (size_t index = 0; index < length; ++index) {
+    out += kHexDigits[(frame[index] >> 4) & 0x0F];
+    out += kHexDigits[frame[index] & 0x0F];
+  }
+  return out;
+}
+
 bool jk02FrameValid(const uint8_t* frame, size_t length) {
   if (frame == nullptr || length < kJk02FrameSize) {
     return false;
@@ -140,16 +154,29 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
     }
   }
   if (enabledCells == 0) {
-    // Every cell slot read 0 V. Note a deliberate divergence from the
-    // reference implementations: syssi/esphome-jk-bms still publishes the
-    // pack-level fields (voltage, current, SOC, temperatures) when no cell is
-    // above zero, whereas this decoder rejects the whole frame. A bench or
-    // unpopulated pack is therefore silent here but sample-producing there.
-    return false;
+    // Every cell slot read 0 V. On the 24-cell layout this stays a hard
+    // reject: that path is proven working and is deliberately unchanged. On
+    // the 32-cell layout it is a valid frame that must not be discarded — the
+    // reference family (syssi/esphome-jk-bms) still publishes the pack-level
+    // fields in this state, and a real 32S JK-PB2A16S30P that reports no cell
+    // voltage (unpopulated/bench pack, or a transient while balancing)
+    // otherwise produced pure silence: heartbeats only, never a decoded
+    // sample. Carry the cells as an explicit empty set (cellCount stays 0)
+    // and zero the derived values rather than leaving the 100/-100 scan
+    // sentinels, so nothing downstream sees a nonsense min/max or a
+    // divide-by-zero.
+    if (!is32s) {
+      return false;
+    }
+    parsed.minCellVoltage = 0.0f;
+    parsed.maxCellVoltage = 0.0f;
+    parsed.avgCellVoltage = 0.0f;
+    parsed.deltaCellVoltage = 0.0f;
+  } else {
+    parsed.cellCount = highestCell;
+    parsed.avgCellVoltage /= enabledCells;
+    parsed.deltaCellVoltage = parsed.maxCellVoltage - parsed.minCellVoltage;
   }
-  parsed.cellCount = highestCell;
-  parsed.avgCellVoltage /= enabledCells;
-  parsed.deltaCellVoltage = parsed.maxCellVoltage - parsed.minCellVoltage;
 
   parsed.packVoltage = static_cast<float>(readU32Le(frame + 118 + off2)) * 0.001f;
   // Positive current = charging, matching the JK-BMS convention.

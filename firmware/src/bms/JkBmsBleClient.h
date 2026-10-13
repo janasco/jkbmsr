@@ -44,6 +44,10 @@ class JkBmsBleClient : public BmsBleClient {
   bool discoverTarget();
   bool sendReadOnlyCommand(JkBmsReadOnlyCommand command);
   void processFrame(const uint8_t* frame, size_t length);
+  // Emits a bounded, rate-limited raw-frame capture line when a frame is
+  // dropped or fails to verify/decode, so the frame can be captured from the
+  // board's own serial. Rate-limiting lives in Jk02RawCaptureGate.
+  void logRawFrameCapture(const uint8_t* frame, size_t length, const String& reason);
 
   bool enabled_ = false;
   bool stackInitialized_ = false;
@@ -58,6 +62,7 @@ class JkBmsBleClient : public BmsBleClient {
   size_t assemblyLength_ = 0;
   BatteryTelemetry latest_;
   BmsBleStatus status_;
+  Jk02RawCaptureGate rawCaptureGate_;
   void* client_ = nullptr;  // NimBLEClient*, kept opaque to this header
 };
 

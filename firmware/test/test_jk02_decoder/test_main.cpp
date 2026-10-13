@@ -136,6 +136,107 @@ void test_rejects_short_frame() {
   TEST_ASSERT_FALSE(decodeJk02CellInfo(kCellInfo24s, 200, false, t));
 }
 
+// Recompute the additive 8-bit checksum in the final byte after editing a
+// frame's payload, so an edited frame stays structurally valid.
+static void refreshChecksum(uint8_t* frame) {
+  uint8_t crc = 0;
+  for (size_t i = 0; i < kJk02FrameSize - 1; ++i) {
+    crc += frame[i];
+  }
+  frame[kJk02FrameSize - 1] = crc;
+}
+
+// The 32S relaxation: a structurally valid cell-info frame whose every cell
+// slot reads 0 V is accepted (not discarded), the pack-level fields are still
+// decoded, and the derived cell statistics are zero rather than the 100/-100
+// scan sentinels or a division by zero.
+void test_accepts_32s_all_zero_cells() {
+  uint8_t frame[sizeof(kCellInfo32s)];
+  memcpy(frame, kCellInfo32s, sizeof(frame));
+  memset(frame + 6, 0, 32 * 2);  // all 32 cell slots -> 0 V
+  refreshChecksum(frame);
+
+  BatteryTelemetry t;
+  TEST_ASSERT_TRUE(decodeJk02CellInfo(frame, sizeof(frame), true, t));
+  TEST_ASSERT_TRUE(t.valid);
+  TEST_ASSERT_EQUAL_STRING("ble", t.source);
+  TEST_ASSERT_EQUAL_UINT8(0, t.cellCount);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.minCellVoltage);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.maxCellVoltage);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.avgCellVoltage);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.deltaCellVoltage);
+  TEST_ASSERT_EQUAL_UINT8(0, t.minVoltageCell);
+  TEST_ASSERT_EQUAL_UINT8(0, t.maxVoltageCell);
+  // Pack-level fields are unaffected by the missing cell voltages.
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 105.632f, t.packVoltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, -25.5f, t.packCurrent);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 66.0f, t.stateOfCharge);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 45.2f, t.mosfetTemperature);
+}
+
+// The 24S path is deliberately unchanged: an all-zero 24S frame is still
+// rejected rather than relaxed.
+void test_rejects_24s_all_zero_cells() {
+  uint8_t frame[sizeof(kCellInfo24s)];
+  memcpy(frame, kCellInfo24s, sizeof(frame));
+  memset(frame + 6, 0, 24 * 2);  // all 24 cell slots -> 0 V
+  refreshChecksum(frame);
+
+  BatteryTelemetry t;
+  TEST_ASSERT_FALSE(decodeJk02CellInfo(frame, sizeof(frame), false, t));
+}
+
+// With only some cells populated, the average divides by the populated count
+// (no divide-by-zero) and the min/max ignore the zero slots.
+void test_partial_cells_average_ignores_zero_slots() {
+  uint8_t frame[sizeof(kCellInfo32s)];
+  memcpy(frame, kCellInfo32s, sizeof(frame));
+  memset(frame + 6, 0, 32 * 2);
+  const uint16_t cell0 = 3300;  // 3.300 V
+  const uint16_t cell1 = 3310;  // 3.310 V
+  frame[6] = static_cast<uint8_t>(cell0 & 0xFF);
+  frame[7] = static_cast<uint8_t>(cell0 >> 8);
+  frame[8] = static_cast<uint8_t>(cell1 & 0xFF);
+  frame[9] = static_cast<uint8_t>(cell1 >> 8);
+  refreshChecksum(frame);
+
+  BatteryTelemetry t;
+  TEST_ASSERT_TRUE(decodeJk02CellInfo(frame, sizeof(frame), true, t));
+  TEST_ASSERT_EQUAL_UINT8(2, t.cellCount);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.300f, t.cellVoltages[0]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.310f, t.cellVoltages[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.cellVoltages[2]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.300f, t.minCellVoltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.310f, t.maxCellVoltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.305f, t.avgCellVoltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.010f, t.deltaCellVoltage);
+  TEST_ASSERT_EQUAL_UINT8(1, t.minVoltageCell);
+  TEST_ASSERT_EQUAL_UINT8(2, t.maxVoltageCell);
+}
+
+void test_raw_frame_hex_formatting() {
+  const uint8_t bytes[] = {0x55, 0xaa, 0xeb, 0x90, 0x02, 0x00, 0x0f, 0xff};
+  TEST_ASSERT_EQUAL_STRING("55aaeb9002000fff", jk02FrameToHex(bytes, sizeof(bytes)).c_str());
+  TEST_ASSERT_EQUAL_STRING("", jk02FrameToHex(nullptr, sizeof(bytes)).c_str());
+  TEST_ASSERT_EQUAL_STRING("", jk02FrameToHex(bytes, 0).c_str());
+  // A full frame expands to exactly 600 characters.
+  TEST_ASSERT_EQUAL_UINT32(600, static_cast<uint32_t>(jk02FrameToHex(kCellInfo32s, sizeof(kCellInfo32s)).length()));
+}
+
+void test_raw_capture_gate_rate_limits_but_always_logs_first() {
+  Jk02RawCaptureGate gate(5000);
+  TEST_ASSERT_TRUE(gate.shouldLog(0));      // the first frame is always captured
+  TEST_ASSERT_FALSE(gate.shouldLog(1000));  // inside the interval -> suppressed
+  TEST_ASSERT_FALSE(gate.shouldLog(4999));
+  TEST_ASSERT_EQUAL_UINT32(2, gate.suppressedCount());
+  TEST_ASSERT_TRUE(gate.shouldLog(5000));   // interval elapsed -> logged
+  TEST_ASSERT_EQUAL_UINT32(2, gate.takeSuppressedCount());  // reported with that line
+  TEST_ASSERT_EQUAL_UINT32(0, gate.takeSuppressedCount());  // take clears
+  TEST_ASSERT_FALSE(gate.shouldLog(9999));
+  TEST_ASSERT_EQUAL_UINT32(1, gate.takeSuppressedCount());
+  TEST_ASSERT_EQUAL_UINT32(0, gate.takeSuppressedCount());
+}
+
 void test_hardware_version_selects_layout() {
   // Device-info frame: header, type 0x03, hw version "14.XA" at offset 22.
   uint8_t frame[300] = {};
@@ -176,6 +277,11 @@ void setup() {
   RUN_TEST(test_decode_32s_layout);
   RUN_TEST(test_rejects_bad_crc);
   RUN_TEST(test_rejects_short_frame);
+  RUN_TEST(test_accepts_32s_all_zero_cells);
+  RUN_TEST(test_rejects_24s_all_zero_cells);
+  RUN_TEST(test_partial_cells_average_ignores_zero_slots);
+  RUN_TEST(test_raw_frame_hex_formatting);
+  RUN_TEST(test_raw_capture_gate_rate_limits_but_always_logs_first);
   RUN_TEST(test_hardware_version_selects_layout);
   RUN_TEST(test_ble_command_surface_is_read_only);
   UNITY_END();

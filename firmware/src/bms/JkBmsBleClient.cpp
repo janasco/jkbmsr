@@ -259,6 +259,7 @@ void JkBmsBleClient::handleNotification(const uint8_t* data, size_t length) {
 void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
   if (!jk02FrameValid(frame, length)) {
     status_.checksumErrors += 1;
+    logRawFrameCapture(frame, length, "header/checksum mismatch");
     return;
   }
 
@@ -284,6 +285,7 @@ void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
     case Jk02FrameType::kCellInfo: {
       if (!deviceInfoReceived_) {
         // Layout unknown until the hardware version arrives.
+        logRawFrameCapture(frame, length, "cell-info before device-info (layout unknown)");
         return;
       }
       BatteryTelemetry decoded;
@@ -293,12 +295,34 @@ void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
         latest_ = decoded;
         status_.framesDecoded += 1;
         status_.lastFrameAtMs = decoded.capturedAtMs;
+        if (decoded.cellCount == 0) {
+          // The relaxed 32S path: the frame is now a valid sample but carries
+          // no cell voltages. Capture it once (rate-limited) so the layout can
+          // be confirmed from the board's own serial.
+          logRawFrameCapture(frame, length, "all-zero cells accepted (32S)");
+        }
+      } else {
+        logRawFrameCapture(frame, length, "cell-info decode failed");
       }
       break;
     }
     default:
       break;
   }
+}
+
+void JkBmsBleClient::logRawFrameCapture(const uint8_t* frame, size_t length, const String& reason) {
+  if (!rawCaptureGate_.shouldLog(millis())) {
+    return;
+  }
+  String message = "JK02 raw frame: reason=" + reason + ", len=" +
+                   String(static_cast<unsigned int>(length)) + ", hex=" +
+                   jk02FrameToHex(frame, length);
+  const uint32_t suppressed = rawCaptureGate_.takeSuppressedCount();
+  if (suppressed > 0) {
+    message += " (+" + String(suppressed) + " suppressed)";
+  }
+  logWarn(message);
 }
 
 bool JkBmsBleClient::poll(BatteryTelemetry& telemetry) {
