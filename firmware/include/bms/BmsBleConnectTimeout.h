@@ -21,6 +21,18 @@
 // The BLE clients must therefore express the timeout in seconds and convert for
 // the active NimBLE major version. bmsBleConnectTimeoutArg() is kept free of any
 // NimBLE dependency so the conversion is a pure, host-testable function.
+//
+// NOTE: <NimBLEDevice.h> is included OUTSIDE the namespace on purpose. Including
+// it inside drags NimBLE's own `std::list`/`std::vector` uses into `jkbmsr::std`,
+// which does not exist, and fails to compile on the 1.x targets (env:dev and the
+// esp32-classic/esp32-s3-4mb targets that `release.sh` compiles).
+#if defined(__has_include)
+#if __has_include(<NimBLEDevice.h>)
+#include <NimBLEDevice.h>
+#define JKBMSR_BMS_BLE_HAVE_NIMBLE 1
+#endif
+#endif
+
 namespace jkbmsr {
 
 constexpr uint32_t kBmsBleConnectTimeoutSeconds = 5;
@@ -30,16 +42,6 @@ constexpr uint32_t bmsBleConnectTimeoutArg(bool apiUsesMilliseconds) {
   return apiUsesMilliseconds ? kBmsBleConnectTimeoutSeconds * 1000U
                              : kBmsBleConnectTimeoutSeconds;
 }
-
-// NimBLE client support, present only when building for a device target. The
-// host unit-test build has no NimBLE, so availability is detected rather than
-// assumed; the pure conversion above is what that test exercises.
-#if defined(__has_include)
-#if __has_include(<NimBLEDevice.h>)
-#include <NimBLEDevice.h>
-#define JKBMSR_BMS_BLE_HAVE_NIMBLE 1
-#endif
-#endif
 
 #if defined(JKBMSR_BMS_BLE_HAVE_NIMBLE)
 // NimBLE-Arduino defines NIMBLE_CPP_VERSION_MAJOR from 2.x on; 1.x does not
