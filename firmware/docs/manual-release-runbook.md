@@ -10,7 +10,7 @@ to live in `.github/workflows/`:
 | Script | Replaces | What it does |
 | --- | --- | --- |
 | `scripts/run-checks.sh` | `firmware.yml` — jobs `validate`, `host-tests`, `build`, `build-c6` | profile/target validation, the native host suites, the 25-environment PlatformIO matrix |
-| `scripts/release.sh` | `ota-release.yml` — jobs `build-release`, `publish-release` | build, sign, verify, upload to R2, update D1, create the GitHub release, commit the public mirror |
+| `scripts/release.sh` | `ota-release.yml` — jobs `build-release`, `publish-release` | build, sign, verify, upload to R2 (OTA image and browser flash bundle), update D1, create the GitHub release, commit the public OTA verification metadata |
 
 Both are safe to run without side effects: `--dry-run` prints the entire plan
 and exits 0 without touching Cloudflare, R2, D1, GitHub, or this repository's
@@ -129,9 +129,10 @@ before it builds anything. The key is never printed, never traced, and the
 temporary PEM is shredded on exit including on failure.
 
 `RELEASES_REPO_PUSH_TOKEN` is **gone**. It existed only to push the public
-release artifacts into the separate `jkbmsr/jkbmsr-releases` repository. Those
-artifacts now live in `releases/` in this repository, so the cross-repo clone
-and its token are no longer needed. Nothing to rotate, nothing to revoke.
+release artifacts into the separate `jkbmsr/jkbmsr-releases` repository. The
+public OTA verification material now lives in `releases/ota/` in this
+repository, so the cross-repo clone and its token are no longer needed. Nothing
+to rotate, nothing to revoke.
 
 ---
 
@@ -152,7 +153,7 @@ Useful flags:
 | `--skip-build` | reuse the existing `.pio/build/<env>` artifacts (re-publish after a partial failure) |
 | `--no-publish` | build, sign, validate and stage only; no R2, D1, GitHub, or commit |
 | `--no-push` | publish and commit, but leave the commit local |
-| `--verify-cdn` | HTTP-read every published artifact from cdn.jkbmsr.com and compare SHA-256 |
+| `--verify-cdn` | HTTP-read the public OTA metadata from cdn.jkbmsr.com and compare SHA-256 |
 
 The script publishes, in this order, for every gateway target (all of which
 have an OTA channel):
@@ -162,12 +163,19 @@ have an OTA channel):
    `bootloader.bin` / `partitions.bin` / `boot_app0.bin`.
 2. **Sign** the OTA metadata, then gate it with
    `python3 scripts/validate-ota-release-bundle.py`.
-3. **Upload to R2** — `npx wrangler r2 object put ... --remote`.
+3. **Upload to R2** — `npx wrangler r2 object put ... --remote`. This uploads
+   the single OTA image under `firmware/<target>/…` **and** the four-part
+   browser flash bundle plus manifest and per-part checksums under
+   `flash/<target>/v<version>/…`. The account-gated API streams the latter.
 4. **Update D1** — the `firmware` row for that target, superseding the previous
    `is_latest` for the same target.
 5. **Create the GitHub release** for `firmware-v<version>`, with
    target-scoped asset names.
-6. **Commit the public mirror** in `releases/`, validate the index, and push.
+6. **Commit the public OTA verification metadata** — `releases/ota/<target>-latest.json`
+   and `releases/ota/keys/public/<key id>.pem`, then push.
+
+No firmware binaries or `firmware/**` index are written into this repository or
+published to the CDN.
 
 A pre-flight runs first and reports **every** problem it finds at once, rather
 than stopping at the first.
@@ -176,17 +184,21 @@ than stopping at the first.
 
 ## 5. Then, by hand: publish the CDN and verify
 
-The public artifacts are committed to `releases/` in this repository, but that
-directory is only *served* once it is deployed. That deploy is a separate,
-deliberate step:
+The public OTA verification material is committed to `releases/ota/` in this
+repository, but that directory is only *served* once `releases/` is deployed.
+That deploy is a separate, deliberate step:
 
 ```bash
 # deploy releases/ to Cloudflare Pages project 'jkbmsr-releases' -> cdn.jkbmsr.com
+# (scripts/deploy-releases.sh --deploy; it packages docs/, ota/, and mobile/
+#  checksums only — never firmware/)
 ```
 
 **Project names are load-bearing.**
 
-- `jkbmsr-releases` → `cdn.jkbmsr.com` — this is the one for firmware artifacts.
+- `jkbmsr-releases` → `cdn.jkbmsr.com` — the host for the release index, docs,
+  mobile checksums, and the public OTA verification material. It does **not**
+  serve firmware.
 - `jkbmsr-docs` → the custom-domain origin for `docs.jkbmsr.com`, which is retired as a browsable copy and 301s to the apex `jkbmsr.com/docs/`.
 - The apex `jkbmsr.com` is **Pages project `jkbmsr-marketing`** (the Astro
   marketing site since 2026-09-27; WordPress deliberately still runs behind the
@@ -194,17 +206,19 @@ deliberate step:
   only. The 2026-09-12 outage was a static export deployed into `jkbmsr-web`,
   the product app — never target that, or the apex, from here.
 
-Then verify what a client would actually download:
+Then verify what a customer can read publicly:
 
 ```bash
 ./scripts/release.sh <version> --no-publish --verify-cdn --yes
 ```
 
 This performs a real unauthenticated HTTP read of every
-`https://cdn.jkbmsr.com/firmware/<target>/v<version>/firmware.bin` and compares
-the SHA-256 against the build. It is deliberately **not** a
+`https://cdn.jkbmsr.com/ota/<target>-latest.json` and compares the SHA-256
+against `releases/ota/<target>-latest.json`. It is deliberately **not** a
 `wrangler r2 object get` readback, because a readback through the wrong account
-reports a false match.
+reports a false match. Firmware itself is not on the CDN and is not verified
+here — the account-gated API streams it from R2, and `test-production-ota.sh`
+covers the device OTA path.
 
 Finally, check the OTA path end to end against the live API:
 
@@ -265,52 +279,37 @@ can accept. `release.sh` derives the public key from the supplied private key
 and refuses to continue unless it matches the published one.
 
 **A re-run re-signs.** ECDSA is randomised by design, so regenerating
-`firmware-metadata.json` for an already-published version produces a new, equally
-valid signature rather than a byte-identical file. Do not expect "no public
-release changes to commit" from a re-run.
+`firmware-metadata.json` / `releases/ota/<target>-latest.json` for an
+already-published version produces a new, equally valid signature rather than a
+byte-identical file. Do not expect "no public release changes to commit" from a
+re-run.
 
-**`update_release_index.py` must run with `releases/` as the working
-directory.** It writes the relative path `firmware/releases.json`. The script
-itself lives in `firmware/scripts/`; `releases/scripts/` contains only
-`validate_release_index.py`.
+**`update_release_index.py` and `validate_release_index.py` are no longer run by
+`release.sh` or by `deploy-releases.sh`.** They existed to keep a published
+`firmware/releases.json` index aligned with each target's `latest.json`. There
+is no published firmware index any more: the account-gated API builds its
+catalog from R2 + D1. The scripts remain in the tree, but the historical
+`releases/firmware/**` tree they read is frozen and unpublished.
 
 **`generate-flash-manifest.py` is read from `firmware/scripts/`.** It resolves
-`hardware-targets.json` relative to its own parent, so the copy in
-`firmware/scripts/` reads `firmware/hardware-targets.json` and the one copied
-into `releases/firmware/` stays in sync automatically.
+`hardware-targets.json` relative to its own parent, reading
+`firmware/hardware-targets.json`. It is used only to build the R2 flash-bundle
+manifest; nothing is copied into a `releases/firmware/` tree.
 
 ---
 
-## Why the public mirror is a commit, not a second clone
+## Why the public OTA material is a commit
 
 The old workflow's last step cloned `jkbmsr/jkbmsr-releases` and pushed the
-public artifacts there under a `RELEASES_REPO_PUSH_TOKEN`. Those artifacts now
-live in `releases/` in this repository, so the cross-repo clone and that token
-are gone: the same files are written to `releases/` and committed to the remote
-the source is already on. No second repository to authenticate to, no second
-remote to push.
+public artifacts there under a `RELEASES_REPO_PUSH_TOKEN`. The public material
+now lives in `releases/ota/` in this repository, so the cross-repo clone and
+that token are gone: the same files are written to `releases/ota/` and committed
+to the remote the source is already on. No second repository to authenticate to,
+no second remote to push.
 
-That step also carried a long comment about a real defect. An earlier version of
-its retry loop re-synced only `firmware/releases.json` before regenerating it,
-leaving every *other* target's `firmware/<other-target>/latest.json` exactly as
-they were at that leg's original clone — stale, or missing entirely if a
-concurrent leg pushed in between. `validate_release_index.py` cross-checks
-`releases.json` against every target's own `latest.json`, so a stale or missing
-file failed validation even though the push itself would have succeeded. The
-fix at the time was `git reset --hard origin/main` before each attempt.
-
-Three things preserve that intent here, and none of them is `reset --hard`:
-
-1. All seven targets are published by one process in one pass, so there is no
-   longer a concurrent second writer whose push can be missed.
-2. `releases/` must be clean before the loop starts *and* is re-checked at the
-   top of every attempt, and every generated file is rewritten from scratch on
-   every attempt — target-scoped files included.
-3. `releases/scripts/validate_release_index.py` runs on every attempt and still
-   cross-checks `releases.json` against every target's `latest.json`, so a stale
-   or missing file fails the gate instead of being published.
-
-`git reset --hard` is deliberately not used on a retry. This is the operator's
-working tree, not a throwaway clone, and discarding uncommitted work to win a
-push race is not a trade worth making. On a genuine non-fast-forward the script
-stops and prints the exact commands to run instead.
+`releases/` must be clean before the commit loop starts *and* is re-checked at
+the top of every attempt; the public OTA metadata is rewritten from scratch on
+every attempt. `git reset --hard` is deliberately not used on a retry. This is
+the operator's working tree, not a throwaway clone, and discarding uncommitted
+work to win a push race is not a trade worth making. On a genuine non-fast-forward
+the script stops and prints the exact commands to run instead.

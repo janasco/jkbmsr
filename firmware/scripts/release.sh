@@ -197,7 +197,7 @@ RELEASE_TAG="firmware-v${VERSION}"
 printf 'release.sh: firmware %s -> tag %s\n' "$VERSION" "$RELEASE_TAG"
 printf 'release.sh: PLATFORMIO_CORE_DIR=%s\n' "$PLATFORMIO_CORE_DIR"
 printf 'release.sh: STAGE_DIR=%s\n' "$STAGE_DIR"
-printf 'release.sh: public mirror=%s\n' "$MIRROR_DIR"
+printf 'release.sh: public release tree=%s\n' "$MIRROR_DIR"
 [ "$DRY_RUN" -eq 1 ] && printf 'release.sh: DRY RUN -- no build, no upload, no git.\n'
 
 BUILD_LOG_DIR="$(mktemp -d)"
@@ -444,8 +444,9 @@ PY
 # Verify a published R2 object through the REST API rather than
 # `wrangler r2 object get`. The REST URL contains the account id, so a
 # readback cannot silently answer from the wrong account -- which is exactly the
-# failure the wrangler readback hid. (The public CDN copy, published from
-# releases/, gets a real unauthenticated HTTP read instead; see --verify-cdn.)
+# failure the wrangler readback hid. (The public OTA metadata copy, published
+# from releases/, gets a real unauthenticated HTTP read instead; see
+# --verify-cdn.)
 r2_object_size() {
   python3 - "$1" "$R2_BUCKET" "$CLOUDFLARE_API_BASE" <<'PY'
 import json, os, sys, urllib.error, urllib.parse, urllib.request
@@ -726,12 +727,13 @@ upload_to_r2() {
   upload_flash_bundle "$target"
 }
 
-# ── Step 7b: R2 flash bundle (firmware delivery gate, Phase 1) ───────────────
+# ── Step 7b: R2 flash bundle (firmware delivery gate) ────────────────────────
 # The device OTA path above stores a single .bin. The browser flasher needs a
 # four-part bundle (bootloader / partitions / boot_app0 / application) plus its
-# manifest and checksum, and until now those lived ONLY in the public Pages
-# mirror. The API gate can only proxy what R2 actually holds, so a release also
-# stores the bundle here under its own prefix.
+# manifest and checksum. Those parts used to live ONLY in the public Pages
+# mirror; since the gate the API is the only delivery path, and it can only
+# proxy what R2 actually holds, so a release stores the bundle here under its
+# own prefix.
 #
 # Layout (fixed on purpose -- the Worker's slot->key table and this uploader
 # must agree, so the key is built in exactly one shape):
@@ -752,8 +754,10 @@ upload_to_r2() {
 # the R2 object's own basename, so the Worker can serve a per-slot checksum and
 # the flasher can refuse to write a part that does not match.
 #
-# This does NOT change what the public mirror publishes (that is Phase 4); the
-# repository's releases/ tree is still written by write_mirror_tree() below.
+# This does NOT change what the public CDN publishes; since the gate, nothing
+# firmware-shaped is published there at all. The bundle lives only in R2 and is
+# streamed to a logged-in flasher (Step 10 writes only the public OTA
+# verification material).
 flash_object_key() {
   # flash/<target>/v<version>/<part>
   printf 'flash/%s/v%s/%s' "$1" "$2" "$3"
@@ -830,9 +834,8 @@ upload_flash_bundle() {
   fi
 
   # Materialise the two generated inputs. generate_flash_manifest() writes the
-  # same manifest write_mirror_tree() does, from the checked-in hardware
-  # catalog, so the R2 copy and the public mirror cannot disagree about offsets
-  # or chip family.
+  # manifest from the checked-in hardware catalog, so the R2 copy cannot drift
+  # from the catalog the flasher's API catalog also derives from.
   generate_flash_manifest "$target" "${out}/flash-manifest.json"
   # Bundle-local checksum naming firmware.bin the way a flasher resolves it.
   # The staged ${out}/firmware.sha256 is left ALONE: it names the GitHub asset
@@ -1006,152 +1009,46 @@ create_github_release() {
   info "${target}: GitHub release ${RELEASE_TAG} updated (${#assets[@]} assets)"
 }
 
-# ── Step 10: the public release mirror, committed into THIS repository ───────
-# ── What changed, and why ────────────────────────────────────────────────────
-# The old workflow's final step cloned jkbmsr/jkbmsr-releases with a
-# RELEASES_REPO_PUSH_TOKEN and pushed the public artifacts there. The public
-# release artifacts now live in releases/ inside THIS repository, so the
-# cross-repo clone and that token are gone: the same files are written to
-# releases/ and committed to the same remote the source is already on. There is
-# no second repository to authenticate to and no second remote to push.
+# ── Step 10: public OTA verification material, committed into THIS repository ─
+# ── What this publishes, and what it deliberately does NOT ───────────────────
+# The browser flash bundle is no longer mirrored into this public repository.
+# Since 2026-10-13 the only firmware delivery path is the account-gated API
+# (api.jkbmsr.com/v1/flash/*), which streams the four-part bundle from the
+# private R2 bucket; the release pipeline uploads it there (Step 7b). Nothing
+# a flasher fetches lives in git any more.
 #
-# ── The stale-latest.json bug that comment warned about, and what preserves it ──
-# The old step carried a long comment about a real defect: an earlier version of
-# the retry loop only re-synced firmware/releases.json before regenerating it,
-# leaving every OTHER target's firmware/<other-target>/latest.json exactly as
-# they were at that leg's original clone -- stale, or missing entirely if a
-# concurrent leg pushed in between. validate_release_index.py cross-checks
-# releases.json against every target's own latest.json, so a stale or missing
-# file fails validation even though the push itself would have succeeded. The
-# fix at the time was `git reset --hard origin/main` before each attempt,
-# because that discards the entire working tree back to current truth,
-# target-scoped files included.
+# What therefore still gets written and committed here is only the material a
+# customer is meant to verify against in public:
 #
-# Three things preserve that intent here, and none of them is `reset --hard`:
+#   releases/ota/<target>-latest.json        signed OTA metadata (public)
+#   releases/ota/keys/public/<key id>.pem    the OTA public verification key
 #
-#   1. All seven targets are published by ONE process in ONE pass, so there is
-#      no longer a concurrent second writer whose push can be missed.
-#   2. releases/ is required to be clean before the loop starts AND re-checked
-#      at the top of every attempt, and every generated file is rewritten from
-#      scratch on every attempt -- target-scoped files included.
-#   3. validate_release_index.py still runs on every attempt and still
-#      cross-checks releases.json against every target's latest.json, so a
-#      stale or missing file fails the gate instead of being published.
+# Removed with the mirror (see the gate spec §6.4/§10):
+#   * releases/firmware/<target>/v<version>/{firmware.bin,firmware.sha256,
+#     firmware-metadata.json,release.json,RELEASE_NOTES.md,flash-manifest.json}
+#   * releases/firmware/<target>/latest.json
+#   * releases/firmware/hardware-targets.json and releases.json
+#   * the update_release_index.py call and the validate_release_index.py gate
+#     that cross-checked them. There is no published firmware index any more;
+#     the API builds its catalog from R2 + D1 instead.
 #
-# `git reset --hard` is deliberately NOT used on a retry: this is the operator's
-# working tree, not a throwaway clone, and discarding uncommitted work to win a
-# push race is not a trade worth making. On a genuine non-fast-forward the
-# script stops and says exactly what to run instead.
-write_mirror_tree() {
-  local target="$1" pio_env="$2" chip_family="$3" has_ota="$4"
-  local released_at="$5"
+# History is NOT rewritten. Firmware already committed under releases/firmware/**
+# stays in the public repository's git history and in already-deployed Pages
+# deployments. This change stops FUTURE publishing; removing the historical
+# copies is a separate decision, deliberately not made here.
+write_public_ota_material() {
+  local target="$1" has_ota="$2"
   local out="${STAGE_DIR}/${target}"
-  local version_dir="${MIRROR_DIR}/firmware/${target}/v${VERSION}"
-  local metadata_field ota_metadata_json
 
-  mkdir -p "$version_dir"
-  cp "${out}/firmware.bin" "${version_dir}/firmware.bin"
-  cp "${FIRMWARE_ROOT}/hardware-targets.json" "${MIRROR_DIR}/firmware/hardware-targets.json"
-  printf '%s  %s\n' "${TARGET_SHA[$target]}" "firmware.bin" >"${version_dir}/firmware.sha256"
-
-  if [ "$has_ota" = "true" ]; then
-    mkdir -p "${MIRROR_DIR}/ota/keys/public"
-    cp "${out}/firmware-metadata.json" "${version_dir}/firmware-metadata.json"
-    cp "${out}/release-bootloader.bin" "${version_dir}/bootloader.bin"
-    cp "${out}/release-partitions.bin" "${version_dir}/partitions.bin"
-    cp "${out}/release-boot_app0.bin" "${version_dir}/boot_app0.bin"
-    cp "${PUBLIC_KEY_PATH}" "${MIRROR_DIR}/ota/keys/public/${OTA_SIGNING_KEY_ID}.pem"
-    cp "${out}/firmware-metadata.json" "${MIRROR_DIR}/ota/${target}-latest.json"
-    metadata_field='"./firmware-metadata.json"'
-    # Built into a variable first, then interpolated below: a heredoc nested
-    # inside another heredoc's $(...) substitution is a bash syntax error, not
-    # just ugly.
-    ota_metadata_json=$(cat <<OTA
-{
-  "version": "${VERSION}",
-  "targetHardware": "${target}",
-  "releasedAt": "${released_at}",
-  "downloadUrl": "${DOWNLOAD_URL}",
-  "sha256": "${TARGET_SHA[$target]}",
-  "signature": "${TARGET_SIGNATURE[$target]}",
-  "signingKeyId": "${OTA_SIGNING_KEY_ID}",
-  "signatureAlgorithm": "${OTA_SIGNATURE_ALGORITHM}"
-}
-OTA
-)
-  else
-    metadata_field="null"
-    ota_metadata_json="null"
+  if [ "$has_ota" != "true" ]; then
+    info "${target}: no OTA channel -- no public OTA verification material to publish"
+    return 0
   fi
 
-  cat >"${version_dir}/release.json" <<JSON
-{
-  "version": "${VERSION}",
-  "targetHardware": "${target}",
-  "releasedAt": "${released_at}",
-  "githubReleaseTag": "${RELEASE_TAG}",
-  "artifacts": {
-    "firmware": "./firmware.bin",
-    "checksum": "./firmware.sha256",
-    "metadata": ${metadata_field},
-    "releaseNotes": "./RELEASE_NOTES.md",
-    "flashManifest": "./flash-manifest.json"
-  },
-  "otaMetadata": ${ota_metadata_json}
-}
-JSON
-
-  cat >"${version_dir}/RELEASE_NOTES.md" <<MD
-# Firmware ${VERSION} — ${target}
-
-Release date: \`${released_at}\`
-
-$([ "$has_ota" = "true" ] && echo "This gateway hardware supports over-the-air updates; this release also went out through the OTA channel." || echo "This gateway hardware has no OTA channel (USB/web-serial reflash only).")
-
-This public release mirrors the production artifacts published from \`firmware\`.
-MD
-
-  cat >"${MIRROR_DIR}/firmware/${target}/latest.json" <<JSON
-{
-  "currentVersion": "${VERSION}",
-  "targetHardware": "${target}",
-  "releasedAt": "${released_at}",
-  "publicBaseUrl": "${PUBLIC_BASE_URL}",
-  "artifactDirectory": "./v${VERSION}/",
-  "checksumFile": "./v${VERSION}/firmware.sha256",
-  "releaseManifest": "./v${VERSION}/release.json",
-  "flashManifest": "./v${VERSION}/flash-manifest.json"
-}
-JSON
-
-  # Chip-family-specific offsets generated from the checked-in hardware
-  # catalog. The browser never guesses offsets from a USB adapter ID.
-  python3 "${FIRMWARE_ROOT}/scripts/generate-flash-manifest.py" \
-    --target "$target" \
-    --version "$VERSION" \
-    --output "${version_dir}/flash-manifest.json" \
-    || die "${target}: generate-flash-manifest.py failed (unknown target? check firmware/hardware-targets.json)"
-
-  (cd "$version_dir" && sha256sum -c firmware.sha256) || die "${target}: staged artifact does not match its own checksum"
-
-  # update_release_index.py writes the RELATIVE path "firmware/releases.json",
-  # and its own docstring says to run it from the root of the public release
-  # tree. In the old split layout that root was a jkbmsr-releases clone; here it
-  # is releases/. The script itself lives with the rest of the firmware tooling
-  # in firmware/scripts/ (releases/scripts/ holds only the validator), so it is
-  # invoked with releases/ as the working directory rather than copied.
-  ( cd "$MIRROR_DIR" && \
-    RELEASE_VERSION="${VERSION}" \
-    RELEASE_TARGET_HARDWARE="${target}" \
-    RELEASE_RELEASED_AT="${released_at}" \
-    RELEASE_TAG="${RELEASE_TAG}" \
-    RELEASE_SHA256="${TARGET_SHA[$target]}" \
-    RELEASE_HAS_OTA="${has_ota}" \
-    RELEASE_SIGNATURE="${TARGET_SIGNATURE[$target]:-}" \
-    RELEASE_SIGNING_KEY_ID="${OTA_SIGNING_KEY_ID}" \
-    RELEASE_SIGNATURE_ALGORITHM="${OTA_SIGNATURE_ALGORITHM}" \
-    python3 "${FIRMWARE_ROOT}/scripts/update_release_index.py" ) \
-    || die "${target}: update_release_index.py failed"
+  mkdir -p "${MIRROR_DIR}/ota/keys/public"
+  cp "${out}/firmware-metadata.json" "${MIRROR_DIR}/ota/${target}-latest.json"
+  cp "${PUBLIC_KEY_PATH}" "${MIRROR_DIR}/ota/keys/public/${OTA_SIGNING_KEY_ID}.pem"
+  info "${target}: wrote public OTA metadata (ota/${target}-latest.json) and the OTA public key"
 }
 
 # The published OTA public key is a .pem. This repository's root .gitignore has
@@ -1193,21 +1090,21 @@ MSG
   return 0
 }
 
-commit_mirror() {
+commit_public_ota_material() {
   local branch
   branch=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
   if [ "$branch" = "HEAD" ]; then
-    die "detached HEAD -- check out a branch before publishing the public mirror"
+    die "detached HEAD -- check out a branch before publishing the public OTA verification material"
   fi
 
   local attempt=1
   while :; do
-    # Clean state for THIS attempt. See the comment above write_mirror_tree:
-    # nothing target-scoped may be carried over from a previous attempt. This
-    # is the hand-run equivalent of the `git reset --hard origin/main` the old
-    # CI step used -- it guarantees the working tree starts from the truth
-    # rather than from whatever a previous attempt left behind -- without the
-    # data loss, because it refuses instead of overwriting.
+    # Clean state for THIS attempt. See the comment above
+    # write_public_ota_material: nothing may be carried over from a previous
+    # attempt. This is the hand-run equivalent of the `git reset --hard
+    # origin/main` the old CI step used -- it guarantees the working tree starts
+    # from the truth rather than from whatever a previous attempt left behind --
+    # without the data loss, because it refuses instead of overwriting.
     local dirty
     dirty=$(git -C "$REPO_ROOT" status --porcelain -- releases)
     if [ -n "$dirty" ]; then
@@ -1219,20 +1116,17 @@ commit_mirror() {
     for line in $RELEASE_MATRIX; do
       IFS='|' read -r target pio_env chip_family has_ota <<<"$line"
       target_selected "$target" || continue
-      write_mirror_tree "$target" "$pio_env" "$chip_family" "$has_ota" "$RELEASED_AT"
+      write_public_ota_material "$target" "$has_ota"
     done
-
-    ( cd "$MIRROR_DIR" && python3 scripts/validate_release_index.py ) \
-      || die "releases/scripts/validate_release_index.py rejected the public release tree -- nothing was committed. This is the gate that catches a stale or missing per-target latest.json."
 
     git -C "$REPO_ROOT" add -- releases
 
     if git -C "$REPO_ROOT" diff --cached --quiet; then
-      info "No public release changes to commit"
+      info "No public OTA verification material changes to commit"
       return 0
     fi
 
-    git -C "$REPO_ROOT" commit -m "feat: publish firmware ${VERSION} release artifacts" \
+    git -C "$REPO_ROOT" commit -m "chore(releases): publish firmware ${VERSION} OTA verification metadata" \
       || die "git commit failed"
 
     if [ "$DO_PUSH" -eq 0 ]; then
@@ -1262,7 +1156,7 @@ cannot fast-forward. Nothing was forced and nothing was reset.
 
     * The R2 objects, the D1 rows and the GitHub release assets are ALREADY
       published at this point. This failure is only about the in-repo public
-      mirror, and retrying does not roll any of it back.
+      OTA verification material, and retrying does not roll any of it back.
     * A re-run re-signs. ECDSA is randomised by design, so regenerated
       firmware-metadata.json carries a NEW (equally valid) signature for the
       same version rather than a byte-identical tree. Do not expect 'no public
@@ -1280,13 +1174,16 @@ MSG
   done
 }
 
-# ── Step 11: public CDN verification ─────────────────────────────────────────
-# A real unauthenticated HTTP read of the published artifact, compared by
-# SHA-256. This is the only verification that proves what a *client* would
-# actually download, and it is deliberately not a wrangler readback.
+# ── Step 11: public CDN verification (OTA verification material) ─────────────
+# A real unauthenticated HTTP read of the public OTA metadata, compared by
+# SHA-256. Firmware binaries are NOT on the CDN any more — the account-gated
+# API streams them from R2 — so what there is left to verify over HTTP is the
+# signed per-target OTA metadata that customers and devices verify against. A
+# real read, not a wrangler readback, is still the point.
 verify_cdn() {
   if [ "$DRY_RUN" -eq 1 ]; then
-    plan "GET ${PUBLIC_BASE_URL}/firmware/<target>/v${VERSION}/firmware.bin and compare SHA-256 against the local build, for every published target"
+    plan "GET ${PUBLIC_BASE_URL}/ota/<target>-latest.json for every OTA target and compare SHA-256 against releases/ota/<target>-latest.json"
+    plan "(firmware binaries are no longer on ${PUBLIC_BASE_URL}; they are delivered by the account-gated API from R2)"
     return 0
   fi
 
@@ -1295,8 +1192,16 @@ verify_cdn() {
   for line in $RELEASE_MATRIX; do
     IFS='|' read -r target pio_env chip_family has_ota <<<"$line"
     target_selected "$target" || continue
-    local remote="${PUBLIC_BASE_URL}/firmware/${target}/v${VERSION}/firmware.bin"
-    local expected="${TARGET_SHA[$target]}"
+    [ "$has_ota" = "true" ] || continue
+    local local_file="${MIRROR_DIR}/ota/${target}-latest.json"
+    if [ ! -f "$local_file" ]; then
+      printf '   %s: local OTA metadata %s is missing — cannot verify\n' "$target" "$local_file" >&2
+      failures=$((failures + 1))
+      continue
+    fi
+    local remote="${PUBLIC_BASE_URL}/ota/${target}-latest.json"
+    local expected
+    expected=$(sha256sum "$local_file" | awk '{print $1}')
     if python3 - "$remote" "$expected" <<'PY'
 import hashlib, sys, urllib.error, urllib.request
 
@@ -1325,15 +1230,15 @@ if actual != expected:
 print(actual)
 PY
     then
-      info "${target}: ${remote} matches the built image"
+      info "${target}: ${remote} matches releases/ota/${target}-latest.json"
       checked=$((checked + 1))
     else
-      printf '   %s: %s FAILED verification (published copy does not match the build)\n' "$target" "$remote" >&2
+      printf '   %s: %s FAILED verification (published copy does not match the local OTA metadata)\n' "$target" "$remote" >&2
       failures=$((failures + 1))
     fi
   done
-  [ "$failures" -eq 0 ] || die "${failures} published artifact(s) did not verify over HTTP against ${PUBLIC_BASE_URL}"
-  info "${checked} artifact(s) verified by HTTP read and SHA-256"
+  [ "$failures" -eq 0 ] || die "${failures} published file(s) did not verify over HTTP against ${PUBLIC_BASE_URL}"
+  info "${checked} public OTA metadata file(s) verified by HTTP read and SHA-256"
 }
 
 # ── Step 12: main ────────────────────────────────────────────────────────────
@@ -1359,7 +1264,7 @@ preflight() {
   if [ "$DRY_RUN" -eq 1 ]; then
     note "pre-flight"
     if [ "$skip_remote" -eq 1 ]; then
-      plan "--no-publish: skip the Cloudflare, GitHub and public-mirror checks"
+      plan "--no-publish: skip the Cloudflare, GitHub and public-release checks"
     else
       plan "assert CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set, and that the account id is ${JKBMSR_CLOUDFLARE_ACCOUNT_ID}"
       plan "assert the token can read that account (GET /accounts/<id>)"
@@ -1382,7 +1287,7 @@ preflight() {
   fi
 
   if [ "$skip_remote" -eq 1 ]; then
-    info "--no-publish: skipping the Cloudflare, GitHub and public-mirror checks"
+    info "--no-publish: skipping the Cloudflare, GitHub and public-release checks"
   else
     assert_cloudflare_env || preflight_failed
 
@@ -1507,7 +1412,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   for line in $RELEASE_MATRIX; do
     IFS='|' read -r target pio_env chip_family has_ota <<<"$line"
     target_selected "$target" || continue
-    [ "$has_ota" = "true" ] || { plan "${target}: nothing to publish to R2 or D1 (no OTA channel); the GitHub release and the public mirror still get it"; continue; }
+    [ "$has_ota" = "true" ] || { plan "${target}: nothing to publish to R2 or D1 (no OTA channel); the GitHub release and the public OTA metadata still get it"; continue; }
     upload_to_r2 "$target"
     update_d1 "$target" "$RELEASED_AT"
   done
@@ -1516,11 +1421,11 @@ if [ "$DRY_RUN" -eq 1 ]; then
     target_selected "$target" || continue
     create_github_release "$target"
   done
-  note "public mirror (committed into this repository, not a second clone)"
-  plan "regenerate releases/firmware/<target>/v${VERSION}/*, latest.json, ota/<target>-latest.json and releases.json for every target"
-  plan "python3 releases/scripts/validate_release_index.py"
-  plan "git add releases && git commit -m 'feat: publish firmware ${VERSION} release artifacts' && git push origin HEAD:<branch>"
-  plan "(retry loop with a clean-tree re-check per attempt; no 'git reset --hard' -- see the comment above write_mirror_tree)"
+  note "public OTA verification material (committed into this repository)"
+  plan "write releases/ota/<target>-latest.json and releases/ota/keys/public/<key id>.pem for every OTA target"
+  plan "git add releases && git commit -m 'chore(releases): publish firmware ${VERSION} OTA verification metadata' && git push origin HEAD:<branch>"
+  plan "(retry loop with a clean-tree re-check per attempt; no 'git reset --hard' -- see the comment above write_public_ota_material)"
+  plan "(no firmware binaries or manifest are written: the flash bundle goes to R2 and is served only by the account-gated API)"
 else
   note "publish to R2"
   for line in $RELEASE_MATRIX; do
@@ -1545,15 +1450,15 @@ else
     create_github_release "$target"
   done
 
-  note "public mirror -- committed into this repository"
-  commit_mirror
+  note "public OTA verification material -- committed into this repository"
+  commit_public_ota_material
 fi
 
 if [ "$VERIFY_CDN" -eq 1 ]; then
   note "verify the published copies over HTTP"
   if [ "$DO_COMMIT" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
-    info "The mirror files are committed but cdn.jkbmsr.com is served by the Cloudflare Pages project"
-    info "'jkbmsr-releases'. Deploy releases/ to that project first, then re-run:"
+    info "The public OTA metadata is committed but cdn.jkbmsr.com is served by the Cloudflare"
+    info "Pages project 'jkbmsr-releases'. Deploy releases/ to that project first, then re-run:"
     info "    ./scripts/release.sh ${VERSION} --skip-build --no-publish --verify-cdn --yes"
   fi
   verify_cdn
@@ -1572,17 +1477,18 @@ for line in $RELEASE_MATRIX; do
 done
 if [ "$DO_PUSH" -eq 0 ] && [ "$DO_COMMIT" -eq 1 ] && [ "$DRY_RUN" -eq 0 ]; then
   info ""
-  info "The public mirror is committed but NOT pushed. Nothing here is live on cdn.jkbmsr.com until it is."
+  info "The public OTA verification material is committed but NOT pushed. It is not live on cdn.jkbmsr.com until it is."
 fi
 if [ "$DO_COMMIT" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
   info ""
-  info "The public mirror files were generated and validated in releases/ but NOT committed (--no-commit)."
-  info "Push them yourself, or re-run without --no-commit."
+  info "The public OTA verification material was written in releases/ but NOT committed (--no-commit)."
+  info "Push it yourself, or re-run without --no-commit."
 fi
 info ""
 info "Next, by hand:"
 info "  1. deploy releases/ to Cloudflare Pages project 'jkbmsr-releases' (serves cdn.jkbmsr.com)"
 info "     -- NEVER to the apex or jkbmsr-web: the apex is Pages project jkbmsr-marketing (Astro), and the 2026-09-12 outage was a static export deployed into jkbmsr-web"
+info "     -- firmware is NOT part of that deploy; the account-gated API serves it from R2 (see the gate spec)"
 info "  2. ./scripts/release.sh ${VERSION} --skip-build --no-publish --verify-cdn --yes"
 info "  3. ./scripts/test-production-ota.sh    (signature + checksum against the live API)"
 if [ "$DRY_RUN" -eq 1 ]; then

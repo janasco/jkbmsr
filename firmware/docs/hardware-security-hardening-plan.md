@@ -55,7 +55,7 @@ lower-risk than H6 (no irreversible eFuse burning).
 
 | Approach | UX | Needs an app? | Fit |
 |---|---|---|---|
-| **Improv Wi-Fi over BLE** (recommended) | Flash + provision in one browser flow | No — Chrome/Edge Web Bluetooth | **Integrates with the web flasher already at `cdn.jkbmsr.com/flash`** |
+| **Improv Wi-Fi over BLE** (recommended) | Flash + provision in one browser flow | No — Chrome/Edge Web Bluetooth | **Integrates with the web flasher already at `jkbmsr.com/flash`** |
 | SoftAP captive portal | Join a `JKBMSR-Setup` Wi-Fi, fill a form | No | Good field re-provisioning fallback |
 | ESP unified provisioning (SoftAP/BLE) | Espressif's official phone apps | Yes (or Web Bluetooth) | Batteries-included but app-dependent |
 | In the planned Flutter app | In-app setup | Yes (jkbmsr-pro, not built yet) | Later, once the app exists |

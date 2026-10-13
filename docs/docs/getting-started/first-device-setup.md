@@ -2,7 +2,7 @@
 
 End-to-end path for a new ESP32 gateway: browser flash → Wi‑Fi → claim → dashboard.
 
-Use this for the first physical board. Encrypted / Secure Boot prototypes are a separate path (`idf-secure`); start with the public CDN build.
+Use this for the first physical board. Encrypted / Secure Boot prototypes are a separate path (`idf-secure`); start with the published release.
 
 ## What you need
 
@@ -11,9 +11,9 @@ Use this for the first physical board. Encrypted / Secure Boot prototypes are a 
 - A JK BMS Remote account at [app.jkbmsr.com](https://app.jkbmsr.com)
 - The JK-BMS powered and within Bluetooth (BLE) range of the gateway (claim works without BMS data)
 
-## Happy path (CDN flash)
+## Happy path (flasher)
 
-1. Open [cdn.jkbmsr.com/flash](https://cdn.jkbmsr.com/flash) in Chrome or Edge.
+1. Sign in at [app.jkbmsr.com](https://app.jkbmsr.com), then open [jkbmsr.com/flash](https://jkbmsr.com/flash) in Chrome or Edge. Firmware is served only to a signed-in account.
 2. Connect the ESP32 over USB and flash the latest firmware (`0.1.4` or newer).
 3. When Improv Serial appears, join your Wi‑Fi network on the same cable.
 4. The flasher redirects to `https://app.jkbmsr.com/onboard?device=…&code=…`.

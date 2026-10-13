@@ -1,44 +1,42 @@
 # Firmware Downloads
 
-JK BMS Remote public firmware artifacts are published in the public `jkbmsr-releases` repository and served from:
+JK BMS Remote firmware is installed **from the logged-in browser flasher**:
 
-- `https://cdn.jkbmsr.com`
+- <https://jkbmsr.com/flash>
 
-This public release host is for manual downloads, checksum verification, release notes, and public OTA verification material.
+An account is required. Firmware is delivered only through the authenticated
+JK BMS Remote API (`api.jkbmsr.com`), which streams the release to a signed-in
+browser. There is **no public, anonymous firmware download**. `cdn.jkbmsr.com`
+no longer serves firmware binaries or a `firmware/` index.
 
-Current target:
+## Installing firmware
 
-- `esp32dev`
+1. Sign in at <https://app.jkbmsr.com>.
+2. Open the flasher at <https://jkbmsr.com/flash> (Chrome or Edge, desktop).
+3. Connect the gateway over a USB **data** cable and click **Connect and
+   install**.
+4. Complete Wi‑Fi provisioning (Improv Serial) when prompted, then claim the
+   device.
 
-Public release contents:
+See [Firmware Flashing](/getting-started/firmware-flashing) for the full path.
 
-- firmware binary
-- checksum file
-- signed OTA metadata
-- release notes
-- public verification key
+## Why an account
 
-## Canonical Public Paths
+Firmware delivery is gated to keep anonymous bulk downloads, hotlinks and
+link-shared copies out of circulation. A logged-in user can still save the
+bytes the browser writes — the gate stops anonymous distribution, it is not
+device binding.
 
-- `https://cdn.jkbmsr.com/`
-- `https://cdn.jkbmsr.com/firmware/latest.json`
-- `https://cdn.jkbmsr.com/firmware/releases.json`
-- `https://cdn.jkbmsr.com/ota/latest.json`
+## Public verification material
+
+The signed OTA metadata and the OTA public key remain public so a customer or
+device can verify a release independently:
+
+- `https://cdn.jkbmsr.com/ota/<target>-latest.json`
+- `https://cdn.jkbmsr.com/ota/keys/public/<key-id>.pem`
 - `https://cdn.jkbmsr.com/docs/VERIFY_FIRMWARE.md`
-- `https://cdn.jkbmsr.com/CHANGELOG.md`
 
-## Distribution Split
-
-- Use `https://cdn.jkbmsr.com` for manual download and verification.
-- Production OTA updates are still delivered through the authenticated cloud API.
-- The public release host does not replace dashboard authentication, device authorization, or OTA rollout control.
-
-## Manual Download Flow
-
-1. Open `https://cdn.jkbmsr.com/firmware/latest.json` to confirm the current public version and target.
-2. Open `https://cdn.jkbmsr.com/firmware/releases.json` if you need public release history or installer-facing version listings.
-3. Download `firmware.bin` and `firmware.sha256` for the matching target directory.
-4. Verify the checksum before flashing.
-5. Review `release.json`, release notes, and OTA metadata if you are validating a support case or installer workflow.
+Release notes and checksums are shown in the flasher for the release it is
+about to install.
 
 JK BMS Remote version 1 supports JK-BMS only.

@@ -5,12 +5,13 @@ has Phase 1 provisioning.
 
 Public runbook (keep this in sync): https://jkbmsr.com/docs/getting-started/first-device-setup
 
-## Option A — CDN browser flash (`0.1.5+`)
+## Option A — Browser flash
 
-1. Confirm `cdn.jkbmsr.com` serves firmware `0.1.5` or newer. The published
-   `0.1.4` artifact was an embedded test runner and must not be used.
-2. Open https://cdn.jkbmsr.com/flash in Chrome/Edge.
-3. Flash → Improv Wi‑Fi → follow redirect to https://web.jkbmsr.com/onboard.
+1. Sign in at https://app.jkbmsr.com, then open https://jkbmsr.com/flash in
+   Chrome/Edge. Firmware is delivered only to a signed-in account — `cdn.jkbmsr.com`
+   no longer serves firmware. The published `0.1.4` artifact was an embedded test
+   runner and must not be used.
+2. Flash → Improv Wi‑Fi → follow redirect to https://web.jkbmsr.com/onboard.
 
 ## Option B — Local flash tomorrow (works before the CDN release)
 

@@ -2,40 +2,33 @@
 
 JKBMSR firmware source remains private.
 
-Public distributable artifacts belong in the public `jkbmsr-releases` repository.
+Firmware is **not** distributed publicly. Since 2026-10-13 the browser flash
+bundle is delivered only by the account-gated JK BMS Remote API
+(`api.jkbmsr.com/v1/flash/*`), which streams it from the private R2 bucket. The
+device OTA channel (`/v1/ota/*`) serves the single OTA image from R2.
 
-## Public Release Repository
+## What stays public
 
-- Repository: `jkbmsr-releases`
-- Visibility: public
-- Scope: release artifacts only
+The signed OTA metadata and the OTA public key remain public so a release can be
+verified independently. They are committed under `releases/ota/` in the public
+`jkbmsr` repository and served from `cdn.jkbmsr.com`:
 
-## Public Artifacts
+- `ota/<target>-latest.json`
+- `ota/keys/public/<key id>.pem`
 
-Each published firmware version should expose:
+## What is no longer published
 
-- `firmware.bin`
-- `firmware.sha256`
-- signed OTA metadata
-- release manifest
-- release notes
-- public OTA verification key
+- The four-part browser flash bundle (bootloader / partitions / boot_app0 /
+  application) and its manifest
+- The `firmware/**` release mirror and `firmware/releases.json` index
+
+The release pipeline stores the flash bundle in R2 under `flash/<target>/v<version>/`
+and the OTA image under `firmware/<target>/…`. Neither is committed to this
+repository or published to the CDN.
 
 ## Rules
 
-- Do not publish firmware source code in `jkbmsr-releases`
+- Do not publish firmware source code
 - Do not publish private signing keys
 - Do not publish Cloudflare or GitHub secrets
-- Keep release metadata aligned with the production OTA release
-
-## Workflow Note
-
-The firmware OTA release workflow can optionally mirror published release artifacts into `jkbmsr-releases` when a cross-repository push token is configured.
-
-When cross-repository publishing is enabled, the workflow should validate:
-
-- the signed OTA bundle before any publish step
-- the generated `firmware/latest.json`
-- the generated `firmware/releases.json`
-- the generated per-version `release.json`
-- the public checksum file inside the mirrored version directory
+- Keep the public OTA metadata aligned with the D1 release row it is derived from

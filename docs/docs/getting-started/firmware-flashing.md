@@ -1,12 +1,14 @@
 # Firmware Flashing
 
-Flash the ESP32 gateway over USB. Prefer the browser flasher when you have a
-published release that includes Wi‑Fi provisioning (`0.1.4+`).
+Flash the ESP32 gateway over USB. Use the browser flasher at
+<https://jkbmsr.com/flash> — it requires a signed-in JK BMS Remote account.
 
 ## Browser (recommended for published releases)
 
-1. On a desktop **Chrome** or **Edge** machine, open
-   [cdn.jkbmsr.com/flash](https://cdn.jkbmsr.com/flash).
+1. Sign in at <https://app.jkbmsr.com>, then on a desktop **Chrome** or
+   **Edge** machine open the flasher at
+   [jkbmsr.com/flash](https://jkbmsr.com/flash). Firmware is fetched from the
+   authenticated JK BMS Remote API, not a public CDN.
 2. Connect the ESP32 with a USB **data** cable; close any serial monitors.
 3. Click **Connect and install**, pick the port, wait for the flash to finish.
 4. When the dialog offers Wi‑Fi setup (**Improv Serial**), enter the home SSID
@@ -20,8 +22,7 @@ Field fallback (no USB): hold **BOOT** ~5s, join SoftAP `JKBMSR-Setup-XXXX`
 
 ## Local PlatformIO (dev boards / pre-release)
 
-Use this when the CDN build is older than provisioning, or you are testing
-`main` before tagging a release:
+Use this when you are testing `main` before tagging a release:
 
 ```bash
 cd jkbmsr-firmware
@@ -31,8 +32,8 @@ pio device monitor -b 115200
 
 Then either:
 
-- Re-open [cdn.jkbmsr.com/flash](https://cdn.jkbmsr.com/flash), connect, and use
-  the install dialog’s Wi‑Fi / logs path if Improv is detected, **or**
+- Re-open [jkbmsr.com/flash](https://jkbmsr.com/flash), connect, and use the
+  install dialog’s Wi‑Fi / logs path if Improv is detected, **or**
 - Watch serial for the SoftAP name + claim code and provision from a phone.
 
 Encrypted prototypes: see `jkbmsr-firmware/docs/secure-bringup.md`

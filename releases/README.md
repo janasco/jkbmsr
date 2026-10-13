@@ -1,145 +1,86 @@
-# jkbmsr-releases
+# JK BMS Remote release CDN
 
-Public release repository for JK BMS Remote distributable artifacts.
-
-JK BMS Remote is an independent remote monitoring project for JK-BMS systems.
-
-This repository is public by design. It is for release binaries, checksums, signed OTA metadata, release notes, and public download documentation.
-
-Public artifact host:
+Source for the public release host served at:
 
 - `https://cdn.jkbmsr.com`
 
-Authenticated OTA delivery remains separate and continues through the JK BMS Remote cloud API. This repository and domain are for public manual downloads and verification material.
+This directory is packaged and published to the Cloudflare Pages project
+`jkbmsr-releases` by `scripts/deploy-releases.sh`.
 
-## Scope
+## What this host serves
 
-This repository may contain:
+- The release index page (`index.html`)
+- Public documentation (`docs/`)
+- **Public OTA verification material**: per-target signed OTA metadata
+  (`ota/<target>-latest.json`) and the OTA public key
+  (`ota/keys/public/<key id>.pem`)
+- Mobile release checksums and notes (`mobile/android/`)
 
-- ESP32 firmware release binaries
-- SHA-256 checksum files
-- Signed OTA metadata
-- Public OTA verification keys
-- Release notes and changelogs
-- Public download instructions
-- Android APK/AAB release artifacts (`mobile/android/`, published by jkbmsr-pro's release workflow — not "future" anymore, this has been live since v1.0.0)
+## What this host does NOT serve: firmware
 
-This repository must not contain:
+Firmware is **not published here**. Since 2026-10-13 the browser flash bundle
+is delivered only by the **account-gated JK BMS Remote API**
+(`api.jkbmsr.com/v1/flash/*`), which streams it from the private R2 bucket. The
+device OTA channel (`/v1/ota/*`) serves the single OTA image from R2.
 
-- Firmware source code
-- Mobile source code
-- Cloud or dashboard source code
-- Private signing keys
-- GitHub, Cloudflare, or API secrets
-- Internal-only architecture material
+There is deliberately no `firmware/` directory in the packaged deploy: the
+packaging step in `scripts/deploy-releases.sh` dies if one appears. A historical
+`firmware/` mirror may still exist on disk and in git history; it is not
+published. See `jkbmsr-private/ops/internal-notes/firmware-delivery-gate-spec.md`.
 
-## Current Published Artifacts
+Installing firmware is done from the logged-in flasher at
+`https://jkbmsr.com/flash`.
 
-- Firmware targets: one release per gateway hardware model — see
-  `firmware/hardware-targets.json` for the current catalog (currently
-  `esp32-classic-4mb`, `esp32-c3-4mb`, `esp32-s3-4mb`, `esp32-c6-4mb`,
-  `esp8266-uart-lite`, `esp32-s2-4mb`, `esp32-classic-8mb`).
-  `esp32-s2-4mb` has no Bluetooth radio at all — it reaches a BMS over
-  wired UART only, and the only supported BMS is JK-BMS. `esp32dev` was
-  this repo's original single target before the multi-target migration;
-  retired, not reused.
-- Current published firmware version per target: see
-  `firmware/<target>/latest.json` — don't hardcode a version number in
-  this file, it goes stale immediately
-- OTA signing key ID: `jkbmsr-ota-p256-20260705`
-- OTA signature algorithm: `ecdsa-p256-sha256`
-- Mobile: signed Android APK + AAB under `mobile/android/`, published by
-  `jkbmsr-pro`'s release workflow on every version tag — **not** deployed
-  to Cloudflare Pages (it caps files at 25 MiB; the AAB alone is 40+ MiB),
-  only committed to this repo and attached to the matching GitHub Release.
-  No iOS artifacts yet.
-
-## Repository Layout
+## Layout
 
 ```text
-firmware/
-  esp32-classic-4mb/
-    latest.json
-    v0.4.0/
-      firmware.bin
-      firmware.sha256
-      firmware-metadata.json
-      release.json
-      RELEASE_NOTES.md
-  esp32-c3-4mb/    (same shape)
-  esp32-s3-4mb/    (same shape)
-  esp8266-uart-lite/    (same shape, minus firmware-metadata.json — no OTA)
-  esp32-s2-4mb/    (same shape — no BLE on this chip, but keeps OTA)
-  esp32-classic-8mb/    (same shape)
-  hardware-targets.json
-  releases.json
-mobile/
-  android/
-    README.md
-ota/
-  esp32-classic-4mb-latest.json
-  esp32-c3-4mb-latest.json
-  esp32-s3-4mb-latest.json
-  esp32-s2-4mb-latest.json
-  esp32-classic-8mb-latest.json
-  keys/
-    public/
-      jkbmsr-ota-p256-20260705.pem
+index.html
+404.html
+_headers
+_redirects
 docs/
-  VERIFY_FIRMWARE.md
-  OTA_SECURITY.md
   DOWNLOADS.md
-CHANGELOG.md
-README.md
+  OTA_SECURITY.md
+  VERIFY_FIRMWARE.md
+ota/
+  <target>-latest.json
+  keys/public/<key id>.pem
+mobile/
+  android/        (checksums + notes; .apk/.aab ship as GitHub Release assets)
 ```
-
-## Related Repositories
-
-- `jkbmsr-firmware`: private source repository for ESP32 firmware
-- `jkbmsr-api`: private backend/API repository (Worker service is still
-  named `jkbmsr-cloud` internally; the repo itself was renamed)
-- `jkbmsr-web`: private source for the unified public site + customer
-  dashboard, live at `jkbmsr.com`
-- `jkbmsr-pro`: private mobile app source — released, not just planning;
-  this repo's `mobile/android/` is where its signed builds land
-
-## Rules
-
-- Publish only artifacts intended for customer or installer consumption.
-- Keep release metadata aligned with the production OTA release.
-- Never publish private signing material.
-- Supported BMS: JK-BMS only, over wired UART. Other vendor decoders exist
-  internally in the firmware and are retained for reuse, but they are not
-  support claims and must never be published as supported. A gateway
-  hardware target with `capabilities.ble: false` (currently
-  `esp8266-uart-lite` and `esp32-s2-4mb`) has no Bluetooth radio and so
-  reaches JK-BMS over wired UART only — never describe a no-BLE target as
-  supporting Bluetooth.
 
 ## Deployment
 
 - Cloudflare Pages project: `jkbmsr-releases`
 - Public custom domain: `cdn.jkbmsr.com`
 - Source branch: `main`
-- Deployed by hand: `scripts/deploy-releases.sh` (see `DEPLOY.md`)
+- Deployed by hand: `scripts/deploy-releases.sh --deploy` (see `DEPLOY.md`)
 
-The Cloudflare Pages deployment should publish this repository as a static artifact mirror only. Do not place authenticated APIs, upload handlers, or private operational tooling behind this domain.
+The Cloudflare Pages deployment publishes a static artifact mirror only. Do not
+place authenticated APIs, upload handlers, or private operational tooling behind
+this domain.
 
-## Publishing Model
+## Publishing model
 
-- `cdn.jkbmsr.com` is the canonical anonymous host for manual downloads.
-- `api.jkbmsr.com` remains the authenticated OTA channel for managed devices.
-- `jkbmsr-firmware` is the private source of truth for firmware source, release generation, and OTA signing.
-- Public artifacts mirrored here must match the release metadata published by the production OTA flow.
-- `firmware/releases.json` should remain the public history index for release pages, installer tooling, and the marketing downloads page.
+- `cdn.jkbmsr.com` is the anonymous host for the release index, docs, mobile
+  checksums, and the public OTA verification material. It is **not** a firmware
+  host.
+- `api.jkbmsr.com` is the authenticated channel: device OTA (`/v1/ota/*`) and
+  the account-gated browser firmware API (`/v1/flash/*`).
+- `jkbmsr-firmware` (R2 bucket) is the private source of truth for the released
+  firmware objects.
+- `firmware/scripts/release.sh` writes the per-target OTA metadata and public
+  key into `releases/ota/`; it does not write firmware binaries or a
+  `firmware/` index into this repository.
 
-## Maintainer Checklist
+## Maintainer checklist
 
 Before merging public artifact updates:
 
-1. Confirm the firmware binary, checksum, and public metadata all describe the same version.
-2. Confirm each `firmware/<target>/latest.json` points at the current public version for that target.
-3. Confirm each `ota/<target>-latest.json` exposes only public verification material.
-4. Confirm no private keys, Cloudflare tokens, or internal-only files were added.
-5. Confirm links on `index.html` and docs still resolve under `https://cdn.jkbmsr.com`.
-6. Run `python3 scripts/validate_release_index.py` to verify every `firmware/<target>/latest.json`, `firmware/releases.json`, and manifest files stay aligned.
+1. Confirm the public OTA metadata (`ota/<target>-latest.json`) and public key
+   describe the release the API and D1 also report.
+2. Confirm no `firmware/` directory is added back to this tree.
+3. Confirm no private keys, Cloudflare tokens, or internal-only files were
+   added.
+4. Confirm links on `index.html` and docs still resolve under
+   `https://cdn.jkbmsr.com`.

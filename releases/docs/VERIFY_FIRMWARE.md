@@ -1,33 +1,17 @@
 # Verify Firmware
 
-Use this guide to verify public firmware artifacts before flashing manually.
+Use this guide to verify the public OTA verification material for a release.
 
 ## Files
 
-For firmware `0.1.2` on `esp32dev`, use:
+For an OTA-capable target, the public material under `https://cdn.jkbmsr.com` is:
 
-- `firmware/esp32dev/v0.1.2/firmware.bin`
-- `firmware/esp32dev/v0.1.2/firmware.sha256`
-- `ota/latest.json`
-- `ota/keys/public/jkbmsr-ota-p256-20260705.pem`
+- `ota/<target>-latest.json` — signed OTA metadata for the target
+- `ota/keys/public/<key id>.pem` — the OTA public verification key
 
-## Verify SHA-256
-
-Linux:
-
-```bash
-sha256sum firmware.bin
-cat firmware.sha256
-```
-
-macOS:
-
-```bash
-shasum -a 256 firmware.bin
-cat firmware.sha256
-```
-
-The computed checksum must match the published checksum exactly.
+The firmware binaries themselves are not downloadable from this host; they are
+installed from the logged-in flasher at <https://jkbmsr.com/flash>, which shows
+the release checksum and verifies each flashed part.
 
 ## Verify Signed OTA Metadata
 
@@ -40,31 +24,22 @@ releasedAt
 sha256
 ```
 
-2. Base64-decode the `signature` field from `ota/latest.json`
+2. Base64-decode the `signature` field from `ota/<target>-latest.json`
 3. Verify the signature with the published public key
 
-Example payload for `0.1.2`:
-
-```text
-0.1.2
-esp32dev
-2026-07-05T07:14:03Z
-24c0d60d08894d333e954ec226cbed69b80de8729bdcbec57e052bc4cfe2bfe2
-```
-
-Example verification flow:
+Example verification flow (substitute the values from the metadata file):
 
 ```bash
 printf '%s\n%s\n%s\n%s' \
-  '0.1.2' \
-  'esp32dev' \
-  '2026-07-05T07:14:03Z' \
-  '24c0d60d08894d333e954ec226cbed69b80de8729bdcbec57e052bc4cfe2bfe2' > payload.txt
+  '<version>' \
+  '<targetHardware>' \
+  '<releasedAt>' \
+  '<sha256>' > payload.txt
 
-printf '%s' 'MEYCIQC1eMljN4zL+D8sppiFLBCosU8sC72LVvvrUhubNsLPbgIhAIjHqLuJuODOuofha+HPyhzLTY4xfjbzCYCihAkY3YU/' | base64 -d > signature.bin
+printf '%s' '<signature>' | base64 -d > signature.bin
 
 openssl dgst -sha256 \
-  -verify ota/keys/public/jkbmsr-ota-p256-20260705.pem \
+  -verify ota/keys/public/<key id>.pem \
   -signature signature.bin \
   payload.txt
 ```

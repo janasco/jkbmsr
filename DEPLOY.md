@@ -306,37 +306,36 @@ scripts/deploy-releases.sh --deploy       # publish
 What that does, in order:
 
 1. `scripts/preflight.sh --project jkbmsr-releases`.
-2. Validate the required files, and for every
-   `releases/firmware/<target>/latest.json`: the version directory,
-   `firmware.bin`, `firmware.sha256`, `flash-manifest.json`, and — for
-   OTA-capable targets — the bootloader, partition table, `boot_app0`, the signed
-   `releases/ota/<target>-latest.json` and the OTA public key. `publicBaseUrl`
-   must be `https://cdn.jkbmsr.com`.
-3. `python3 scripts/validate_release_index.py` —
-   `releases/firmware/releases.json` against every target's `latest.json` and
-   every manifest.
-4. `sha256sum -c firmware.sha256` for each target's current version.
-5. Package into `releases/dist/`: `index.html`, `_headers`, `_redirects`, a
-   freshly generated slim `releases/firmware/releases.json`, each target's
-   `latest.json` and its current `v<version>/` directory, plus `mobile/` and
-   `ota/` with the `.apk`/`.aab` files removed (Cloudflare Pages caps a single
-   file at 25 MiB and the signed AAB is 40+ MiB; those ship as GitHub Release
-   assets instead).
-6. `npx wrangler pages deploy dist --project-name jkbmsr-releases --branch main`
-7. Verify every target's `firmware.bin` over HTTP against the local bytes.
+2. Validate the required files: `index.html`, `404.html`, `_headers`,
+   `_redirects`, the docs, and the public OTA verification material
+   (`ota/<target>-latest.json` and `ota/keys/public/<key id>.pem`). **Firmware
+   is deliberately not on this host** — since 2026-10-13 the browser flash
+   bundle is published nowhere public and is delivered only by the
+   account-gated API (`api.jkbmsr.com/v1/flash/*`) from the private R2 bucket.
+   A `releases/dist/firmware` directory fails the packaging step outright.
+3. Package into `releases/dist/`: `index.html`, `404.html`, `_headers`,
+   `_redirects`, `docs/`, `ota/`, and `mobile/` (with the `.apk`/`.aab` files
+   removed, because Cloudflare Pages caps a single file at 25 MiB and the
+   signed AAB is 40+ MiB; those ship as GitHub Release assets instead).
+4. `npx wrangler pages deploy dist --project-name jkbmsr-releases --branch main`
+5. Verify `index.html` and every public OTA metadata file over HTTP against the
+   local bytes.
 
 `releases/dist` is wiped and rebuilt on every run. CI got a fresh checkout, so
 its `dist` could only ever hold the current build; a local working tree can
-leave a previous firmware version behind, and on this CDN the URL *is* the
-version number, so a stale directory is a live download of the wrong bytes.
+leave a stale file behind. The packaging step also fails outright if a
+`firmware/` directory is ever packaged.
 
 ## Cutting a firmware OTA release
 
 Firmware releases are the one job that is not "deploy a static directory": the
-binary goes to R2, the metadata row goes to D1, devices fetch it through
-`api.jkbmsr.com`, and only then does the public mirror get refreshed. The
-procedure is `firmware/scripts/release.sh`; the narrative version of it is
-`firmware/docs/manual-release-runbook.md`.
+binary goes to R2 (both the single OTA image and the four-part browser-flash
+bundle), the metadata row goes to D1, and clients fetch it through
+`api.jkbmsr.com` — the device OTA channel and the account-gated browser API.
+The only thing refreshed in the public repository is the OTA verification
+material under `releases/ota/`; the flash bundle is never committed or served
+publicly. The procedure is `firmware/scripts/release.sh`; the narrative version
+of it is `firmware/docs/manual-release-runbook.md`.
 
 What you must supply:
 
@@ -354,8 +353,8 @@ Order of operations:
 ```bash
 scripts/check-all.sh --run --only firmware           # actually execute the suites
 firmware/scripts/release.sh 0.9.2 --dry-run          # read the whole plan first
-firmware/scripts/release.sh 0.9.2                    # sign, R2, D1, GitHub release, mirror
-scripts/deploy-releases.sh --deploy                  # publish cdn.jkbmsr.com
+firmware/scripts/release.sh 0.9.2                    # sign, R2, D1, GitHub release, OTA metadata
+scripts/deploy-releases.sh --deploy                  # publish cdn.jkbmsr.com (no firmware)
 firmware/scripts/release.sh 0.9.2 --skip-build --no-publish --verify-cdn --yes
 firmware/scripts/test-production-ota.sh              # signature + checksum, live API
 ```
@@ -366,15 +365,18 @@ that already matches `kFirmwareVersion` in `firmware/include/FirmwareVersion.h`
 the header first. Useful flags: `--target <targetHardware>` to release one
 hardware model, `--skip-build` to re-publish a build already staged under
 `firmware/.pio/release/`, `--no-publish` to stop before any Cloudflare write,
-`--no-commit` / `--no-push` to keep the generated `releases/` mirror local, and
-`--verify-cdn` to do a real HTTP read of the published copies.
+`--no-commit` / `--no-push` to keep the generated `releases/ota/` material
+local, and `--verify-cdn` to do a real HTTP read of the published OTA metadata.
 
-`release.sh` writes the public mirror files into `releases/` and commits them,
-but it cannot publish the CDN: that is a Pages project, and you deploy it with
-`scripts/deploy-releases.sh`. That split is deliberate — the mirror commit and
-the CDN deploy are separate acts, and the second one is the only one a customer
-can observe. `--verify-cdn` gives you the same hash comparison over HTTP that
-`scripts/verify-publish.py` does, so use whichever you have in front of you.
+`release.sh` writes the public OTA verification material into `releases/ota/`
+and commits it, but it cannot publish the CDN: that is a Pages project, and you
+deploy it with `scripts/deploy-releases.sh`. That split is deliberate — the
+material commit and the CDN deploy are separate acts, and the second one is the
+only one a customer can observe. `--verify-cdn` gives you the same hash
+comparison over HTTP that `scripts/verify-publish.py` does, so use whichever you
+have in front of you. Note that `release.sh` no longer writes or commits any
+firmware binaries or a `releases/firmware/` index — the flash bundle goes to R2
+and is served only by the account-gated API.
 
 `releases/docs/VERIFY_FIRMWARE.md` documents the signature payload layout that
 devices verify: version, target hardware, release time and SHA-256, newline
@@ -402,10 +404,11 @@ python3 scripts/verify-publish.py \
   --url https://jkbmsr-docs-b1p.pages.dev/index.html \
   --file docs/dist/index.html
 
-# release CDN: index, the index the flasher reads, and every target's binary
+# release CDN: the index and the public OTA verification material (firmware is
+# NOT on this host any more — it is served by the account-gated API from R2)
 python3 scripts/verify-publish.py \
   --url https://cdn.jkbmsr.com/index.html --file releases/dist/index.html \
-  --url https://cdn.jkbmsr.com/firmware/releases.json --file releases/dist/firmware/releases.json
+  --url https://cdn.jkbmsr.com/ota/esp32-classic-4mb-latest.json --file releases/dist/ota/esp32-classic-4mb-latest.json
 ```
 
 Why not a wrangler readback:

@@ -98,8 +98,8 @@ the host map, and the traps that have bitten this project are in
   gateway talk to the BMS over Bluetooth; there is no wired transport.
 - No other BMS vendor is supported.
 - Firmware targets ESP32-family chips with a Bluetooth radio. See
-  `firmware/platformio.ini` and
-  `releases/firmware/hardware-targets.json` for the list of published targets.
+  `firmware/platformio.ini` and `firmware/hardware-targets.json` for the list
+  of targets.
 
 ## Before you open an issue
 

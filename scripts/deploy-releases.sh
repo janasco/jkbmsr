@@ -17,6 +17,17 @@
 # The 2026-09-12 outage was a static export deployed into `jkbmsr-web`, the
 # product app — so target `jkbmsr-releases` and nothing else. See DEPLOY.md.
 #
+# FIRMWARE IS NOT PUBLISHED HERE. This host is for the release index, the
+# public OTA verification material (ota/**), the docs, and mobile
+# checksums/notes. The browser flash bundle (releases/firmware/**) is
+# deliberately NOT packaged into releases/dist: since 2026-10-13 the only
+# delivery path for firmware is the account-gated API
+# (api.jkbmsr.com/v1/flash/*), which streams it from the private R2 bucket.
+# The `releases/firmware/**` mirror may still exist on disk and in git
+# history, but cdn.jkbmsr.com must not serve it. A guard below dies if a
+# `firmware/` directory ever reappears in the packaged dist. See
+# jkbmsr-private/ops/internal-notes/firmware-delivery-gate-spec.md.
+#
 # Usage:
 #   scripts/deploy-releases.sh                  # dry run: validate + print the plan
 #   scripts/deploy-releases.sh --build-only     # validate + package, publish nothing
@@ -64,13 +75,6 @@ info() { printf '   ..    %s\n' "$*"; }
 die()  { printf '\ndeploy-releases: FAILED — %s\n' "$*" >&2; exit 1; }
 
 usage() { sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; $d'; }
-
-# One helper for every JSON read below. The original workflow inlined
-# `python3 -c "import json; print(json.load(open('...'))['key'])"` a dozen
-# times; same behaviour, one place to look.
-json_field() {
-  python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$1" "$2"
-}
 
 # The workflow gated the deploy on `if: github.ref == 'refs/heads/main'`, so a
 # publish could only ever happen from main. A script has no such guarantee, so
@@ -137,113 +141,66 @@ require_file() {
   [ -f "$RELEASES_DIR/$1" ] || die "missing required file: releases/$1"
   ok "$1"
 }
-# Same check, no per-file chatter: the per-target loop covers ~50 files and a
-# line for each one buries the line that matters when something is missing.
-require_file_quiet() {
-  [ -f "$RELEASES_DIR/$1" ] || die "missing required file: releases/$1"
-}
 for required in \
   README.md \
   CHANGELOG.md \
   index.html \
   404.html \
-  firmware/releases.json \
-  firmware/hardware-targets.json \
   docs/DOWNLOADS.md \
   docs/OTA_SECURITY.md \
   docs/VERIFY_FIRMWARE.md \
-  scripts/validate_release_index.py \
   _redirects
 do
   require_file "$required"
 done
 
+# The public OTA verification material stays public: the signed per-target OTA
+# metadata and the OTA public key. The flash bundle does not, so there is no
+# firmware/<target>/latest.json requirement any more.
 shopt -s nullglob
-latest_jsons=("$RELEASES_DIR"/firmware/*/latest.json)
+ota_latest_jsons=("$RELEASES_DIR"/ota/*-latest.json)
 shopt -u nullglob
-# The original looped over `firmware/*/latest.json` without checking the glob
-# matched anything: with a typo, or an empty releases/ tree, it validated zero
-# targets and reported success. A CDN with no firmware on it looks exactly like
-# a successful deploy, so this is checked.
-[ "${#latest_jsons[@]}" -gt 0 ] \
-  || die "no firmware/<target>/latest.json found — there is nothing to publish"
-info "targets with a latest.json: ${#latest_jsons[@]}"
+# A glob that matches nothing validates zero targets and reports success, which
+# looks exactly like a healthy deploy. Assert that the OTA metadata is present.
+[ "${#ota_latest_jsons[@]}" -gt 0 ] \
+  || die "no ota/<target>-latest.json found — there is no public verification material to publish"
+info "OTA verification metadata present for ${#ota_latest_jsons[@]} target(s)"
+require_file "$OTA_PUBLIC_KEY"
+ok "public OTA verification material present"
 
-cd "$RELEASES_DIR"
-for latest_json in "${latest_jsons[@]}"; do
-  rel=${latest_json#"$RELEASES_DIR/"}
-  target_hardware=$(json_field "$rel" targetHardware)
-  version=$(json_field "$rel" currentVersion)
-  public_base_url=$(json_field "$rel" publicBaseUrl)
-
-  # A target whose latest.json points anywhere but the CDN is a misconfigured
-  # release: everything downstream bakes this value into the download URLs.
-  [ "$public_base_url" = "https://cdn.jkbmsr.com" ] \
-    || die "$rel declares publicBaseUrl '$public_base_url', expected https://cdn.jkbmsr.com"
-
-  require_file_quiet "firmware/${target_hardware}/v${version}/firmware.bin"
-  require_file_quiet "firmware/${target_hardware}/v${version}/firmware.sha256"
-  require_file_quiet "firmware/${target_hardware}/v${version}/flash-manifest.json"
-
-  # OTA-capable targets ship the full USB/web-serial flash bundle
-  # (bootloader/partitions/boot_app0) and OTA signing material. Every target
-  # in the current matrix is OTA-capable; a future non-OTA target would have
-  # neither.
-  if [ -f "firmware/${target_hardware}/v${version}/firmware-metadata.json" ]; then
-    require_file_quiet "firmware/${target_hardware}/v${version}/bootloader.bin"
-    require_file_quiet "firmware/${target_hardware}/v${version}/partitions.bin"
-    require_file_quiet "firmware/${target_hardware}/v${version}/boot_app0.bin"
-    require_file_quiet "ota/${target_hardware}-latest.json"
-    require_file_quiet "$OTA_PUBLIC_KEY"
-  fi
-  ok "$target_hardware v$version"
-done
-ok "every target's artifacts are present"
+# releases/firmware/** must not be published. It may still exist on disk (the
+# historical mirror), but if its absence from the package ever stops being true
+# the guard before the deploy catches it. Saying it out loud here keeps the
+# intent visible rather than implicit in a missing cp.
+if [ -d "$RELEASES_DIR/firmware" ]; then
+  info "releases/firmware/ is present on disk and deliberately NOT published (account-gated API is the only firmware delivery path)"
+fi
 
 # ---------------------------------------------------------------------------
-# 2. Validate release index consistency
-#    (pages.yml, "Validate release index consistency")
-# ---------------------------------------------------------------------------
-step "validate release index consistency"
-python3 scripts/validate_release_index.py || die "validate_release_index.py failed"
-ok "firmware/releases.json agrees with every firmware/<target>/latest.json"
-
-# ---------------------------------------------------------------------------
-# 3. Verify published checksums
-#    (pages.yml, "Verify published checksums")
-# ---------------------------------------------------------------------------
-step "verify published checksums"
-for latest_json in "${latest_jsons[@]}"; do
-  rel=${latest_json#"$RELEASES_DIR/"}
-  target_hardware=$(json_field "$rel" targetHardware)
-  version=$(json_field "$rel" currentVersion)
-  ( cd "firmware/${target_hardware}/v${version}" && sha256sum -c firmware.sha256 ) \
-    || die "checksum verification failed for ${target_hardware} v${version}"
-  ok "${target_hardware} v${version}: firmware.sha256 matches firmware.bin"
-done
-
-# ---------------------------------------------------------------------------
-# 4. Prepare the static artifact
+# 2. Prepare the static artifact
 #    (pages.yml, "Prepare static artifact")
 # ---------------------------------------------------------------------------
+# NOTE: the release-index and per-target checksum steps that used to run here
+# are gone with the firmware bundle. `releases/scripts/validate_release_index.py`
+# and `firmware/scripts/update_release_index.py` remain in the tree but are no
+# longer invoked by this deploy: there is no published firmware index to keep
+# aligned. The account-gated API derives its catalog from R2 + D1 instead.
 if [ "$MODE" = "dry-run" ]; then
   step "plan: package and publish"
   cat <<PLAN
    ..    rm -rf releases/dist
    ..    cp releases/{index.html,404.html,_headers,_redirects} releases/dist/
-   ..    cp releases/firmware/hardware-targets.json releases/dist/firmware/
-   ..    python3  ->  releases/dist/firmware/releases.json  (one slim entry per
-          target, built from each firmware/<target>/latest.json)
-   ..    per target: copy firmware/<target>/latest.json and the whole
-          firmware/<target>/v<version>/ directory
-   ..    cp -R releases/{mobile,ota} releases/dist/
+   ..    cp -R releases/{docs,mobile,ota} releases/dist/
    ..    find releases/dist/mobile -type f \\( -name '*.apk' -o -name '*.aab' \\) -delete
+   ..    die if releases/dist/firmware exists (the firmware bundle must never be published)
    ..    cd releases && npx wrangler pages deploy dist \\
              --project-name $PAGES_PROJECT --branch $PAGES_BRANCH
-   ..    python3 scripts/verify-publish.py  (real HTTP read + hash, every target)
+   ..    python3 scripts/verify-publish.py  (real HTTP read + hash of index + OTA material)
 PLAN
 else
   step "prepare the static artifact (releases/dist)"
+  cd "$RELEASES_DIR"
+
   # Cleared first on purpose. The old pipeline ran on a fresh checkout, so
   # `dist` could only hold the current build. A local working tree does not, and
   # a firmware directory left over from a previous version would be published
@@ -258,62 +215,10 @@ else
   # 404.html for unmatched routes and does not let it shadow real assets.
   cp index.html 404.html _headers _redirects "$DIST/"
 
-  # Kept verbatim from the workflow, intermediate file and all, so the two
-  # implementations can be compared line for line.
-  cp firmware/hardware-targets.json dist_hardware_targets.json
-  mkdir -p "$DIST/firmware"
-  cp dist_hardware_targets.json "$DIST/firmware/hardware-targets.json"
-  rm dist_hardware_targets.json
-
-  # Publish only the current browser-flash bundle per target.
-  # Historical firmware remains in the release repository for
-  # operational recovery but is not exposed as a browsable CDN
-  # catalog. The web app's browser flasher and its hardware-model
-  # selector fetch firmware/releases.json and firmware/hardware-targets.json
-  # to discover flashable builds — one slim releases.json entry per target
-  # here, not the full historical catalog (signatures, signing-key IDs, every
-  # past version), keeps that working without bloating the deploy.
-  python3 - <<'PY'
-import json
-import glob
-
-releases = []
-public_base_url = None
-for latest_path in sorted(glob.glob("firmware/*/latest.json")):
-    with open(latest_path, encoding="utf-8") as f:
-        latest = json.load(f)
-    public_base_url = latest["publicBaseUrl"]
-    target = latest["targetHardware"]
-    # latest["artifactDirectory"] ("./vX.Y.Z/") is relative to this
-    # target's own firmware/<target>/ directory, but releases.json
-    # lives one level up at firmware/ — prefix with the target
-    # directory or the browser resolves this path one level too
-    # shallow (firmware/vX.Y.Z/... instead of
-    # firmware/<target>/vX.Y.Z/...) and 404s.
-    releases.append({
-        "version": latest["currentVersion"],
-        "targetHardware": target,
-        "releasedAt": latest["releasedAt"],
-        "artifacts": {"flashManifest": f"./{target}/" + latest["artifactDirectory"].removeprefix("./") + "flash-manifest.json"},
-    })
-
-with open("dist/firmware/releases.json", "w", encoding="utf-8") as f:
-    json.dump({"publicBaseUrl": public_base_url, "releases": releases}, f, indent=2)
-    f.write("\n")
-PY
-  [ -f "$DIST/firmware/releases.json" ] || die "releases.json was not generated"
-
-  for latest_json in "${latest_jsons[@]}"; do
-    rel=${latest_json#"$RELEASES_DIR/"}
-    target_dir=$(dirname "$rel")
-    target_hardware=$(basename "$target_dir")
-    version=$(json_field "$rel" currentVersion)
-    mkdir -p "$DIST/firmware/${target_hardware}"
-    cp "$rel" "$DIST/firmware/${target_hardware}/latest.json"
-    cp -R "firmware/${target_hardware}/v${version}" "$DIST/firmware/${target_hardware}/"
-  done
-
-  cp -R mobile ota "$DIST/"
+  # Public material only: the release index page, the docs, the public OTA
+  # verification metadata + key, and mobile checksums/notes. Firmware bytes are
+  # NOT copied — see the guard below and the header.
+  cp -R docs mobile ota "$DIST/"
 
   # Cloudflare Pages caps individual files at 25 MiB; the signed .apk/.aab
   # already exceed that (the .aab is 40+ MiB) and are properly distributed
@@ -321,10 +226,19 @@ PY
   # failing it on every release.
   find "$DIST/mobile" -type f \( -name '*.apk' -o -name '*.aab' \) -delete
 
+  # THE GUARD. This is the assertion that keeps the cutover from silently
+  # reversing: if a future edit reintroduces a `cp -R firmware ...`, the deploy
+  # would look normal and re-expose the complete flash bundle on a public host.
+  # Fail loudly instead. See the header and the gate spec.
+  if [ -e "$DIST/firmware" ]; then
+    find "$DIST/firmware" -maxdepth 2 | sed 's/^/          /' >&2
+    die "releases/dist/firmware exists — firmware must NEVER be published to cdn.jkbmsr.com; firmware is delivered only via the account-gated API (see the header)"
+  fi
+
   file_count=$(find "$DIST" -type f | wc -l | tr -d ' ')
   size=$(du -sh "$DIST" | cut -f1)
   [ "$file_count" -gt 0 ] || die "releases/dist is empty"
-  ok "packaged $file_count files ($size) into releases/dist"
+  ok "packaged $file_count files ($size) into releases/dist (no firmware/)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -353,16 +267,16 @@ fi
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "deploy" ] && [ "$NO_VERIFY" -eq 0 ]; then
   step "verify the published CDN ($PUBLIC_URL)"
-  verify_urls=("$PUBLIC_URL/index.html" "$PUBLIC_URL/firmware/releases.json"
-               "$PUBLIC_URL/firmware/hardware-targets.json")
-  verify_files=("$DIST/index.html" "$DIST/firmware/releases.json"
-                "$DIST/firmware/hardware-targets.json")
-  for latest_json in "${latest_jsons[@]}"; do
-    rel=${latest_json#"$RELEASES_DIR/"}
-    target_hardware=$(basename "$(dirname "$rel")")
-    version=$(json_field "$rel" currentVersion)
-    verify_urls+=("$PUBLIC_URL/firmware/${target_hardware}/v${version}/firmware.bin")
-    verify_files+=("$DIST/firmware/${target_hardware}/v${version}/firmware.bin")
+  # index.html plus the public OTA verification material that stays public. The
+  # firmware bundle is deliberately absent — it is delivered by the
+  # account-gated API from R2, not from this host — so there is nothing to
+  # hash here for it. A 404 on /firmware/** is the intended state.
+  verify_urls=("$PUBLIC_URL/index.html")
+  verify_files=("$DIST/index.html")
+  for ota_latest in "${ota_latest_jsons[@]}"; do
+    rel=${ota_latest#"$RELEASES_DIR/"}
+    verify_urls+=("$PUBLIC_URL/${rel}")
+    verify_files+=("$DIST/${rel}")
   done
   verify_args=()
   for i in "${!verify_urls[@]}"; do
@@ -383,7 +297,8 @@ say "   mode             $MODE"
 say "   pages project    $PAGES_PROJECT   (do not rename)"
 say "   branch           $PAGES_BRANCH"
 say "   public url       $PUBLIC_URL"
-say "   targets          ${#latest_jsons[@]}"
+say "   ota targets      ${#ota_latest_jsons[@]}"
+say "   firmware         NOT published here (account-gated API only)"
 say "   staged artifact  releases/dist"
 say "   published        $([ "$MODE" = deploy ] && echo yes || echo no)"
 say ""

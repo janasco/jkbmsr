@@ -1,14 +1,15 @@
 # Release Notes
 
-Current published firmware release:
+Firmware is installed from the logged-in browser flasher at
+<https://jkbmsr.com/flash>. The current version per target is resolved from the
+authenticated API, not a static public file.
 
-- Version: `0.1.2`
-- Target: `esp32dev`
-
-Highlights:
+Highlights of recent releases:
 
 - signed OTA metadata verification in firmware
 - production OTA release automation
-- checksum-published public release artifacts
+- per-part checksum verification in the browser flasher
 
-For release-by-release details, refer to the public `jkbmsr-releases` repository.
+For release-by-release details, see the release index at
+<https://cdn.jkbmsr.com/> and the GitHub releases on
+<https://github.com/janasco/jkbmsr/releases>.

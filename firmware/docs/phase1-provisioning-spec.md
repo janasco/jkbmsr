@@ -3,7 +3,7 @@
 Implements H7 (see `docs/hardware-security-hardening-plan.md`). Goal: a device
 with **no stored WiFi credentials** must let a non-technical user get online
 without a serial monitor or a pre-baked build — driven from the browser flasher
-we already ship (`cdn.jkbmsr.com/flash`), with a field fallback.
+we already ship (`jkbmsr.com/flash`), with a field fallback.
 
 **Transport:** **Improv Serial** as primary (works over the same USB/Web-Serial
 that ESP Web Tools just flashed over — no BLE stack, no partition change),

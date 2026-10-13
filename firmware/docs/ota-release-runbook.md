@@ -34,11 +34,11 @@ This runbook is for maintainers releasing production firmware from `jkbmsr-firmw
    - R2 object
    - D1 firmware metadata
    - GitHub release assets
-   - optional `jkbmsr-releases` public artifact mirror
-   - public release-history index validation when mirroring is enabled
+   - public OTA verification metadata (`releases/ota/`)
+   - the browser flash bundle in R2 (`flash/<target>/v<version>/`)
 8. Verify `GET /v1/ota/latest` returns the new version and signature metadata.
 9. Verify an authenticated `GET /v1/ota/firmware/:firmwareId` returns the expected checksum header.
-10. Verify the public release repository mirrors the same version if cross-repo publishing is enabled.
+10. Verify the public OTA metadata matches the D1 row it was derived from.
 11. Record any release issues in the release notes before leaving the release window.
 
 ## Commands
@@ -58,7 +58,6 @@ git push origin firmware-v<version>
 - `CLOUDFLARE_ACCOUNT_ID`
 - `OTA_SIGNING_PRIVATE_KEY_B64`
 - `OTA_SIGNING_KEY_ID`
-- Optional: `RELEASES_REPO_PUSH_TOKEN`
 
 ## Real Hardware Validation
 
