@@ -1,7 +1,8 @@
 # ESP32-S3-N16R8 under arduino-esp32 3.x / ESP-IDF 5.x
 
-Status: **spike, built and staged, not hardware-validated.** No release was cut.
-The owner approves any release and any decision to adopt this framework.
+Status: **adopted as the `env:esp32-s3-16mb` build; not hardware-validated.** No
+release was cut from this change. The owner approves any release and any
+flash-to-hardware test.
 
 ## Why
 
@@ -53,36 +54,47 @@ Nearest neighbours, for reference: `54.03.21` and `54.03.21-2` are Arduino
 **3.2.1** / IDF **5.4.2**, and `54.03.20` is the exact 3.2.0 / 5.4.1 match. We
 pin `54.03.20` deliberately, because that is the stack the working image used.
 
-## The spike environment
+## The adopted environment
 
-`firmware/platformio-idf5.ini` defines `[env:esp32-s3-16mb-idf5]`. It is
-registered from `platformio.ini` via `extra_configs`, so it is a normal
-PlatformIO env (`pio run -e esp32-s3-16mb-idf5`) but is a separate file on
-purpose:
+This began as a build-only spike (`env:esp32-s3-16mb-idf5` in a separate
+`platformio-idf5.ini`, kept out of the build scripts on purpose). It is now the
+**canonical `env:esp32-s3-16mb`** in `platformio.ini`: same env name, same
+product target, built against the 3.x framework. The spike's separate file and
+its `extra_configs` registration were removed, so there is one env, not two.
 
-- **Isolation.** `scripts/run-checks.sh` requires every `[env:]` in
-  `platformio.ini` to appear in its `BUILD_MATRIX`, and builds them all in one
-  shared `PLATFORMIO_CORE_DIR`. This env pins a *different* pioarduino release
-  than `env:esp32-c6-4mb`, and two pioarduino releases both install a package
-  named `framework-arduinoespressif32` — so building it in the same core dir
-  would clobber the C6 target's framework. Keeping it out of the main file
-  leaves `run-checks.sh` and `release.sh` completely untouched, and makes it
-  impossible for this spike to disturb an existing target.
+The env keeps the exact geometry it had: `board = esp32-s3-devkitc-1`,
+`board_upload.flash_size = 16MB`, `board_build.flash_size = 16MB`,
+`board_build.arduino.memory_type = qio_opi`, `board_build.flash_mode = qio`, and
+`partitions-16mb-ota.csv`. Its `JKBMSR_TARGET_HARDWARE` stays
+`"esp32-s3-16mb"` — a device running it still reports a string `jkbmsr-api`'s
+catalog already knows. The only env-level change from the old official-platform
+build is `platform` (now the 54.03.20 fork URL) and `NimBLE-Arduino` 1.4.3 →
+**2.5.1** (the 2.x branch is the one that supports core 3.x; same pin the C6 env
+uses).
 
-The env is otherwise identical in intent to `env:esp32-s3-16mb`: same board
-(`esp32-s3-devkitc-1`), `board_upload.flash_size = 16MB`,
-`board_build.arduino.memory_type = qio_opi`, `board_build.flash_mode = qio`,
-and `partitions-16mb-ota.csv`. Its `JKBMSR_TARGET_HARDWARE` is left as
-`"esp32-s3-16mb"` — this is the same product target on a different framework,
-not a new hardware target, so a device running it still reports a string
-`jkbmsr-api`'s catalog already knows.
+**Isolation is now automatic, not manual.** With the env back in the main file,
+`run-checks.sh` and `release.sh` build it, so the two-pioarduino-release
+collision has to be handled there. Both scripts source
+`scripts/lib/platform-isolation.sh`, which gives every distinct platform spec
+its own PlatformIO core dir:
 
-Build it in its **own** core dir (required, not optional):
+```
+platform = espressif32@7.0.1  (official)  -> .platformio-core/               (shared)
+.../releases/download/54.03.20/... (S3)   -> .platformio-core-pioarduino-54.03.20
+.../releases/download/55.03.311/...(C6)   -> .platformio-core-pioarduino-55.03.311
+```
+
+Before this, both fork releases shared `.platformio-core-pioarduino` and would
+have clobbered each other exactly like the official/fork pair.
+
+To build it by hand, either let the default core dir apply or name it yourself:
 
 ```bash
 cd firmware
-PLATFORMIO_CORE_DIR="$PWD/.platformio-core-idf5" \
-  pio run -e esp32-s3-16mb-idf5
+pio run -e esp32-s3-16mb
+# or, explicitly:
+PLATFORMIO_CORE_DIR="$PWD/.platformio-core-pioarduino-54.03.20" \
+  pio run -e esp32-s3-16mb
 ```
 
 ## Result — the real firmware compiles
@@ -96,7 +108,8 @@ type in `OtaClient.cpp`, and the NimBLE-Arduino 2.x scan-result types are all
 already handled. The only env-level change is `NimBLE-Arduino` 1.4.3 → **2.5.1**
 (the 2.x branch is the one that supports core 3.x; same pin the C6 env uses).
 
-Build output:
+Build output (recorded while the env was still named `esp32-s3-16mb-idf5`; the
+env is now `esp32-s3-16mb` and builds the same way):
 
 ```
 Environment         Status    Duration
@@ -107,7 +120,7 @@ Flash: [==        ]  19.2% (used 1550086 bytes from 8060928)
 
 ## Bootloader and image, measured
 
-| Artifact | Current (`esp32-s3-16mb`, IDF 4.4.7) | This spike (IDF 5.4.1) |
+| Artifact | Previous (`esp32-s3-16mb`, IDF 4.4.7) | Now (`esp32-s3-16mb`, IDF 5.4.1) |
 | --- | --- | --- |
 | `bootloader.bin` | 15104 B | **20208 B** |
 | `partitions.bin` | 3072 B | 3072 B |
@@ -117,7 +130,7 @@ Flash: [==        ]  19.2% (used 1550086 bytes from 8060928)
 **The new bootloader is 20208 bytes — exactly the size of the colleague's
 working bootloader** — and it directly carries the version string
 `v5.4.1-1-g2f7dcd862a-dirty` in its own rodata (found with `strings`). The
-compiled image's `esp_app_desc.idf_ver` reads the same. The current image's
+compiled image's `esp_app_desc.idf_ver` reads the same. The previous image's
 `esp_app_desc.idf_ver` reads `v4.4.7-dirty`. (Second-stage bootloaders in IDF
 4.4 did not embed a version string; the IDF 5.x one does, which is why the new
 one is directly self-identifying.)
@@ -180,13 +193,15 @@ esptool.py --chip esp32s3 write_flash \
   test has to answer; nothing here does.
 - **No runtime behaviour is validated** — WiFi, BLE, TLS, OTA, PSRAM. Only
   compilation and image layout were measured.
-- **This env is not in `run-checks.sh`'s matrix or `release.sh`.** It is a
-  spike. Promoting it to a supported target (matrix, `hardware-targets.json`,
-  release flow) is a separate, owner-approved change.
+- **`run-checks.sh` and `release.sh` build it, but nothing here ran the full
+  matrix to green.** The env is in `run-checks.sh`'s `BUILD_MATRIX` (it always
+  was, under this name) and in `release.sh`'s `RELEASE_MATRIX`, so it is a real
+  target now rather than a side file; verifying a full green matrix run and a
+  real release is the owner's call.
 
 ## Next step
 
-Flash `.pio/idf5-flash/` to the N16R8 and confirm the boot banner. If it boots,
-the framework generation is confirmed as the fix and the env can be promoted to
-a first-class target; if it still fails, the flash chip itself (`1820c2`) is the
-next thing to isolate.
+Flash the built artifacts to the N16R8 and confirm the boot banner. If it boots,
+the framework generation is confirmed as the fix; if it still fails, the flash
+chip itself (`1820c2`) is the next thing to isolate. Either way a release needs
+the owner.

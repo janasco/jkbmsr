@@ -46,6 +46,17 @@ PIO_BIN="${PIO_BIN:-pio}"
 # PLATFORMIO_CORE_DIR=/tmp/platformio).
 export PLATFORMIO_CORE_DIR="${PLATFORMIO_CORE_DIR:-${ROOT}/.platformio-core}"
 
+# ── Platform isolation ──────────────────────────────────────────────────────
+# The matrix mixes one official-platform family with TWO distinct pioarduino
+# releases (54.03.20 for esp32-s3-16mb, 55.03.311 for the C6 envs). Each
+# installs a package named framework-arduinoespressif32, so building them in one
+# shared core dir clobbers whichever ran first. Give every distinct platform
+# spec its own dir: official envs share the base dir, a URL-pinned fork gets
+# <base>-pioarduino-<tag>. Same helper release.sh sources, so the two cannot
+# drift apart; see scripts/lib/platform-isolation.sh.
+# shellcheck source=lib/platform-isolation.sh
+. "${ROOT}/scripts/lib/platform-isolation.sh"
+
 ARTIFACT_DIR="${ARTIFACT_DIR:-${ROOT}/.pio/artifacts}"
 
 # ── The two suites that are KNOWN RED ────────────────────────────────────────
@@ -335,14 +346,20 @@ run_build() {
       secure_boot_key_ready=1
     fi
 
+    # Its own core dir -- see the platform-isolation block near the top. The
+    # official-platform envs all resolve to the base dir, so nothing changes for
+    # them; the two pioarduino releases no longer share one.
+    local core_dir
+    core_dir="$(core_dir_for_env "$ROOT" "$env_name" "$PLATFORMIO_CORE_DIR")"
+
     if [ "$DRY_RUN" -eq 1 ]; then
-      plan "pio run -e ${env_name}   (firmware.bin artifact: ${upload}; compile-only tests: ${run_tests})"
+      plan "pio run -e ${env_name}   (PLATFORMIO_CORE_DIR=${core_dir}; firmware.bin artifact: ${upload}; compile-only tests: ${run_tests})"
       record "$env_name" SKIP "dry-run"
       continue
     fi
 
-    info "pio run -e ${env_name}"
-    if "$PIO_BIN" run -e "$env_name" >"${LOG_DIR}/${env_name}.log" 2>&1; then
+    info "pio run -e ${env_name}   (PLATFORMIO_CORE_DIR=${core_dir})"
+    if PLATFORMIO_CORE_DIR="$core_dir" "$PIO_BIN" run -e "$env_name" >"${LOG_DIR}/${env_name}.log" 2>&1; then
       info "  ok"
     else
       info "  FAILED -- last lines of ${LOG_DIR}/${env_name}.log:"

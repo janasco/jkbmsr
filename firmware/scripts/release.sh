@@ -502,49 +502,17 @@ r2_object_key() {
 
 object_key_for() { r2_object_key "$1" "$VERSION"; }
 
-# ── Platform isolation: one PlatformIO core dir per platform FAMILY ─────────
-# The official `espressif32` platform and the community `pioarduino` fork both
-# register under the SAME PlatformIO platform name ("espressif32"), and both
-# install a package named `framework-arduinoespressif32`. Two builds that share
-# one PLATFORMIO_CORE_DIR therefore collide: only one framework can exist under
-# that package name at a time, so the C6 env that pins the fork dies deep inside
-# the fork's own build script --
-#   TypeError ... build_script_path = str(Path(FRAMEWORK_DIR) / ...)
-#   (FRAMEWORK_DIR is None)
-# -- before it ever compiles. Worse, the official targets still build, so the
-# collision is invisible until the very last matrix leg.
-#
-# This is why the old CI workflow gave the C6 env its own job/cache-key; the
-# release matrix mixes six official-platform envs with one pioarduino env
-# (esp32-c6-4mb), so the fork gets its own core dir here too. The dir is derived
-# from the env's own `platform =` line rather than a hardcoded env name, so a
-# second custom-platform env added later is isolated automatically:
+# ── Platform isolation: one PlatformIO core dir per platform SPEC ───────────
+# The full reasoning -- why the official platform and each URL-pinned fork
+# collide, and why "one fork dir" is not enough when two fork releases are
+# pinned -- lives in scripts/lib/platform-isolation.sh, which run-checks.sh also
+# sources so the two scripts cannot drift apart. The base core dir is shared by
+# the official-platform envs; env:esp32-s3-16mb and the C6 envs each get their
+# own, keyed on the release tag in their platform URL:
 #   platform = espressif32@7.0.1  (official)  -> the base core dir, shared
-#   platform = <url>              (a fork)    -> the fork's isolated core dir
-PIO_FORK_CORE_SUFFIX="-pioarduino"
-
-platform_spec_for_env() {
-  local env="$1"
-  awk -v want="$env" '
-    $0 == "[env:" want "]" { inside = 1; next }
-    /^\[/                { inside = 0 }
-    inside && /^[[:space:]]*platform[[:space:]]*=/ {
-      sub(/^[[:space:]]*platform[[:space:]]*=[[:space:]]*/, "")
-      sub(/[[:space:]]*;.*$/, "")
-      print
-      exit
-    }
-  ' "${FIRMWARE_ROOT}/platformio.ini"
-}
-
-core_dir_for_env() {
-  local env="$1" spec
-  spec="$(platform_spec_for_env "$env")"
-  case "$spec" in
-    *://*) printf '%s%s' "$PLATFORMIO_CORE_DIR" "$PIO_FORK_CORE_SUFFIX" ;;
-    *)     printf '%s' "$PLATFORMIO_CORE_DIR" ;;
-  esac
-}
+#   platform = <url>              (a fork)    -> <base>-pioarduino-<tag>
+# shellcheck source=lib/platform-isolation.sh
+. "${FIRMWARE_ROOT}/scripts/lib/platform-isolation.sh"
 
 build_target() {
   local target="$1" pio_env="$2" chip_family="$3" has_ota="$4"
@@ -553,10 +521,11 @@ build_target() {
   local firmware="${build_dir}/firmware.bin"
   local asset_name="jkbmsr-${target}-${VERSION}.bin"
   local sha
-  # The fork's env must not share a core dir with the official-platform envs --
-  # see the platform-isolation block above.
+  # Each env builds from its own core dir; see the platform-isolation block
+  # above. The official-platform envs share the base dir (unchanged); the
+  # URL-pinned forks each get their own.
   local core_dir
-  core_dir="$(core_dir_for_env "$pio_env")"
+  core_dir="$(core_dir_for_env "$FIRMWARE_ROOT" "$pio_env" "$PLATFORMIO_CORE_DIR")"
 
   TARGET_CHIP_FAMILY["$target"]="$chip_family"
   TARGET_HAS_OTA["$target"]="$has_ota"

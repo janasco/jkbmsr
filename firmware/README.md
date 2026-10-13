@@ -32,24 +32,28 @@ It is responsible for:
   same chip/pins/capabilities as `env:dev`, just larger OTA app partitions
   (`partitions-8mb-ota.csv`) for boards with more flash.
 - Also builds for `env:esp32-c6-4mb` (`board = esp32-c6-devkitc-1`) —
-  ESP32-C6, experimental, WiFi 6 + Bluetooth 5.3 + OTA. This is the only
-  target that pins a different platform source: the official PlatformIO
-  espressif32 platform has no Arduino-framework board defs for this chip at
-  all (only `espidf`), so this env points at the community `pioarduino`
-  fork instead, and pulls in a newer Arduino-ESP32 core (3.3.11) as a
-  result — every other target still builds against the official platform's
-  older core. That newer core changed a few APIs shared code touches
-  (NimBLE-Arduino's scan-result types, `NetworkClientSecure::setCACertBundle`'s
-  signature, mbedtls's `_ret`-suffixed function names); each is handled with
-  a `#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)`
-  or equivalent NimBLE-version guard, not a fork of the file. Both platforms
-  register under the same PlatformIO platform name ("espressif32"), so
-  installing both into one shared `~/.platformio` overwrites whichever was
-  installed first — confirmed locally the hard way. `scripts/run-checks.sh`
-  keeps this target in its own PlatformIO core directory specifically to
-  avoid that; a local machine
-  building both this env and any other in the same PlatformIO core dir back
-  to back will need to let the affected packages reinstall in between.
+  ESP32-C6, experimental, WiFi 6 + Bluetooth 5.3 + OTA. The official PlatformIO
+  espressif32 platform has no Arduino-framework board defs for this chip at all
+  (only `espidf`), so this env points at the community `pioarduino` fork
+  instead, and pulls in a newer Arduino-ESP32 core (3.3.11) as a result. It is
+  no longer the only env on a fork: `env:esp32-s3-16mb` pins a *different*
+  pioarduino release (54.03.20, Arduino-ESP32 3.2.0 / IDF 5.4.1) because the
+  official platform's IDF 4.4.7 bootloader boot-loops on that module; every
+  other target still builds against the official platform.
+- The newer cores changed a few APIs shared code touches (NimBLE-Arduino's
+  scan-result types, `NetworkClientSecure::setCACertBundle`'s signature,
+  mbedtls's `_ret`-suffixed function names); each is handled with a
+  `#if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)`
+  or equivalent NimBLE-version guard, not a fork of the file.
+- All these platforms register under the same PlatformIO platform name
+  ("espressif32") and install a package named `framework-arduinoespressif32`,
+  so two of them in one PlatformIO core dir overwrite each other — confirmed
+  locally the hard way. `scripts/release.sh` and `scripts/run-checks.sh` both
+  source `scripts/lib/platform-isolation.sh`, which gives every distinct
+  platform spec its own core dir (official envs share `.platformio-core/`, each
+  fork release gets `.platformio-core-pioarduino-<tag>`). Building those envs by
+  hand in one shared core dir will still need the affected packages to
+  reinstall in between.
 - Latest built artifact: `.pio/build/dev/firmware.bin`
 - Last published OTA version: see `jkbmsr-releases`' `firmware/latest.json`
 - Production OTA publish path:
