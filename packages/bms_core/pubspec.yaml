@@ -1,0 +1,11 @@
+name: bms_core
+description: "Pure-Dart JK-BMS protocol, telemetry model, and device-detection core shared by the JKBMSR apps."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.0.0
