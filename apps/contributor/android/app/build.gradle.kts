@@ -14,10 +14,10 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        // Same Java level as apps/ble (Java 11), so all our Android apps build
-        // against one toolchain.
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Same Java level as apps/pro (Java 17), so this app starts on the
+        // modern toolchain Flutter recommends.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     defaultConfig {
@@ -45,7 +45,7 @@ android {
 
 kotlin {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
