@@ -2,6 +2,6 @@
 
 namespace jkbmsr {
 
-constexpr const char* kFirmwareVersion = "0.9.4";
+constexpr const char* kFirmwareVersion = "0.9.5";
 
 }  // namespace jkbmsr
