@@ -103,10 +103,15 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
   // (offset 64 = 6 + 24*2 + 10) — confirmed against a real 24s capture
   // (test_decode_24s_real_capture) and against syssi/esphome-jk-bms's
   // documented byte layout (offset 64, scale 0.001 Ohm/count). The 32s
-  // offset (80 = 64 + off) is inferred by the same +off shift every other
-  // field between the cell array and packVoltage uses here, but is NOT
-  // verified against a real 32s capture (kCellInfo32s is synthetic) — worth
-  // confirming against real 32s hardware if a mismatch ever turns up.
+  // offset (80 = 64 + off) applies the same +off shift used by every other
+  // field between the cell array and packVoltage; it matches
+  // syssi/esphome-jk-bms' jk_bms_ble.cpp (`i*2 + 64 + offset`, offset = 16
+  // for JK02_32S) and a hardware-validated JK02_32S offset table (offset 80,
+  // scale 0.001 Ohm/count). kCellInfo32s is synthetic, so the 32s value is
+  // corroborated by those references rather than by a capture we took; a raw
+  // 32s frame dump would close that last gap. A misread layout changes decoded
+  // *values* (cell voltages, temperatures) — it does not, on its own, stop a
+  // sample from being produced, so do not "correct" these on a hunch.
   const size_t wireResistanceBase = 64 + off;
 
   BatteryTelemetry parsed;
@@ -135,6 +140,11 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
     }
   }
   if (enabledCells == 0) {
+    // Every cell slot read 0 V. Note a deliberate divergence from the
+    // reference implementations: syssi/esphome-jk-bms still publishes the
+    // pack-level fields (voltage, current, SOC, temperatures) when no cell is
+    // above zero, whereas this decoder rejects the whole frame. A bench or
+    // unpopulated pack is therefore silent here but sample-producing there.
     return false;
   }
   parsed.cellCount = highestCell;
