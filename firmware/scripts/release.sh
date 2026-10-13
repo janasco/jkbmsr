@@ -742,6 +742,15 @@ upload_to_r2() {
 #     flash/<target>/v<version>/firmware.bin
 #     flash/<target>/v<version>/flash-manifest.json
 #     flash/<target>/v<version>/firmware.sha256
+#     flash/<target>/v<version>/flash-checksums.json
+#
+# The last file is the integrity contract the flasher verifies against. Until
+# now only the application image was checksummed (by the D1 `firmware.sha256`
+# row); bootloader/partitions/boot_app0 were written with no verification at
+# all, so a corrupted or truncated part from R2 would be flashed silently.
+# flash-checksums.json carries a sha256 for EVERY downloadable part, keyed by
+# the R2 object's own basename, so the Worker can serve a per-slot checksum and
+# the flasher can refuse to write a part that does not match.
 #
 # This does NOT change what the public mirror publishes (that is Phase 4); the
 # repository's releases/ tree is still written by write_mirror_tree() below.
@@ -757,6 +766,35 @@ generate_flash_manifest() {
     --version "$VERSION" \
     --output "$output" \
     || die "${target}: generate-flash-manifest.py failed (unknown target? check firmware/hardware-targets.json)"
+}
+
+# Write flash-checksums.json: a sha256 per downloadable part, keyed by the R2
+# object basename (bootloader.bin, partitions.bin, boot_app0.bin, firmware.bin).
+# The keys are the FILENAMES the Worker maps a slot to, not slot names, so the
+# file is self-describing and the backend never has to guess the release
+# pipeline's naming. Args are `part=local-file` pairs.
+generate_flash_checksums() {
+  local output="$1"
+  shift
+  python3 - "$output" "$@" <<'PY'
+import hashlib
+import json
+import sys
+
+output, specs = sys.argv[1], sys.argv[2:]
+parts = {}
+for spec in specs:
+    name, path = spec.split("=", 1)
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    parts[name] = digest.hexdigest()
+
+with open(output, "w", encoding="utf-8") as handle:
+    json.dump({"schemaVersion": 1, "algorithm": "sha256", "parts": parts}, handle, indent=2)
+    handle.write("\n")
+PY
 }
 
 upload_flash_bundle() {
@@ -785,6 +823,8 @@ upload_flash_bundle() {
       key=$(flash_object_key "$target" "$VERSION" "$part")
       plan "npx wrangler@${WRANGLER_VERSION} r2 object put \"${R2_BUCKET}/${key}\" --file ${file} --remote"
     done
+    plan "sha256 every .bin part and upload flash-checksums.json (the per-part integrity contract the flasher verifies against):"
+    plan "npx wrangler@${WRANGLER_VERSION} r2 object put \"${R2_BUCKET}/$(flash_object_key "$target" "$VERSION" flash-checksums.json)\" --file ${out}/flash-checksums.json --remote"
     plan "verify each stored flash object's size through the R2 REST API (account id in the URL, so the readback cannot come from the wrong account)"
     return 0
   fi
@@ -798,6 +838,23 @@ upload_flash_bundle() {
   # The staged ${out}/firmware.sha256 is left ALONE: it names the GitHub asset
   # (jkbmsr-<target>-<version>.bin) and is uploaded as that asset's .sha256.
   printf '%s  %s\n' "${TARGET_SHA[$target]}" "firmware.bin" >"${out}/flash-firmware.sha256"
+
+  # Per-part checksums for the downloadable images only (the manifest and the
+  # bundle's own .sha256 are metadata, not write inputs). Built from the same
+  # staged bytes that are about to be uploaded, so the checksum and the object
+  # cannot describe different files.
+  local -a checksum_specs=()
+  for entry in "${entries[@]}"; do
+    file="${entry%%|*}"
+    part="${entry##*|}"
+    [ "${part##*.}" = "bin" ] || continue
+    checksum_specs+=("${part}=${file}")
+  done
+  generate_flash_checksums "${out}/flash-checksums.json" "${checksum_specs[@]}" \
+    || die "${target}: could not write flash-checksums.json"
+  # Uploaded last, so a mid-bundle failure leaves no checksums object claiming
+  # a release whose parts are incomplete.
+  entries+=("${out}/flash-checksums.json|flash-checksums.json")
 
   for entry in "${entries[@]}"; do
     file="${entry%%|*}"
