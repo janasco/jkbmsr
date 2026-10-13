@@ -74,6 +74,7 @@ BUILD_MATRIX=$(cat <<'MATRIX'
 dev|yes|yes|no
 esp32-c3-4mb|yes|no|no
 esp32-s3-4mb|yes|no|no
+esp32-s3-16mb|yes|no|no
 esp32-classic-8mb|yes|no|no
 idf|no|no|no
 idf-secure|yes|no|no

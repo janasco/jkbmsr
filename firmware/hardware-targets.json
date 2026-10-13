@@ -35,6 +35,17 @@
       "boards": ["ESP32-S3-DevKitC-1", "Lolin S3 Mini", "ESP32-S3 Super Mini", "Seeed XIAO ESP32-S3"]
     },
     {
+      "targetHardware": "esp32-s3-16mb",
+      "platformioEnvironment": "esp32-s3-16mb",
+      "chipFamily": "ESP32-S3",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 16,
+      "capabilities": { "wifi": true, "ble": true, "ota": true },
+      "boardProfiles": ["esp32-s3-devkitc-1"],
+      "boards": ["ESP32-S3-N16R8 (16 MB flash, 8 MB Octal PSRAM)", "ESP32-S3-DevKitC-1 (16 MB flash variant)", "ESP32-S3 modules with 16 MB flash"]
+    },
+    {
       "targetHardware": "esp32-classic-8mb",
       "platformioEnvironment": "esp32-classic-8mb",
       "chipFamily": "ESP32",

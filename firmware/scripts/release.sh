@@ -79,6 +79,7 @@ RELEASE_MATRIX=$(cat <<'MATRIX'
 esp32-classic-4mb|dev|ESP32|true
 esp32-c3-4mb|esp32-c3-4mb|ESP32-C3|true
 esp32-s3-4mb|esp32-s3-4mb|ESP32-S3|true
+esp32-s3-16mb|esp32-s3-16mb|ESP32-S3|true
 esp32-classic-8mb|esp32-classic-8mb|ESP32|true
 esp32-c6-4mb|esp32-c6-4mb|ESP32-C6|true
 MATRIX

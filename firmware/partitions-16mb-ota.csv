@@ -1,0 +1,19 @@
+# OTA-capable layout for 16MB flash, for the ESP32-S3-N16R8 module (16MB flash,
+# 8MB Octal PSRAM) that the field hardware uses.
+# Same nvs/otadata/app0 offsets as partitions-4mb-ota.csv and
+# partitions-8mb-ota.csv -- nvs at 0x9000, otadata at 0xe000, app0 at 0x10000 --
+# because the browser flasher writes bootloader@0x0, partitions@0x8000,
+# boot_app0@0xe000 and firmware@0x10000, so those addresses are fixed across
+# every target and only the slot SIZES may change here.
+# Geometry, continuing the 4MB -> 8MB scaling exactly:
+#   app0/app1 grow 0x3D0000 -> 0x7B0000 each (2x the 8MB slot + 0x10000),
+#   spiffs grows 0x40000 -> 0x80000, and coredump stays 0x10000 and last.
+#   0x10000 + 0x7B0000 + 0x7B0000 + 0x80000 + 0x10000 = 0x1000000 (16MB)
+#   exactly: no gaps, no overflow.
+# Name,    Type, SubType,  Offset,   Size
+nvs,       data, nvs,      0x9000,   0x5000
+otadata,   data, ota,      0xe000,   0x2000
+app0,      app,  ota_0,    0x10000,  0x7B0000
+app1,      app,  ota_1,    0x7C0000, 0x7B0000
+spiffs,    data, spiffs,   0xF70000, 0x80000
+coredump,  data, coredump, 0xFF0000, 0x10000
