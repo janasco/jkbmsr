@@ -694,6 +694,7 @@ upload_to_r2() {
   if [ "$DRY_RUN" -eq 1 ]; then
     plan "npx wrangler@${WRANGLER_VERSION} r2 object put \"${R2_BUCKET}/${key}\" --file ${out}/firmware.bin --remote"
     plan "verify the object through the R2 REST API (account id in the URL, so the readback cannot come from the wrong account)"
+    upload_flash_bundle "$target"
     return 0
   fi
 
@@ -706,17 +707,124 @@ upload_to_r2() {
 
   if [ "$SKIP_R2_VERIFY" -eq 1 ]; then
     warn "skipping the R2 readback (--skip-r2-verify)"
+  else
+    local expected_size actual_size
+    expected_size=$(stat -c '%s' "${out}/firmware.bin")
+    # Curl is broken on the release host (its config errors out with
+    # "ORDER: parameter null or not set"), so every HTTP call in this script goes
+    # through Python's urllib instead.
+    actual_size=$(r2_object_size "$key") || die "${target}: could not read back ${key} from the R2 REST API"
+    [ "$actual_size" = "$expected_size" ] \
+      || die "${target}: R2 object ${key} is ${actual_size} bytes, expected ${expected_size} -- the upload did not land as intended"
+    info "${target}: uploaded to ${R2_BUCKET}/${key} (${actual_size} bytes, confirmed in account ${CLOUDFLARE_ACCOUNT_ID})"
+  fi
+
+  # The browser-flash bundle, under its own prefix. The OTA key above and the
+  # D1 rows that reference it are deliberately untouched: devices read that
+  # exact key, and this addition must not be able to move it. See the block
+  # below for why the bundle goes to R2 at all.
+  upload_flash_bundle "$target"
+}
+
+# ── Step 7b: R2 flash bundle (firmware delivery gate, Phase 1) ───────────────
+# The device OTA path above stores a single .bin. The browser flasher needs a
+# four-part bundle (bootloader / partitions / boot_app0 / application) plus its
+# manifest and checksum, and until now those lived ONLY in the public Pages
+# mirror. The API gate can only proxy what R2 actually holds, so a release also
+# stores the bundle here under its own prefix.
+#
+# Layout (fixed on purpose -- the Worker's slot->key table and this uploader
+# must agree, so the key is built in exactly one shape):
+#
+#     flash/<target>/v<version>/bootloader.bin
+#     flash/<target>/v<version>/partitions.bin
+#     flash/<target>/v<version>/boot_app0.bin
+#     flash/<target>/v<version>/firmware.bin
+#     flash/<target>/v<version>/flash-manifest.json
+#     flash/<target>/v<version>/firmware.sha256
+#
+# This does NOT change what the public mirror publishes (that is Phase 4); the
+# repository's releases/ tree is still written by write_mirror_tree() below.
+flash_object_key() {
+  # flash/<target>/v<version>/<part>
+  printf 'flash/%s/v%s/%s' "$1" "$2" "$3"
+}
+
+generate_flash_manifest() {
+  local target="$1" output="$2"
+  python3 "${FIRMWARE_ROOT}/scripts/generate-flash-manifest.py" \
+    --target "$target" \
+    --version "$VERSION" \
+    --output "$output" \
+    || die "${target}: generate-flash-manifest.py failed (unknown target? check firmware/hardware-targets.json)"
+}
+
+upload_flash_bundle() {
+  local target="$1"
+  local out="${STAGE_DIR}/${target}"
+  local chip_family="${TARGET_CHIP_FAMILY[$target]:-}"
+
+  # local file | r2 part name. Bootloader/partitions/boot_app0 exist only for
+  # the ESP32 families; the ESP8266 flashes one merged image. The list is built
+  # before the dry-run branch so the plan needs no staged files.
+  local entries=()
+  if [ "$chip_family" != "ESP8266" ]; then
+    entries+=("${out}/release-bootloader.bin|bootloader.bin")
+    entries+=("${out}/release-partitions.bin|partitions.bin")
+    entries+=("${out}/release-boot_app0.bin|boot_app0.bin")
+  fi
+  entries+=("${out}/firmware.bin|firmware.bin")
+  entries+=("${out}/flash-manifest.json|flash-manifest.json")
+  entries+=("${out}/flash-firmware.sha256|firmware.sha256")
+
+  local entry file part key
+  if [ "$DRY_RUN" -eq 1 ]; then
+    for entry in "${entries[@]}"; do
+      file="${entry%%|*}"
+      part="${entry##*|}"
+      key=$(flash_object_key "$target" "$VERSION" "$part")
+      plan "npx wrangler@${WRANGLER_VERSION} r2 object put \"${R2_BUCKET}/${key}\" --file ${file} --remote"
+    done
+    plan "verify each stored flash object's size through the R2 REST API (account id in the URL, so the readback cannot come from the wrong account)"
     return 0
   fi
-  local expected_size actual_size
-  expected_size=$(stat -c '%s' "${out}/firmware.bin")
-  # Curl is broken on the release host (its config errors out with
-  # "ORDER: parameter null or not set"), so every HTTP call in this script goes
-  # through Python's urllib instead.
-  actual_size=$(r2_object_size "$key") || die "${target}: could not read back ${key} from the R2 REST API"
-  [ "$actual_size" = "$expected_size" ] \
-    || die "${target}: R2 object ${key} is ${actual_size} bytes, expected ${expected_size} -- the upload did not land as intended"
-  info "${target}: uploaded to ${R2_BUCKET}/${key} (${actual_size} bytes, confirmed in account ${CLOUDFLARE_ACCOUNT_ID})"
+
+  # Materialise the two generated inputs. generate_flash_manifest() writes the
+  # same manifest write_mirror_tree() does, from the checked-in hardware
+  # catalog, so the R2 copy and the public mirror cannot disagree about offsets
+  # or chip family.
+  generate_flash_manifest "$target" "${out}/flash-manifest.json"
+  # Bundle-local checksum naming firmware.bin the way a flasher resolves it.
+  # The staged ${out}/firmware.sha256 is left ALONE: it names the GitHub asset
+  # (jkbmsr-<target>-<version>.bin) and is uploaded as that asset's .sha256.
+  printf '%s  %s\n' "${TARGET_SHA[$target]}" "firmware.bin" >"${out}/flash-firmware.sha256"
+
+  for entry in "${entries[@]}"; do
+    file="${entry%%|*}"
+    part="${entry##*|}"
+    key=$(flash_object_key "$target" "$VERSION" "$part")
+
+    [ -f "$file" ] || die "${target}: flash bundle part ${file} is missing -- refusing to publish a partial bundle"
+
+    npx --yes "wrangler@${WRANGLER_VERSION}" r2 object put "${R2_BUCKET}/${key}" \
+      --file "$file" --remote \
+      || die "${target}: R2 upload of ${key} failed"
+
+    if [ "$SKIP_R2_VERIFY" -eq 1 ]; then
+      warn "skipping the R2 readback of ${key} (--skip-r2-verify)"
+      continue
+    fi
+    # Size readback, same discipline as the OTA object: a failed upload leaves
+    # the PREVIOUS run's object in place, so presence is not proof. The readback
+    # goes through the REST API (account id in the URL), never wrangler, which
+    # can answer from the wrong account.
+    local expected_size actual_size
+    expected_size=$(stat -c '%s' "$file")
+    actual_size=$(r2_object_size "$key") || die "${target}: could not read back ${key} from the R2 REST API"
+    [ "$actual_size" = "$expected_size" ] \
+      || die "${target}: R2 object ${key} is ${actual_size} bytes, expected ${expected_size} -- the upload did not land as intended"
+    info "${target}: uploaded to ${R2_BUCKET}/${key} (${actual_size} bytes, confirmed in account ${CLOUDFLARE_ACCOUNT_ID})"
+  done
 }
 
 # ── Step 8: D1 ───────────────────────────────────────────────────────────────
