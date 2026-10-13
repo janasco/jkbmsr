@@ -62,6 +62,8 @@ SUITES=(
   # Pure Wi-Fi connect/retry/restart timing logic (src/network/WifiRetryPolicy.h
   # is header-only, so no extra source is needed).
   "test_wifi_retry"
+  # NimBLE-Arduino 1.x/2.x setConnectTimeout() unit conversion (header-only).
+  "test_bms_ble_connect_timeout"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the

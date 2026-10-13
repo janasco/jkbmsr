@@ -2,6 +2,7 @@
 
 #include <NimBLEDevice.h>
 
+#include "bms/BmsBleConnectTimeout.h"
 #include "debug/DebugLog.h"
 
 namespace jkbmsr {
@@ -116,7 +117,7 @@ void JkBmsBleClient::connectIfDue() {
   auto* client = static_cast<NimBLEClient*>(client_);
   if (client == nullptr) {
     client = NimBLEDevice::createClient();
-    client->setConnectTimeout(5);
+    applyBmsBleConnectTimeout(client);
     client_ = client;
   }
 

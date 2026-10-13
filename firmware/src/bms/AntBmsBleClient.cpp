@@ -2,6 +2,8 @@
 
 #include <NimBLEDevice.h>
 
+#include "bms/BmsBleConnectTimeout.h"
+
 #include "bms/AntBmsDecoder.h"
 #include "debug/DebugLog.h"
 
@@ -111,7 +113,7 @@ void AntBmsBleClient::connectIfDue() {
   auto* client = static_cast<NimBLEClient*>(client_);
   if (client == nullptr) {
     client = NimBLEDevice::createClient();
-    client->setConnectTimeout(5);
+    applyBmsBleConnectTimeout(client);
     client_ = client;
   }
 

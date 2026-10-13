@@ -2,6 +2,8 @@
 
 #include <NimBLEDevice.h>
 
+#include "bms/BmsBleConnectTimeout.h"
+
 #include "bms/DalyD2Decoder.h"
 #include "debug/DebugLog.h"
 
@@ -96,7 +98,7 @@ void DalyBmsBleClient::connectIfDue() {
   auto* client = static_cast<NimBLEClient*>(client_);
   if (client == nullptr) {
     client = NimBLEDevice::createClient();
-    client->setConnectTimeout(5);
+    applyBmsBleConnectTimeout(client);
     client_ = client;
   }
 
