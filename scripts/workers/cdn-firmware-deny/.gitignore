@@ -1,0 +1,6 @@
+# Wrangler writes .wrangler/ (cache, tmp, deploy/config.json) beside the config
+# it is run from. None of it is source; keep it out of the tree so a dry run or
+# a deploy cannot leave untracked artifacts behind.
+.wrangler/
+node_modules/
+dist/

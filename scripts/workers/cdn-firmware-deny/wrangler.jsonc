@@ -1,0 +1,22 @@
+// Cloudflare Worker: deny cdn.jkbmsr.com/firmware/** at the edge.
+//
+// The route is the whole point — a request matching it is answered by index.js
+// and never reaches the Pages origin or the edge cache that kept serving the
+// removed firmware. index.js states the why; README.md states the deploy
+// command, the rollback and the verification.
+//
+// account_id is pinned so this cannot be deployed to the pre-migration account,
+// which shares every resource name (the two-account trap in DEPLOY.md). The
+// zone is jkbmsr.com; cdn is a custom domain on the Pages project
+// jkbmsr-releases, and a Worker route on a custom domain is the same mechanism
+// that already retires www. and docs. on this zone.
+{
+  "name": "jkbmsr-cdn-firmware-deny",
+  "main": "index.js",
+  "compatibility_date": "2026-01-01",
+  "account_id": "9c686ab673caa0f69af5bee930392670",
+  "routes": [
+    { "pattern": "cdn.jkbmsr.com/firmware", "zone_name": "jkbmsr.com" },
+    { "pattern": "cdn.jkbmsr.com/firmware/*", "zone_name": "jkbmsr.com" }
+  ]
+}
