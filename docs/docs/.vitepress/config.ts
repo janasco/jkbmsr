@@ -195,7 +195,6 @@ export default defineConfig({
     siteTitle: "JK BMS Remote Docs",
     nav: [
       { text: "Overview", link: "/index" },
-      { text: "API", link: "/api/index" },
       { text: "Firmware", link: "/firmware/downloads" },
       { text: "Getting Started", link: "/getting-started/first-device-setup" },
       { text: "Troubleshooting", link: "/troubleshooting/index" },
@@ -213,17 +212,6 @@ export default defineConfig({
         items: [
           { text: "Apps", link: "/apps/" },
           { text: "Plans & Pricing", link: "/pricing" },
-        ],
-      },
-      {
-        text: "API",
-        items: [
-          { text: "API Index", link: "/api/index" },
-          { text: "Authentication", link: "/api/authentication" },
-          { text: "Devices", link: "/api/devices" },
-          { text: "Telemetry", link: "/api/telemetry" },
-          { text: "Config", link: "/api/config" },
-          { text: "OTA", link: "/api/ota" },
         ],
       },
       {
