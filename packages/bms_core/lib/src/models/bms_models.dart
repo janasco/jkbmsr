@@ -260,6 +260,58 @@ class BmsAlarms {
     if (fullyCharged) list.add('Battery is Fully Charged');
     return list;
   }
+
+  BmsAlarms copyWith({
+    bool? cellOverVoltage,
+    bool? cellUnderVoltage,
+    bool? batteryOverVoltage,
+    bool? batteryUnderVoltage,
+    bool? chargeOverCurrent,
+    bool? dischargeOverCurrent,
+    bool? chargeOverTemp,
+    bool? chargeUnderTemp,
+    bool? dischargeOverTemp,
+    bool? dischargeUnderTemp,
+    bool? mosOverTemp,
+    bool? wireResistanceAnomaly,
+    bool? currentSensorAnomaly,
+    bool? cellCountMismatch,
+    bool? fullyCharged,
+  }) {
+    return BmsAlarms(
+      cellOverVoltage: cellOverVoltage ?? this.cellOverVoltage,
+      cellUnderVoltage: cellUnderVoltage ?? this.cellUnderVoltage,
+      batteryOverVoltage: batteryOverVoltage ?? this.batteryOverVoltage,
+      batteryUnderVoltage: batteryUnderVoltage ?? this.batteryUnderVoltage,
+      chargeOverCurrent: chargeOverCurrent ?? this.chargeOverCurrent,
+      dischargeOverCurrent: dischargeOverCurrent ?? this.dischargeOverCurrent,
+      chargeOverTemp: chargeOverTemp ?? this.chargeOverTemp,
+      chargeUnderTemp: chargeUnderTemp ?? this.chargeUnderTemp,
+      dischargeOverTemp: dischargeOverTemp ?? this.dischargeOverTemp,
+      dischargeUnderTemp: dischargeUnderTemp ?? this.dischargeUnderTemp,
+      mosOverTemp: mosOverTemp ?? this.mosOverTemp,
+      wireResistanceAnomaly: wireResistanceAnomaly ?? this.wireResistanceAnomaly,
+      currentSensorAnomaly: currentSensorAnomaly ?? this.currentSensorAnomaly,
+      cellCountMismatch: cellCountMismatch ?? this.cellCountMismatch,
+      fullyCharged: fullyCharged ?? this.fullyCharged,
+    );
+  }
+}
+
+/// True when a decoded telemetry frame reports a different number of cells than
+/// the BMS is configured for ([configuredCellCount] — the `cellCount` setting,
+/// JK02 settings frame offset 114).
+///
+/// The decoded side is `cells.length`, i.e. the cells actually reporting; every
+/// brand parser skips zero slots, so this is the same comparison the BMS's own
+/// "cell count is not equal to settings" alarm makes. Either side being unknown
+/// returns false: a telemetry frame seen before the settings dump must not
+/// invent a mismatch, and the "no cell voltages" state (an empty [cells] list)
+/// is not one.
+bool hasCellCountMismatch({required num? configuredCellCount, required List<CellInfo> cells}) {
+  final configured = configuredCellCount?.round() ?? 0;
+  if (configured <= 0 || cells.isEmpty) return false;
+  return cells.length != configured;
 }
 
 class BmsStatus {
@@ -337,6 +389,9 @@ class BmsStatus {
     bool? chargeMosEnabled,
     bool? dischargeMosEnabled,
     bool? balanceEnabled,
+    BmsAlarms? alarms,
+    String? cellType,
+    int? timeEnterSleepSec,
   }) {
     return BmsStatus(
       brand: brand ?? this.brand,
@@ -354,12 +409,12 @@ class BmsStatus {
       t1Temp: t1Temp ?? this.t1Temp,
       t2Temp: t2Temp ?? this.t2Temp,
       balanceCurrentA: balanceCurrentA ?? this.balanceCurrentA,
-      cellType: cellType,
-      timeEnterSleepSec: timeEnterSleepSec,
+      cellType: cellType ?? this.cellType,
+      timeEnterSleepSec: timeEnterSleepSec ?? this.timeEnterSleepSec,
       chargeMosEnabled: chargeMosEnabled ?? this.chargeMosEnabled,
       dischargeMosEnabled: dischargeMosEnabled ?? this.dischargeMosEnabled,
       balanceEnabled: balanceEnabled ?? this.balanceEnabled,
-      alarms: alarms,
+      alarms: alarms ?? this.alarms,
       timestamp: DateTime.now(),
     );
   }

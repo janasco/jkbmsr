@@ -918,7 +918,7 @@ class BleBmsService {
   }
 
   void _publish(BmsStatus status) {
-    _currentStatus = status;
+    _currentStatus = _applyCellCountMismatch(status);
     _hasLiveData = true;
     _statusController.add(_currentStatus);
 
@@ -928,6 +928,25 @@ class BleBmsService {
     if (_isProbing && status.brand == _probeCandidates![_probeIndex].brand) {
       _confirmProbe();
     }
+  }
+
+  /// Sets [BmsAlarms.cellCountMismatch] on a freshly decoded status, comparing
+  /// the cells the pack is reporting against the count it is *configured* for.
+  ///
+  /// This lives here, not in a parser, because neither side is visible to one:
+  /// the reported count comes from the telemetry frame and the configured count
+  /// from the settings frame (`BmsParameterSchema` id `cellCount`), and only the
+  /// service sees both. The flag was previously never set by anything, so the
+  /// alert could not fire — see the alarms note in AGENTS.md. Returns [status]
+  /// unchanged when the flag already matches, so the steady state allocates
+  /// nothing.
+  BmsStatus _applyCellCountMismatch(BmsStatus status) {
+    final mismatch = hasCellCountMismatch(
+      configuredCellCount: _currentSettings.values['cellCount'],
+      cells: status.cells,
+    );
+    if (mismatch == status.alarms.cellCountMismatch) return status;
+    return status.copyWith(alarms: status.alarms.copyWith(cellCountMismatch: mismatch));
   }
 
   //--------------------------------------------------------------------
