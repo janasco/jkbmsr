@@ -208,7 +208,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
                       Icon(Icons.bluetooth_searching_rounded, size: 40, color: const Color(0xFF10B981)),
                       const SizedBox(height: 12),
                       Text(
-                        'Connect to a ${brand.name.toUpperCase()} BMS first',
+                        brand.isPublic ? 'Connect to a JK-BMS first' : 'Connect to a BMS first',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
                       ),
                       const SizedBox(height: 4),
@@ -292,7 +292,9 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
                   ],
                   const SizedBox(height: 16),
                   Text(
-                    'Values are read from real hardware frames and written with the verified ${brand.name.toUpperCase()} command path.',
+                    brand.isPublic
+                        ? 'Values are read from real hardware frames and written with the verified JK-BMS command path.'
+                        : 'Values are read from real hardware frames.',
                     style: const TextStyle(fontSize: 11.0, color: Color(0xFF64748B)),
                   ),
                 ],

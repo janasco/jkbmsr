@@ -53,11 +53,11 @@ class CellsScreen extends StatelessWidget {
                     message: 'Connect to a BMS to see per-cell voltages, balance state, and temperatures.',
                   )
                 else if (!cellDataSupported)
-                  InfoBanner(
+                  const InfoBanner(
                     icon: Icons.grid_view_rounded,
                     title: 'CELL DATA NOT AVAILABLE',
                     message:
-                        "${brand.name.toUpperCase()} doesn't report per-cell voltage or wire-resistance data to this app yet — only JK-BMS is supported for that today.",
+                        "This device doesn't report per-cell voltage or wire-resistance data to this app yet — only JK-BMS is supported for that today.",
                   )
                 else
                   CellVoltagesSection(cells: status.cells),

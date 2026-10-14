@@ -107,7 +107,7 @@ class StatusScreen extends StatelessWidget {
                       icon: Icons.grid_view_rounded,
                       title: 'CELL DATA NOT AVAILABLE',
                       message:
-                          "${brand.name.toUpperCase()} doesn't report per-cell voltage or wire-resistance data to this app yet — only JK-BMS is supported for that today.",
+                          "This device doesn't report per-cell voltage or wire-resistance data to this app yet — only JK-BMS is supported for that today.",
                     ),
                     const SizedBox(height: 14),
                   ] else ...[

@@ -32,7 +32,7 @@ class BmsInfoSection extends StatelessWidget {
 
     final rows = <(String, String)>[
       ('Model', status.modelName),
-      ('Brand', status.brand.name.toUpperCase()),
+      ('Brand', status.brand.isPublic ? status.brand.name.toUpperCase() : 'UNSUPPORTED'),
       ('Chemistry', status.cellType),
       ('Nominal capacity', '${status.nominalCapacityAh.toStringAsFixed(1)} Ah'),
       ('Remaining capacity', '${status.remainingCapacityAh.toStringAsFixed(1)} Ah'),
