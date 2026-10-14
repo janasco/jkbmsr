@@ -34,9 +34,20 @@ if ! command -v flutter >/dev/null 2>&1; then
   echo "flutter not found on PATH" >&2
   exit 1
 fi
-if [[ ! -f android/key.properties || ! -f android/upload-keystore.jks ]]; then
-  echo "Missing android/key.properties + android/upload-keystore.jks (release signing)." >&2
+if [[ ! -f android/key.properties ]]; then
+  echo "Missing android/key.properties (release signing)." >&2
   echo "See android/key.properties.example. Refusing to build a store artifact with debug signing." >&2
+  exit 1
+fi
+# The keystore is wherever key.properties says it is, not necessarily a file in
+# this tree. Contributor deliberately keeps its upload key in the PRIVATE repo
+# (jkbmsr-private/secrets/android-upload/), because this app lives in the public
+# repository and a keystore under it would be one stray `git add` from being
+# published. So resolve storeFile instead of looking for a local copy.
+STORE_FILE="$(grep -m1 '^storeFile=' android/key.properties | cut -d= -f2- || true)"
+if [[ -z "$STORE_FILE" || ! -f "$STORE_FILE" ]]; then
+  echo "storeFile in android/key.properties is unset or does not exist: ${STORE_FILE:-<unset>}" >&2
+  echo "Refusing to build a store artifact with debug signing." >&2
   exit 1
 fi
 
