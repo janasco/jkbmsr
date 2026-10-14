@@ -14,6 +14,7 @@ import '../../utils/device_id.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
 import '../../widgets/shared/design_system/device_card_background_chart.dart';
+import '../../widgets/plan_pill.dart';
 import 'widgets/device_group_filter_chips.dart';
 
 class DeviceListScreen extends StatefulWidget {
@@ -55,6 +56,13 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   // _loadCardHistory). Absence just means the plain card renders with no
   // background, never a loading state.
   final Map<String, List<TelemetryHistoryPoint>> _history = {};
+
+  // Cloud Service plan per gateway — keyed by device id, filled in as each
+  // device's config call resolves (see _loadCardPlans). Absence just means
+  // the pill renders from whatever the list response already carried on the
+  // Device itself (Free-tier defaults when the API omitted it there too),
+  // never a loading state.
+  final Map<String, DeviceSubscription> _subscriptions = {};
 
   // getDevices() re-stamps the cache's timestamp only on a genuinely live
   // fetch; a silent fallback to a stale cache (network error, but a cached
@@ -169,6 +177,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         _isLoading = false;
       });
       _loadCardHistory(list);
+      _loadCardPlans(list);
     } catch (e) {
       setState(() {
         _error = friendlyErrorMessage(e);
@@ -189,6 +198,19 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
           .then((points) {
         if (!mounted) return;
         setState(() => _history[device.id] = points);
+      }).catchError((_) {});
+    }
+  }
+
+  // Plan pills are informational — fetch per device in parallel, after the
+  // list itself is ready, and never let a slow or failed config call hold up
+  // the page or take down the rest of the list.
+  void _loadCardPlans(List<Device> devices) {
+    for (final device in devices) {
+      _apiClient.getDeviceConfig(device.id).then((config) {
+        if (!mounted) return;
+        setState(() =>
+            _subscriptions[device.id] = DeviceSubscription.fromConfig(config));
       }).catchError((_) {});
     }
   }
@@ -592,6 +614,9 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
                                             color: context.colors.textMuted,
                                           ),
                                         ),
+                                      const SizedBox(
+                                          height: JKBMSRTokens.space4),
+                                      _CardPlanPill(device: device, plan: _subscriptions[device.id]),
                                     ],
                                   ),
                                 ),
@@ -1044,6 +1069,27 @@ class _AlertLegendRow extends StatelessWidget {
               color: context.colors.textPrimary, fontWeight: FontWeight.w600),
         ),
       ],
+    );
+  }
+}
+
+/// Compact Cloud Service plan pill for a gateway card. Renders from the
+/// per-device config fetch when it has resolved, otherwise from whatever the
+/// list response already carried on the [Device] itself.
+class _CardPlanPill extends StatelessWidget {
+  final Device device;
+  final DeviceSubscription? plan;
+
+  const _CardPlanPill({required this.device, required this.plan});
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = plan ?? DeviceSubscription.fromDevice(device);
+    return PlanPill(
+      tierLabel: resolved.tierLabel,
+      intervalSeconds: resolved.intervalSeconds,
+      status: resolved.status,
+      compact: true,
     );
   }
 }

@@ -22,6 +22,7 @@ import '../../models/user.dart';
 import '../../models/bms_vendor.dart';
 import '../../main.dart';
 import '../../widgets/app_update_prompt.dart';
+import '../../widgets/plan_pill.dart';
 import '../../utils/error_messages.dart';
 
 class _SettingsCategory {
@@ -101,6 +102,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _error;
   String? _activeDeviceId;
   Device? _activeDevice;
+
+  // Cloud Service plan for the active gateway, parsed out of the
+  // getDeviceConfig response (see DeviceSubscription.fromConfig). Shown in
+  // the Gateway category; plan purchase happens on the web dashboard, so
+  // this screen never initiates checkout.
+  DeviceSubscription _subscription = const DeviceSubscription();
 
   // Each card below saves itself independently — a save only touches its
   // own fields (the config PUT endpoint accepts a partial payload) and only
@@ -388,6 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _activeDeviceId = targetId;
         _activeDevice = matchedDevice;
+        _subscription = DeviceSubscription.fromConfig(config);
         _otaEnabled = config['otaEnabled'] as bool? ?? true;
         _minCellVoltageController.text = (config['minCellVoltageV'] as num? ?? 2.5).toString();
         _maxCellVoltageController.text = (config['maxCellVoltageV'] as num? ?? 3.65).toString();
@@ -599,6 +607,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         _latestVersion = config['latestFirmwareVersion'] as String? ?? _latestVersion;
         _updateAvailable = config['updateAvailable'] as bool? ?? false;
+        _subscription = DeviceSubscription.fromConfig(config);
         _isOtaChecking = false;
       });
       if (_updateAvailable) {
@@ -1609,7 +1618,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'account':
         return [_securityCard(), const SizedBox(height: JKBMSRTokens.space16), _recentSignInsCard(), const SizedBox(height: JKBMSRTokens.space16), _deleteAccountCard()];
       case 'gateway':
-        return [_gatewayNameCard()];
+        return [
+          _gatewayNameCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          _planCard(),
+        ];
       case 'wifi':
         return [
           _wifiCard(),
@@ -1775,6 +1788,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: _savingName
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Save Name'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cloud Service plan for the active gateway. Display-only: plan purchase
+  // and upgrades are managed on the web dashboard, so this card links out
+  // instead of initiating checkout in the app.
+  Widget _planCard() {
+    final renews = _subscription.currentPeriodEnd;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(JKBMSRTokens.space24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Cloud Service Plan', style: JKBMSRTypography.cardHeading),
+            const SizedBox(height: JKBMSRTokens.space8),
+            Text(
+              'How often this gateway sends telemetry to JKBMSR Cloud.',
+              style: JKBMSRTypography.bodySecondary,
+            ),
+            const SizedBox(height: JKBMSRTokens.space16),
+            PlanPill(
+              tierLabel: _subscription.tierLabel,
+              intervalSeconds: _subscription.intervalSeconds,
+              status: _subscription.status,
+            ),
+            if (renews != null && renews.isNotEmpty) ...[
+              const SizedBox(height: JKBMSRTokens.space12),
+              Text(
+                'Renews ${_formatWhen(renews)}',
+                style: JKBMSRTypography.bodySecondary,
+              ),
+            ],
+            const SizedBox(height: JKBMSRTokens.space12),
+            Text(
+              'Plan upgrades are managed on the web dashboard.',
+              style: JKBMSRTypography.bodySecondary,
+            ),
+            const SizedBox(height: JKBMSRTokens.space4),
+            InkWell(
+              onTap: () => _openLink('https://web.jkbmsr.com'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.open_in_new, size: 16, color: context.colors.signal),
+                    const SizedBox(width: JKBMSRTokens.space4),
+                    Text(
+                      'Manage plan on web.jkbmsr.com',
+                      style: JKBMSRTypography.body.copyWith(
+                        color: context.colors.signal,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

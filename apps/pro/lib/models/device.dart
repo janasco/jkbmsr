@@ -39,6 +39,16 @@ class Device {
   // absent (shared-viewer/list responses don't include it) and when set to
   // a web-only template key mobile hasn't ported a renderer for yet.
   final String dashboardTemplateMobile;
+  // Cloud Service plan for this gateway, server-resolved from its
+  // subscription (see GET /v1/dashboard/devices/:deviceId/config). The list
+  // and detail responses may omit these on older API builds, so every field
+  // carries the "no plan" default rather than null — the UI must be able to
+  // render a pill without checking for null first.
+  final String subscriptionTierId;
+  final String subscriptionTierLabel;
+  final int subscriptionTierIntervalSeconds;
+  final String subscriptionStatus; // 'active' | 'inactive'
+  final String? subscriptionCurrentPeriodEnd;
 
   Device({
     required this.id,
@@ -60,6 +70,11 @@ class Device {
     this.isOwner = true,
     this.ownerEmail,
     this.dashboardTemplateMobile = 'default',
+    this.subscriptionTierId = 'free',
+    this.subscriptionTierLabel = 'Free',
+    this.subscriptionTierIntervalSeconds = 3600,
+    this.subscriptionStatus = 'inactive',
+    this.subscriptionCurrentPeriodEnd,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -86,6 +101,14 @@ class Device {
       isOwner: json['isOwner'] as bool? ?? true,
       ownerEmail: json['ownerEmail'] as String?,
       dashboardTemplateMobile: json['dashboardTemplateMobile'] as String? ?? 'default',
+      subscriptionTierId: json['subscriptionTierId'] as String? ?? 'free',
+      subscriptionTierLabel: json['subscriptionTierLabel'] as String? ?? 'Free',
+      // `as num?` tolerates the API sending a double; a missing key is the
+      // Free-tier cadence rather than 0 — 0 would read as "live".
+      subscriptionTierIntervalSeconds:
+          (json['subscriptionTierIntervalSeconds'] as num?)?.toInt() ?? 3600,
+      subscriptionStatus: json['subscriptionStatus'] as String? ?? 'inactive',
+      subscriptionCurrentPeriodEnd: json['subscriptionCurrentPeriodEnd'] as String?,
     );
   }
 
@@ -110,6 +133,55 @@ class Device {
       'isOwner': isOwner,
       'ownerEmail': ownerEmail,
       'dashboardTemplateMobile': dashboardTemplateMobile,
+      'subscriptionTierId': subscriptionTierId,
+      'subscriptionTierLabel': subscriptionTierLabel,
+      'subscriptionTierIntervalSeconds': subscriptionTierIntervalSeconds,
+      'subscriptionStatus': subscriptionStatus,
+      'subscriptionCurrentPeriodEnd': subscriptionCurrentPeriodEnd,
     };
+  }
+}
+
+/// The Cloud Service plan parsed out of a `getDeviceConfig` response map.
+///
+/// The config endpoint returns a raw `Map<String, dynamic>` (not a Device),
+/// so the settings screen reads its subscription fields through this helper
+/// instead of duplicating null-tolerant parsing at each call site.
+class DeviceSubscription {
+  final String tierId;
+  final String tierLabel;
+  final int intervalSeconds;
+  final String status; // 'active' | 'inactive'
+  final String? currentPeriodEnd;
+
+  const DeviceSubscription({
+    this.tierId = 'free',
+    this.tierLabel = 'Free',
+    this.intervalSeconds = 3600,
+    this.status = 'inactive',
+    this.currentPeriodEnd,
+  });
+
+  factory DeviceSubscription.fromConfig(Map<String, dynamic> config) {
+    return DeviceSubscription(
+      tierId: config['subscriptionTierId'] as String? ?? 'free',
+      tierLabel: config['subscriptionTierLabel'] as String? ?? 'Free',
+      intervalSeconds:
+          (config['subscriptionTierIntervalSeconds'] as num?)?.toInt() ?? 3600,
+      status: config['subscriptionStatus'] as String? ?? 'inactive',
+      currentPeriodEnd: config['subscriptionCurrentPeriodEnd'] as String?,
+    );
+  }
+
+  /// Falls back to whatever the list/detail response already carried on the
+  /// [Device] itself (defaults when the API omitted it there too).
+  factory DeviceSubscription.fromDevice(Device device) {
+    return DeviceSubscription(
+      tierId: device.subscriptionTierId,
+      tierLabel: device.subscriptionTierLabel,
+      intervalSeconds: device.subscriptionTierIntervalSeconds,
+      status: device.subscriptionStatus,
+      currentPeriodEnd: device.subscriptionCurrentPeriodEnd,
+    );
   }
 }
