@@ -25,9 +25,9 @@ JKBMSR is now in execution.
 Implemented system pieces:
 
 - ESP32 firmware builds with PlatformIO.
-- Cloudflare Worker API is deployed at `https://api.jkbmsr.com`.
-- Cloudflare D1 schema has grown well beyond the original users/devices/telemetry/alerts/firmware/api_keys set (20 migrations as of this writing) — device config, WiFi management, BLE config, OTA commands, push tokens, licensing, and more.
-- Cloudflare R2 stores firmware binaries.
+- Managed API is deployed at `https://api.jkbmsr.com`.
+- Managed database schema has grown well beyond the original users/devices/telemetry/alerts/firmware/api_keys set (20 migrations as of this writing) — device config, WiFi management, BLE config, OTA commands, push tokens, licensing, and more.
+- Private storage holds firmware binaries.
 - Cloudflare Pages serves the marketing site at `https://jkbmsr.com` (project `jkbmsr-marketing`) and the web dashboard at `https://web.jkbmsr.com` (project `jkbmsr-web`). `app.jkbmsr.com` does not exist — use `web.jkbmsr.com` for the dashboard and flasher. `jkbmsr-site`, the original separate marketing repo, is archived — its content was absorbed into the current site.
 - OTA release automation is implemented for `jkbmsr-firmware`.
 - Android mobile app is released (`jkbmsr-pro`, signed APK/AAB published to `jkbmsr-releases`) — includes QR-code device claiming, device rename, and push notifications on Android.
@@ -115,11 +115,11 @@ docs/
 ## Core Technology Stack
 
 - ESP32 firmware with PlatformIO and Arduino framework
-- Cloudflare Workers backend
+- Managed API backend
 - Hono TypeScript API framework
-- Cloudflare D1 database
-- Cloudflare R2 firmware storage
-- Cloudflare Pages dashboard hosting
+- Managed database
+- Private firmware storage
+- Static dashboard hosting
 - Next.js, React, TypeScript, TailwindCSS for web
 - Flutter for mobile (Android released; iOS not yet)
 - HTTPS JSON REST APIs
@@ -141,7 +141,7 @@ docs/
 ## Current Gaps
 
 - Docs need to be reconciled with the newly implemented dashboard user APIs.
-- OTA docs should include the authenticated R2 streaming endpoint.
+- OTA docs should include the authenticated firmware streaming endpoint.
 - Public firmware download and verification docs should stay aligned with `jkbmsr-releases`.
 - OTA validation docs should keep machine-based and real-hardware checks clearly separated.
 - Getting-started docs need real first-device setup and claim flow.

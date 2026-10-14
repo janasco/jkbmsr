@@ -1,10 +1,10 @@
 # Cloud Setup
 
-JKBMSR Cloud runs on Cloudflare Workers with D1 for database storage and R2 for firmware files.
+JKBMSR Cloud runs on managed serverless infrastructure: a hosted API, a managed database, and private firmware storage — no self-managed servers.
 
 ## Components
 
-- Cloudflare Workers for the API.
-- Cloudflare D1 for devices, telemetry, alerts, firmware metadata, and users.
-- Cloudflare R2 for OTA firmware binaries.
-- Cloudflare Pages for the web dashboard.
+- Hosted API serving the gateways, apps, and dashboard.
+- Managed database for devices, telemetry, alerts, firmware metadata, and users.
+- Private storage for OTA firmware binaries.
+- Hosted static hosting for the web dashboard.

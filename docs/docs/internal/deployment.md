@@ -1,6 +1,6 @@
 # Internal Deployment
 
-JKBMSR Cloud is planned for Cloudflare Workers, D1, R2, and Pages.
+JKBMSR Cloud runs on managed serverless infrastructure (hosted API, managed database, private firmware storage, static hosting).
 
 ## Current Public Domains
 

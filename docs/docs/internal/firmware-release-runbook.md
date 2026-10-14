@@ -23,8 +23,8 @@ Use this runbook when publishing a production firmware update for JKBMSR.
    credentials and the OTA signing key exported. There is no CI to do this for
    you; see `DEPLOY.md` at the root of this repository.
 5. Verify:
-   - R2 object upload
-   - D1 latest firmware metadata
+   - firmware object upload
+   - latest firmware metadata record
    - GitHub release notes + signed OTA metadata (no firmware `.bin` is attached)
    - `/v1/ota/latest`
    - authenticated firmware download headers
@@ -32,5 +32,5 @@ Use this runbook when publishing a production firmware update for JKBMSR.
 ## If Something Fails
 
 1. Stop further release tags.
-2. Roll back the D1 latest pointer to the previous good version.
+2. Roll back the latest-version pointer to the previous good version.
 3. Record the failure mode before attempting a fixed release.

@@ -11,7 +11,7 @@ Firmware releases must include:
 - Binary (delivered only by the account-gated API; never attached to the GitHub release)
 - SHA-256 checksum
 - Signed OTA metadata (the only GitHub release asset — no firmware `.bin`)
-- D1 metadata update
+- Published firmware metadata update
 
 Release flow:
 
@@ -27,7 +27,7 @@ Release flow:
 
 ## Rollback
 
-Rollback is a D1 metadata change. Do not overwrite released firmware objects.
+Rollback is a metadata change. Do not overwrite released firmware objects.
 
 Set the bad version to `is_latest = 0` and restore the previous good version to `is_latest = 1` for the same target hardware.
 
