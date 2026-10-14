@@ -44,14 +44,20 @@ abstract final class ConsentStrings {
   ];
 
   static const String detailsTitle = 'The details, honestly';
+
+  /// Deliberately says nothing about a coarse **country** code. The backend
+  /// only stores one when the payload sets `storeCountry: true`, and this
+  /// client never does, so no country is ever kept and the review screen offers
+  /// no control for it. Promising an opt-in the app does not provide would make
+  /// the copy untrue — which is the one thing this app cannot afford. Do not
+  /// add a country sentence back unless the field and its toggle are wired too.
   static const List<String> details = [
     'Each contribution carries a UTC timestamp for when it was captured, so '
         'contributions can be ordered. It is not linked to you.',
     'The server sees the connecting IP address in order to answer the request. '
-        'It is not stored against your contribution; at most a coarse country '
-        'code is kept, and only if that option is left on.',
+        'It is not stored.',
     'You see the exact payload before anything is sent, and you can switch off '
-        'any field.',
+        'each field the review shows.',
   ];
 
   static const String optInLabel = 'I agree to contribute my device data';
@@ -67,8 +73,11 @@ abstract final class ConsentStrings {
 abstract final class ReviewStrings {
   static const String title = 'Review before you contribute';
 
+  /// "the fields", not "anything": the envelope (`contributionId`,
+  /// `capturedAt`, `consent`, `redaction`, `sizeBytes`) is always present, so
+  /// only the fields the screen lists are actually controllable.
   static const String intro =
-      'This is the exact data that would be sent. Uncheck anything you do not '
+      'This is the exact data that would be sent. Uncheck the fields you do not '
       'want to share.';
 
   static const String serialLabel = 'Serial number';
