@@ -1,0 +1,13 @@
+## Copy this file to android/key.properties (gitignored) and fill in real
+## values from the Contributor app's own upload keystore. Never commit the real
+## file, the keystore itself, or these passwords.
+##
+## Contributor needs its OWN Play upload key: it is a separate Play listing
+## (com.jkbmsr.contributor) from com.jkbmsr.ble and com.jkbmsr.pro, so it cannot
+## reuse their signing identity. The keystore is provisioned by hand (see
+## jkbmsr-private/secrets/android-upload/ and the plan's §6) and lives outside
+## the repo, owned by jkbmsr at mode 0600.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=/absolute/path/to/contributor-upload-keystore.jks

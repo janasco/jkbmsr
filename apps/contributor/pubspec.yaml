@@ -1,7 +1,14 @@
 name: jkbmsr_contributor
 description: "JK BMS Contributor - help improve JK-BMS support by contributing your device data."
 publish_to: 'none'
-version: 0.1.0+1
+# First public release. The family scheme is MAJOR.MINOR.PATCH+BUILD, where
+# the "+BUILD" suffix is the Android versionCode (apps/ble is 4.17.27+47,
+# apps/pro is 1.3.44+76). 1.0.0 marks the first feature-complete v1 build; the
+# versionCode starts at 1 and must increase by one on every Play upload.
+# The Android build reads both from here (android/app/build.gradle.kts uses
+# flutter.versionName / flutter.versionCode), and lib/services/app_info.dart
+# mirrors it by hand for the payload's `app.version`.
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

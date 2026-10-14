@@ -1,6 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- The contribution POST (https://api.jkbmsr.com/v2/contributions) is the
+         app's core feature, so INTERNET must be declared here, in the main
+         manifest. Flutter's template only adds it to the debug/profile
+         overlays (for the dev tooling), so without this a RELEASE build has no
+         network access at all and every submit reports "offline". apps/pro
+         declares it in main for the same reason. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Legacy Bluetooth & Location Permissions. Location is only required by
          the OS for BLE scanning on Android 11 and below; BLUETOOTH_SCAN's
          neverForLocation flag below drops the requirement entirely on 12+. -->

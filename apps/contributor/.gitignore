@@ -46,3 +46,10 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Local release artifacts (produced by scripts/publish-release.sh, never committed)
+/jkbmsr-contributor-v*.apk
+/jkbmsr-contributor-v*.aab
+/jkbmsr-contributor-v*.apk.sha256
+/jkbmsr-contributor-v*.aab.sha256
+/notes.txt
