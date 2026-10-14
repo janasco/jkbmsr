@@ -49,6 +49,12 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
 // 300-byte frame becomes 600 characters; nullptr yields an empty string.
 String jk02FrameToHex(const uint8_t* frame, size_t length);
 
+// True when `mask` has a hole below its highest set bit — i.e. it is not a
+// contiguous run of ones from bit 0. A frame with a gap cannot be represented
+// by the dense cellVoltages array (the absent slot reads as 0.0 V), so the
+// caller treats it as an anomaly worth capturing. `0` (no cells) is not a gap.
+bool cellMaskHasGap(uint32_t mask);
+
 // Rate gate for the raw-capture log. Frames arrive at ~1-2/s, so an
 // unconditional log would spam; but the FIRST frame MUST be captured — a
 // suppressed first frame would hide the exact event the log exists for, so

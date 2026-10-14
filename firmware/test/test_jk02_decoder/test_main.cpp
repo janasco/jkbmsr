@@ -73,6 +73,7 @@ void test_decode_24s_real_capture() {
   TEST_ASSERT_TRUE(t.valid);
   TEST_ASSERT_EQUAL_STRING("ble", t.source);
   TEST_ASSERT_EQUAL_UINT8(16, t.cellCount);
+  TEST_ASSERT_EQUAL_UINT32(0x0000FFFFu, t.cellPresentMask);  // slots 0-15 populated
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.327f, t.minCellVoltage);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.329f, t.maxCellVoltage);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 53.251f, t.packVoltage);
@@ -103,6 +104,7 @@ void test_decode_32s_layout() {
   BatteryTelemetry t;
   TEST_ASSERT_TRUE(decodeJk02CellInfo(kCellInfo32s, sizeof(kCellInfo32s), true, t));
   TEST_ASSERT_EQUAL_UINT8(32, t.cellCount);
+  TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, t.cellPresentMask);  // all 32 slots populated
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.300f, t.cellVoltages[0]);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.331f, t.cellVoltages[31]);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 105.632f, t.packVoltage);
@@ -161,6 +163,7 @@ void test_accepts_32s_all_zero_cells() {
   TEST_ASSERT_TRUE(t.valid);
   TEST_ASSERT_EQUAL_STRING("ble", t.source);
   TEST_ASSERT_EQUAL_UINT8(0, t.cellCount);
+  TEST_ASSERT_EQUAL_UINT32(0u, t.cellPresentMask);  // no slots populated
   TEST_ASSERT_EQUAL_FLOAT(0.0f, t.minCellVoltage);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, t.maxCellVoltage);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, t.avgCellVoltage);
@@ -203,6 +206,8 @@ void test_partial_cells_average_ignores_zero_slots() {
   BatteryTelemetry t;
   TEST_ASSERT_TRUE(decodeJk02CellInfo(frame, sizeof(frame), true, t));
   TEST_ASSERT_EQUAL_UINT8(2, t.cellCount);
+  TEST_ASSERT_EQUAL_UINT32(0b11u, t.cellPresentMask);  // slots 0,1; not a gap
+  TEST_ASSERT_FALSE(cellMaskHasGap(t.cellPresentMask));
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.300f, t.cellVoltages[0]);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.310f, t.cellVoltages[1]);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, t.cellVoltages[2]);
@@ -270,6 +275,48 @@ void test_ble_command_surface_is_read_only() {
   TEST_ASSERT_FALSE(isJkBmsReadOnlyCommand(0xE1));
 }
 
+// A hole below the highest populated slot. The count stays the pack's
+// topological size (highest slot + 1); the mask records that slot 2 was
+// absent, which the dense cellVoltages array cannot express.
+void test_gapped_cells_keep_slot_count_and_mask() {
+  uint8_t frame[sizeof(kCellInfo32s)];
+  memcpy(frame, kCellInfo32s, sizeof(frame));
+  memset(frame + 6, 0, 32 * 2);
+  const uint8_t slots[] = {0, 1, 3};        // slot 2 deliberately absent
+  const uint16_t mv[] = {3300, 3330, 3310}; // max sits below the gap
+  for (size_t i = 0; i < sizeof(slots); ++i) {
+    frame[6 + slots[i] * 2] = static_cast<uint8_t>(mv[i] & 0xFF);
+    frame[6 + slots[i] * 2 + 1] = static_cast<uint8_t>(mv[i] >> 8);
+  }
+  refreshChecksum(frame);
+
+  BatteryTelemetry t;
+  TEST_ASSERT_TRUE(decodeJk02CellInfo(frame, sizeof(frame), true, t));
+  TEST_ASSERT_EQUAL_UINT8(4, t.cellCount);               // highest present slot 3 -> 4
+  TEST_ASSERT_EQUAL_UINT32(0b1011u, t.cellPresentMask);  // slots 0,1,3 populated
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, t.cellVoltages[2]);      // absent slot reads 0 V...
+  TEST_ASSERT_TRUE(cellMaskHasGap(t.cellPresentMask));   // ...and the mask says why
+  // min/max use the populated cells only, and their reported 1-based indices
+  // follow the real slots (not a compacted list).
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.300f, t.minCellVoltage);
+  TEST_ASSERT_EQUAL_UINT8(1, t.minVoltageCell);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.330f, t.maxCellVoltage);
+  TEST_ASSERT_EQUAL_UINT8(2, t.maxVoltageCell);
+}
+
+// cellMaskHasGap is a pure function of the mask, so it is pinned directly in
+// both directions.
+void test_cell_mask_has_gap() {
+  TEST_ASSERT_FALSE(cellMaskHasGap(0u));           // no cells is not a gap
+  TEST_ASSERT_FALSE(cellMaskHasGap(0b1u));
+  TEST_ASSERT_FALSE(cellMaskHasGap(0b11u));
+  TEST_ASSERT_FALSE(cellMaskHasGap(0xFFFFFFFFu));  // full contiguous pack
+  TEST_ASSERT_TRUE(cellMaskHasGap(1u << 31));      // a lone high cell leaves holes below it
+  TEST_ASSERT_TRUE(cellMaskHasGap(0b101u));        // hole at bit 1
+  TEST_ASSERT_TRUE(cellMaskHasGap(0b1011u));       // hole at bit 2
+  TEST_ASSERT_TRUE(cellMaskHasGap((1u << 31) | 0b1u));
+}
+
 void setup() {
   delay(2000);
   UNITY_BEGIN();
@@ -280,6 +327,8 @@ void setup() {
   RUN_TEST(test_accepts_32s_all_zero_cells);
   RUN_TEST(test_rejects_24s_all_zero_cells);
   RUN_TEST(test_partial_cells_average_ignores_zero_slots);
+  RUN_TEST(test_gapped_cells_keep_slot_count_and_mask);
+  RUN_TEST(test_cell_mask_has_gap);
   RUN_TEST(test_raw_frame_hex_formatting);
   RUN_TEST(test_raw_capture_gate_rate_limits_but_always_logs_first);
   RUN_TEST(test_hardware_version_selects_layout);

@@ -300,6 +300,14 @@ void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
           // no cell voltages. Capture it once (rate-limited) so the layout can
           // be confirmed from the board's own serial.
           logRawFrameCapture(frame, length, "all-zero cells accepted (32S)");
+        } else if (cellMaskHasGap(decoded.cellPresentMask)) {
+          // A hole below the highest populated slot. The dense cellVoltages
+          // array cannot represent it — the absent slot reads 0.0 V, the same
+          // as a cell genuinely at 0 V — so capture the frame rather than let
+          // a real gap look like a healthy 0 V reading.
+          logRawFrameCapture(frame, length,
+                             "gapped cells (mask=0x" +
+                                 String(decoded.cellPresentMask, HEX) + ")");
         }
       } else {
         logRawFrameCapture(frame, length, "cell-info decode failed");

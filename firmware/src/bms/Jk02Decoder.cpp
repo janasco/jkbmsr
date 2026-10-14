@@ -60,6 +60,16 @@ String jk02FrameToHex(const uint8_t* frame, size_t length) {
   return out;
 }
 
+bool cellMaskHasGap(uint32_t mask) {
+  // Shift off the contiguous run of populated low cells; anything remaining is
+  // a hole below the highest present slot. Matches the on-wire convention the
+  // decoder uses (bit i = slot i carried a voltage).
+  while ((mask & 0x1u) != 0) {
+    mask >>= 1;
+  }
+  return mask != 0;
+}
+
 bool jk02FrameValid(const uint8_t* frame, size_t length) {
   if (frame == nullptr || length < kJk02FrameSize) {
     return false;
@@ -133,7 +143,7 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
   parsed.minCellVoltage = 100.0f;
   parsed.maxCellVoltage = -100.0f;
   uint8_t enabledCells = 0;
-  uint8_t highestCell = 0;
+  uint32_t presentMask = 0;
   for (uint8_t cell = 0; cell < cellSlots && cell < kMaxCellCount; ++cell) {
     const float voltage = static_cast<float>(readU16Le(frame + 6 + cell * 2)) * 0.001f;
     parsed.cellVoltages[cell] = voltage;
@@ -142,7 +152,7 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
       continue;
     }
     enabledCells += 1;
-    highestCell = cell + 1;
+    presentMask |= (1u << cell);
     parsed.avgCellVoltage += voltage;
     if (voltage < parsed.minCellVoltage) {
       parsed.minCellVoltage = voltage;
@@ -153,6 +163,7 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
       parsed.maxVoltageCell = cell + 1;
     }
   }
+  parsed.cellPresentMask = presentMask;
   if (enabledCells == 0) {
     // Every cell slot read 0 V. On the 24-cell layout this stays a hard
     // reject: that path is proven working and is deliberately unchanged. On
@@ -173,7 +184,16 @@ bool decodeJk02CellInfo(const uint8_t* frame, size_t length, bool is32s, Battery
     parsed.avgCellVoltage = 0.0f;
     parsed.deltaCellVoltage = 0.0f;
   } else {
-    parsed.cellCount = highestCell;
+    // cellCount is the highest populated slot + 1 — the pack's topological
+    // size, which is what a partially populated pack (fewer cells than the
+    // frame has slots) must report. Derived from the presence mask rather
+    // than a parallel scalar, so the count and the mask cannot disagree; an
+    // interior gap is carried by the mask, not smuggled into the count.
+    uint8_t count = 0;
+    for (uint32_t bits = presentMask; bits != 0; bits >>= 1) {
+      ++count;
+    }
+    parsed.cellCount = count;
     parsed.avgCellVoltage /= enabledCells;
     parsed.deltaCellVoltage = parsed.maxCellVoltage - parsed.minCellVoltage;
   }

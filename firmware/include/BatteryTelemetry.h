@@ -17,6 +17,13 @@ struct BatteryTelemetry {
   float mosfetTemperature = 0.0f;
   float cellVoltages[kMaxCellCount] = {};
   uint8_t cellCount = 0;
+  // Which slots actually carried a voltage, bit i = slot i. cellVoltages is a
+  // DENSE array sized to the highest populated slot, so an absent slot in the
+  // middle is published as 0.0 V — indistinguishable from a cell that is
+  // genuinely reading 0 V. The mask preserves that distinction (the app's own
+  // JK path keeps cells sparse for the same reason); cellMaskHasGap() in
+  // Jk02Decoder.h turns it into a yes/no for the raw-capture diagnostic.
+  uint32_t cellPresentMask = 0;
   // Balance-lead resistance per cell, in Ohms, from the JK02 BLE frame; zero
   // for any slot at or past cellCount, same convention as cellVoltages.
   float wireResistanceOhms[kMaxCellCount] = {};

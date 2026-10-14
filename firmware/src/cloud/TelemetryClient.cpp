@@ -99,6 +99,11 @@ bool TelemetryClient::upload(const String& token, const BatteryTelemetry& teleme
     bms["deltaCellVoltage"] = telemetry.deltaCellVoltage;
     bms["minVoltageCell"] = telemetry.minVoltageCell;
     bms["maxVoltageCell"] = telemetry.maxVoltageCell;
+    // Which of the dense `cellVoltages` slots were actually populated. The
+    // whole `bms` object is persisted verbatim in telemetry diagnostics, so
+    // this reaches storage without a backend change; without it a gap and a
+    // genuine 0 V cell are the same bytes.
+    bms["cellPresentMask"] = telemetry.cellPresentMask;
     bms["temperatureSensorCount"] = telemetry.temperatureSensorCount;
     bms["cycleCount"] = telemetry.cycleCount;
     bms["cycleCapacityAh"] = telemetry.cycleCapacityAh;
