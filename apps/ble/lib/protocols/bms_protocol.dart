@@ -195,6 +195,18 @@ class BmsProtocolHelper {
   static int _u32(List<int> d, int o) =>
       (d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) & 0xFFFFFFFF;
 
+  /// Set-bit count of a 32-bit value — the JK02 enabled-cells bitmask's
+  /// popcount is the number of cells the BMS says it is running.
+  static int _popcount32(int value) {
+    var count = 0;
+    var x = value & 0xFFFFFFFF;
+    while (x != 0) {
+      count += x & 1;
+      x >>= 1;
+    }
+    return count;
+  }
+
   static int _i16(List<int> d, int o) {
     final v = _u16(d, o);
     return v >= 0x8000 ? v - 0x10000 : v;
@@ -640,6 +652,22 @@ class BmsProtocolHelper {
         cells.add(CellInfo(index: i + 1, voltage: mv * 0.001, wireResistance: resistanceOhms));
       }
 
+      // The frame states its own cell situation in two little-endian bitmask
+      // fields, one bit per cell slot:
+      //  * offset 54 (first half) — "Enabled cells bitmask": the cells the BMS
+      //    is running. syssi's decode (jk_bms_ble.cpp) documents the encoding
+      //    concretely (0xFF 0xFF 0x00 0x00 = 16 cells) and the real JK-B2A24S
+      //    capture in the tests carries 0xFFFF for its known 16. Its popcount is
+      //    therefore the count the BMS itself reports, which is precisely what
+      //    its "cell count is not equal to settings" alarm compares against the
+      //    configured count.
+      //  * offset 114 (second half) — "Wire resistance warning bitmask": one bit
+      //    per cell/wire the BMS flags; a set bit is this app's "Sample-wire
+      //    Resistance Too Large" alarm. Nothing read this before, so every
+      //    BmsAlarms flag was permanently false until this was read.
+      final enabledCellCount = _popcount32(_u32(data, 54 + off));
+      final wireResistanceWarning = _u32(data, 114 + off2) != 0;
+
       final totalVoltage = _u32(data, 118 + off2) * 0.001;
       final currentA = _i32(data, 126 + off2) * 0.001;
       final mosTemp = is32s ? _i16(data, 112 + off2) * 0.1 : _i16(data, 134 + off2) * 0.1;
@@ -667,6 +695,8 @@ class BmsProtocolHelper {
         // 169 flag esphome also documents — matched here for consistency
         // across the JKBMSR ecosystem.
         balanceEnabled: data[140 + off2] != 0,
+        enabledCellCount: enabledCellCount,
+        alarms: BmsAlarms(wireResistanceAnomaly: wireResistanceWarning),
         timestamp: DateTime.now(),
       );
     } catch (_) {

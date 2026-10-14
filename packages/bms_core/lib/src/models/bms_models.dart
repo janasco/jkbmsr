@@ -308,9 +308,20 @@ class BmsAlarms {
 /// returns false: a telemetry frame seen before the settings dump must not
 /// invent a mismatch, and the "no cell voltages" state (an empty [cells] list)
 /// is not one.
-bool hasCellCountMismatch({required num? configuredCellCount, required List<CellInfo> cells}) {
+bool hasCellCountMismatch({
+  required num? configuredCellCount,
+  required List<CellInfo> cells,
+  int enabledCellCount = 0,
+}) {
   final configured = configuredCellCount?.round() ?? 0;
-  if (configured <= 0 || cells.isEmpty) return false;
+  if (configured <= 0) return false;
+  // The BMS's own statement of how many cells it is running. Preferred when
+  // present: it is stable, where the reported-cell count below flaps on a
+  // transient zero.
+  if (enabledCellCount > 0 && enabledCellCount != configured) return true;
+  // What actually reported. Still worth checking — it is what catches a sense
+  // wire that dropped out, which the enabled bitmask does not show.
+  if (cells.isEmpty) return false;
   return cells.length != configured;
 }
 
@@ -326,6 +337,11 @@ class BmsStatus {
   final int cycleCount;
   final double totalCycleCapacityAh;
   final List<CellInfo> cells;
+  /// Cells the BMS says it is running, from the JK02 cell-info frame's
+  /// "enabled cells" bitmask (offset 54, popcount). 0 = unknown / not reported
+  /// by this brand. This is the count the BMS itself states, as distinct from
+  /// [cells], which are only the cells that reported a voltage.
+  final int enabledCellCount;
   final double mosTemp; // °C
   final double t1Temp; // °C
   final double t2Temp; // °C
@@ -353,6 +369,7 @@ class BmsStatus {
     this.cycleCount = 42,
     this.totalCycleCapacityAh = 11760.0,
     this.cells = const [],
+    this.enabledCellCount = 0,
     this.mosTemp = 38.5,
     this.t1Temp = 32.4,
     this.t2Temp = 33.0,
@@ -382,6 +399,7 @@ class BmsStatus {
     int? cycleCount,
     double? totalCycleCapacityAh,
     List<CellInfo>? cells,
+    int? enabledCellCount,
     double? mosTemp,
     double? t1Temp,
     double? t2Temp,
@@ -405,6 +423,7 @@ class BmsStatus {
       cycleCount: cycleCount ?? this.cycleCount,
       totalCycleCapacityAh: totalCycleCapacityAh ?? this.totalCycleCapacityAh,
       cells: cells ?? this.cells,
+      enabledCellCount: enabledCellCount ?? this.enabledCellCount,
       mosTemp: mosTemp ?? this.mosTemp,
       t1Temp: t1Temp ?? this.t1Temp,
       t2Temp: t2Temp ?? this.t2Temp,

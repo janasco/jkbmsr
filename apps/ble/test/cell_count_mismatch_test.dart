@@ -56,6 +56,33 @@ void main() {
       expect(hasCellCountMismatch(configuredCellCount: 16.4, cells: cells(16)), isFalse);
       expect(hasCellCountMismatch(configuredCellCount: 15.6, cells: cells(16)), isFalse);
     });
+
+    test('uses the BMS-enabled count when the frame reports one', () {
+      // The frame's own count disagrees with the setting -> mismatch, even
+      // though the reported cells happen to match it.
+      expect(
+        hasCellCountMismatch(configuredCellCount: 16, cells: cells(16), enabledCellCount: 15),
+        isTrue,
+      );
+      expect(
+        hasCellCountMismatch(configuredCellCount: 16, cells: cells(16), enabledCellCount: 16),
+        isFalse,
+      );
+      // A sense wire that dropped out while the BMS still counts it is caught
+      // by the reported count, not the enabled one.
+      expect(
+        hasCellCountMismatch(configuredCellCount: 16, cells: cells(15), enabledCellCount: 16),
+        isTrue,
+      );
+    });
+
+    test('raises it from the enabled count even when nothing reports', () {
+      // The "no cell voltages" state must not hide a genuine config mismatch.
+      expect(
+        hasCellCountMismatch(configuredCellCount: 32, cells: const [], enabledCellCount: 16),
+        isTrue,
+      );
+    });
   });
 
   group('BmsAlarms.copyWith', () {

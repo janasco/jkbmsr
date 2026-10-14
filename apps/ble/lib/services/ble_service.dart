@@ -937,13 +937,14 @@ class BleBmsService {
   /// the reported count comes from the telemetry frame and the configured count
   /// from the settings frame (`BmsParameterSchema` id `cellCount`), and only the
   /// service sees both. The flag was previously never set by anything, so the
-  /// alert could not fire — see the alarms note in AGENTS.md. Returns [status]
+  /// alert could not fire. Returns [status]
   /// unchanged when the flag already matches, so the steady state allocates
   /// nothing.
   BmsStatus _applyCellCountMismatch(BmsStatus status) {
     final mismatch = hasCellCountMismatch(
       configuredCellCount: _currentSettings.values['cellCount'],
       cells: status.cells,
+      enabledCellCount: status.enabledCellCount,
     );
     if (mismatch == status.alarms.cellCountMismatch) return status;
     return status.copyWith(alarms: status.alarms.copyWith(cellCountMismatch: mismatch));
