@@ -12,7 +12,7 @@ import '../models/contribution.dart';
 /// anonymisation rules it already carries. There is exactly one destination;
 /// the path is a constant so the contract lives in one place.
 const String contributionApiBase = 'https://api.jkbmsr.com';
-const String contributionApiPath = '/api/v2/ble/contributions';
+const String contributionApiPath = '/v2/contributions';
 
 /// Why a submit did not succeed. The screen turns one of these into copy from
 /// `lib/l10n/strings.dart`; the enum is transport vocabulary, the message is

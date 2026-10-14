@@ -59,7 +59,7 @@ void main() {
     expect(seen, isNotNull);
     expect(seen!.method, 'POST');
     expect(seen!.url.toString(),
-        'https://api.jkbmsr.com/api/v2/ble/contributions');
+        'https://api.jkbmsr.com/v2/contributions');
     expect(seen!.headers['Content-Type'], 'application/json');
     expect(seen!.body, _payload);
     // Anonymous: no authorization / token header of any kind.
