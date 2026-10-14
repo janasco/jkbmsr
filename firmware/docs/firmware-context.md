@@ -15,7 +15,7 @@ The firmware connects an ESP32 gateway to a JK-BMS over Bluetooth (BLE), reads b
 
 ## Modules
 
-- `src/bms`: per-vendor BLE clients and frame decoders. Do not add non-JK BMS support in version 1.
+- `src/bms`: JK BLE client and frame decoder. Do not add non-JK BMS support.
 - `src/network`: WiFi connection and reconnection management.
 - `src/cloud`: device registration, telemetry upload, and remote config clients.
 - `src/ota`: OTA update checks, firmware download, and integrity verification.

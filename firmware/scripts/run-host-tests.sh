@@ -29,7 +29,7 @@
 #
 # Usage:
 #   scripts/run-host-tests.sh              # run every suite
-#   scripts/run-host-tests.sh seplos basen # run suites whose dir name matches
+#   scripts/run-host-tests.sh jk02 wifi    # run suites whose dir name matches
 #
 # Exit status is non-zero if any suite fails to build or fails to run.
 
@@ -41,14 +41,13 @@ CXX=${CXX:-g++}
 FLAGS=(-std=c++17 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -Wall)
 
 # suite-name : source files needed to link it
+# The gateway is JK-BMS only: the only decoder suites are the JK02 decoder
+# plus the shared-stack suites below. The former per-vendor suites (ANT,
+# Basen, Daly D2, JBD, KS, Lolan, Seplos, Tianpower) were removed with their
+# decoders, including the two that used to be known-red
+# (test_daly_d2_decoder, test_ks_bms_decoder).
 SUITES=(
-  "test_ant_bms_decoder:src/bms/AntBmsDecoder.cpp"
-  "test_basen_bms_decoder:src/bms/BasenBmsDecoder.cpp"
-  "test_daly_d2_decoder:src/bms/DalyD2Decoder.cpp"
-  "test_jbd_bms_parser:src/bms/JbdBmsParser.cpp:src/debug/DebugLog.cpp"
   "test_jk02_decoder:src/bms/Jk02Decoder.cpp"
-  "test_ks_bms_decoder:src/bms/KsBmsDecoder.cpp"
-  "test_lolan_bms_decoder:src/bms/LolanBmsDecoder.cpp"
   # Not decoder-only: this one covers the provisioning stack. The WiFi/WebServer/
   # DNSServer/Preferences/esp_random calls it links against are all inert shims
   # in test/host/, which is why it runs natively at all. ResetTrigger.cpp is
@@ -56,8 +55,6 @@ SUITES=(
   # nothing from it is ODR-used and adding it would just drag pinMode()/
   # digitalRead() into the link for no extra coverage.
   "test_provisioning:src/config/ConfigStore.cpp:src/device/DeviceIdentity.cpp:src/provisioning/CaptivePortal.cpp:src/provisioning/ImprovProtocol.cpp:src/provisioning/ProvisioningManager.cpp"
-  "test_seplos_ble_decoder:src/bms/SeplosBleDecoder.cpp"
-  "test_tianpower_bms_decoder:src/bms/TianpowerBmsDecoder.cpp"
   "test_version_compare:src/ota/VersionCompare.cpp"
   # Pure Wi-Fi connect/retry/restart timing logic (src/network/WifiRetryPolicy.h
   # is header-only, so no extra source is needed).

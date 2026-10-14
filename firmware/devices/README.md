@@ -1,14 +1,10 @@
 # Supported devices
 
-Each subdirectory is a compatibility profile for one BMS model or protocol
-family. This covers nine vendors, selected at runtime by a device's
-`bmsVendor` config field (`"jk"` | `"daly"` | `"jbd"` | `"seplos"` |
-`"ant"` | `"tianpower"` | `"basen"` | `"ks"` | `"lolan"`, default `"jk"`) —
-see `include/bms/BmsBleClient.h` for the shared interface `src/main.cpp`
-dispatches through. Every profile uses Bluetooth (BLE): the BMS link is
-BLE-only, with no wired UART transport. Profiles identify the protocol and
-transport used by the shared firmware; they do not duplicate the decoder or
-client implementation.
+The gateway is **JK-BMS only**. Each subdirectory is a compatibility profile
+for one JK protocol family. The product speaks the JK BLE protocol
+(`FFE0`/`FFE1`, auto-discovery) and nothing else: a stored `bmsVendor` value
+from before the product went JK-only falls back to `"jk"` with a serial log
+line in `src/main.cpp`, never selecting another protocol.
 
 Before changing shared BMS code:
 
@@ -23,14 +19,6 @@ Before changing shared BMS code:
 | --- | --- | --- | --- | --- |
 | [JK_B1A8S10P](JK_B1A8S10P/) | 11.XW | JK02_32S | BLE (FFE0/FFE1, auto-discovery) | hardware-tested |
 | [JK_B2A24S](JK_B2A24S/) | < 11 | JK02_24S | BLE (FFE0/FFE1, auto-discovery) | protocol-verified |
-| [DALY_BLE_D2](DALY_BLE_D2/) | all (D2/Modbus BLE protocol family) | DALY_D2_BLE | BLE (FFF0/FFF1/FFF2, auto-discovery) | synthetic-fixture-only |
-| [JBD_BLE](JBD_BLE/) | 0xFF00 default service UUID | JBD_UART | BLE (FF00/FF01/FF02, auto-discovery) | synthetic-fixture-only |
-| [SEPLOS_BLE](SEPLOS_BLE/) | all (1101-SPxx/ZH/MZ BLE protocol family) | SEPLOS_BLE_1101 | BLE (FF00/FF01/FF02, auto-discovery — shares UUIDs with JBD_BLE) | synthetic-fixture-only |
-| [ANT_BLE](ANT_BLE/) | all (2021 BLE protocol family) | ANT_BMS_2021_BLE | BLE (FFE0/FFE1, auto-discovery — shares UUIDs with JK_B* and LOLAN_BLE) | synthetic-fixture-only |
-| [TIANPOWER_BLE](TIANPOWER_BLE/) | all (Tianpower BLE protocol family) | TIANPOWER_BLE | BLE (FF00/FF01/FF02, auto-discovery — shares UUIDs with JBD_BLE) | synthetic-fixture-only |
-| [BASEN_BLE](BASEN_BLE/) | all (Basen BLE protocol family, incl. VIP/EE/Mabru/Roamer) | BASEN_BLE | BLE (FA00/FA01/FA02, auto-discovery) | synthetic-fixture-only |
-| [KS48100_BLE](KS48100_BLE/) | all (KS48100 BLE protocol family) | KS48100_BLE | BLE (FF00/FF01/FF02, auto-discovery — shares UUIDs with JBD_BLE) | synthetic-fixture-only |
-| [LOLAN_BLE](LOLAN_BLE/) | all (Lolan BLE protocol family) | LOLAN_BLE | BLE (FFE0/FFE1/FFE2, auto-discovery — shares UUIDs with JK_B* and ANT_BLE) | synthetic-fixture-only |
 
 ### Status tiers
 
@@ -39,7 +27,41 @@ Before changing shared BMS code:
 - **protocol-verified** — decode logic confirmed correct against a real
   device capture (ours or a documented third-party reference), but not yet
   run against our own gateway hardware.
-- **synthetic-fixture-only** — only a hand-built fixture matching the
-  documented protocol spec exists; no real-device capture has validated it
-  yet. Treat as supported on paper, not yet field-proven.
+- **listed** — same JK protocol family as the profiled models, so expected
+  to work with the shared `Jk02Decoder`/`JkBmsBleClient` implementation, but
+  not individually hardware-tested. Treat as supported on paper, not yet
+  field-proven.
 
+## JK model matrix
+
+Every model below speaks the same JK BLE protocol family as the two profiled
+models above and is served by the shared implementation. Only the two
+profiles carry individual evidence; everything else in this matrix is
+`listed` — never claimed as tested.
+
+### PB Series (`listed`)
+
+JK-PB1A16S10P, JK-PB1A16S15P, JK-PB2A16S10P, JK-PB2A16S15P, JK-PB2A16S20P,
+JK-PB2A16S30P.
+
+### B Series
+
+- JK-B1A8S10P — **hardware-tested** (see `JK_B1A8S10P/`)
+- JK-B2A24S — **protocol-verified** (see `JK_B2A24S/`)
+- Remainder, all `listed`: JK-B1A8S20P, JK-B1A16S15P, JK-B1A20S15P,
+  JK-B1A24S15P, JK-B2A8S20P, JK-B2A20S20P, JK-B2A24S15P, JK-B2A24S20P.
+
+### BD Series (`listed`)
+
+JK-BD4A8S4P, JK-BD4A8S6P, JK-BD4A17S4P, JK-BD4A24S4P, JK-BD6A20S6P,
+JK-BD6A20S10P, JK-BD6A20S15P, JK-BD6A24S4PD, JK-BD6A24S6P, JK-BD6A24S6PD,
+JK-BD6A24S8P, JK-BD6A24S8PD, JK-BD6A24S10P, JK-BD6A24S12P, JK-BD6A24S12PD,
+JK-BD6A24S15P, JK-BD6A24S20P, JK-BD6A24S15PD, JK-BD6A20S12P.
+
+### Active Balancer (`listed`)
+
+JK-B4A24S, JK-B2A16S, JK-B15A24S.
+
+### QB Series (`listed`)
+
+JK-QB2A8S20P.

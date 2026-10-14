@@ -41,9 +41,9 @@ struct DeviceConfig {
   String firmwareVersionFloor;
   uint32_t telemetryIntervalMs = 60000;
   bool otaEnabled = true;
-  // "jk" | "daly" | "jbd" | "seplos" | "ant" | "tianpower" | "basen" | "ks" |
-  // "lolan" — selects which BmsBleClient main.cpp polls. Defaults to "jk" so
-  // every already-deployed gateway keeps working unchanged. The BMS link is
+  // Always "jk": the gateway is JK-BMS only. The field is kept so old NVS
+  // state and stale cloud configs still parse; main.cpp falls back to "jk"
+  // with a serial log line for any other stored value. The BMS link is
   // Bluetooth (BLE) only; there is no wired transport.
   String bmsVendor = "jk";
   // MAC address to target, or empty for auto-discovery of the strongest

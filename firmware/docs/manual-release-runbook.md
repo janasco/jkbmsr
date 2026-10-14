@@ -67,23 +67,20 @@ What it does, in order:
 Like the old matrix, a failing environment does not stop the others; the script
 prints a per-environment table and exits non-zero if anything failed.
 
-### Two suites are expected red
+### All suites must pass
 
-```
-test_daly_d2_decoder     fixtures disagree with the decoder's own length constants
-test_ks_bms_decoder      a one-byte SOH-threshold disagreement
-```
+There is no known-red allowlist. The two formerly-red suites
+(`test_daly_d2_decoder`, whose fixtures disagreed with the decoder's own
+length constants, and `test_ks_bms_decoder`, a one-byte SOH-threshold
+disagreement) went away with their decoders when the product went JK-only.
 
-Neither is a JK-BMS path and neither ships. `run-checks.sh` fails only on
-`BUILD-FAIL` / `FAIL` lines that are **not** one of these two, and it names both
-of them on every run, so a red run is never mistaken for a fresh regression.
 A current green run is:
 
 ```
-passed 11   build-fail 0   test-fail 2   skipped 0
+passed 5   build-fail 0   test-fail 0   skipped 0
 ```
 
-Anything other than those two failing means something regressed.
+Anything failing means something regressed.
 
 ---
 
@@ -287,12 +284,22 @@ already-published version produces a new, equally valid signature rather than a
 byte-identical file. Do not expect "no public release changes to commit" from a
 re-run.
 
-**`update_release_index.py` and `validate_release_index.py` are no longer run by
-`release.sh` or by `deploy-releases.sh`.** They existed to keep a published
-`firmware/releases.json` index aligned with each target's `latest.json`. There
-is no published firmware index any more: the account-gated API builds its
-catalog from R2 + D1. The scripts remain in the tree, but the historical
-`releases/firmware/**` tree they read is frozen and unpublished.
+**`update_release_index.py` is no longer run by `release.sh` or by
+`deploy-releases.sh`.** It existed to keep a published `firmware/releases.json`
+index aligned with each target's `latest.json`. There is no published firmware
+index any more: the account-gated API builds its catalog from R2 + D1. The script
+remains in the tree, but the historical `releases/firmware/**` tree it read is
+frozen and unpublished; do not restore it to satisfy a check.
+
+**`validate_release_index.py` was retired for the same reason and replaced by
+`releases/scripts/validate_ota_metadata.py`.** The old check required
+`releases/firmware/releases.json` — input the public repository is right not to
+carry after the 2026-10-13 strip — so it failed on a correctly-absent tree. The
+replacement validates what the repository *does* still publish: every
+`releases/ota/<target>-latest.json` is well formed, names a published public key,
+and its ECDSA P-256 signature verifies against that key over the exact payload
+`release.sh` signs. It is run by `scripts/check-all.sh` (the `releases`
+component).
 
 **`generate-flash-manifest.py` is read from `firmware/scripts/`.** It resolves
 `hardware-targets.json` relative to its own parent, reading

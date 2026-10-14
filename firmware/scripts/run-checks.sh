@@ -14,8 +14,9 @@
 #                          python3 scripts/validate-device-profiles.py
 #                          python3 scripts/validate-hardware-targets.py
 #   job `host-tests`  -> stage `host-tests`
-#                          ./scripts/run-host-tests.sh, plus the CI's
-#                          two-known-red allowlist gate, reproduced verbatim
+#                          ./scripts/run-host-tests.sh, failing on any
+#                          BUILD-FAIL/FAIL line (the old two-known-red
+#                          allowlist is empty now that those suites are gone)
 #   job `build`       -> stage `build`, 16 PlatformIO environments
 #   job `build-c6`    -> stage `build`, 4 more (the C6 leg) -- 20 in total,
 #                          which is also every [env:] in platformio.ini
@@ -59,23 +60,14 @@ export PLATFORMIO_CORE_DIR="${PLATFORMIO_CORE_DIR:-${ROOT}/.platformio-core}"
 
 ARTIFACT_DIR="${ARTIFACT_DIR:-${ROOT}/.pio/artifacts}"
 
-# ── The two suites that are KNOWN RED ────────────────────────────────────────
-# Neither is a JK-BMS path and neither ships, so a red run of these two is the
-# current expected state, not a regression:
-#
-#   test_daly_d2_decoder -- the test fixtures disagree with the decoder's own
-#       length constants, so the "parses successfully" assertions cannot hold.
-#   test_ks_bms_decoder   -- a one-byte SOH-threshold disagreement in the
-#       status-frame test.
-#
-# The old CI job grepped for BUILD-FAIL/FAIL and filtered exactly these two
-# names out; anything else failed the job. That allowlist -- and nothing looser
-# -- is reproduced below, and both suites are named in the output on every run
-# so a red run is never mistaken for a fresh regression.
-KNOWN_RED_SUITES=(
-  test_daly_d2_decoder
-  test_ks_bms_decoder
-)
+# ── No known-red suites ────────────────────────────────────────────────────
+# The gateway is JK-BMS only. The two suites that used to be KNOWN RED
+# (test_daly_d2_decoder — fixtures disagreeing with the decoder's own length
+# constants; test_ks_bms_decoder — a one-byte SOH-threshold disagreement)
+# went away with their decoders. Neither was a JK-BMS path and neither
+# shipped. Every remaining suite must pass: the allowlist below is empty, so
+# any BUILD-FAIL/FAIL line fails the gate.
+KNOWN_RED_SUITES=()
 
 # ── Build matrix, verbatim from the workflow ─────────────────────────────────
 # env | upload-firmware.bin | compile-only tests | needs Secure Boot dev key
@@ -269,27 +261,28 @@ run_host_tests() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     plan "${runner[*]}"
-    plan "allowlist gate: fail only on BUILD-FAIL/FAIL lines that are not one of: ${KNOWN_RED_SUITES[*]}"
+    plan "gate: fail on any BUILD-FAIL/FAIL line (no known-red allowlist entries)"
     return 0
   fi
 
-  # `|| true` then grep, exactly as CI did: the script's own exit status is
-  # non-zero purely because of the two known-red suites.
+  # `|| true` then grep: the script's own exit status is non-zero when any
+  # suite fails. The known-red allowlist is currently empty (JK-only: the two
+  # formerly-red suites went away with their decoders), so any BUILD-FAIL/FAIL
+  # line is a regression. The grep -v is skipped when the allowlist is empty
+  # because `grep -vE ""` matches nothing — an empty pattern would filter out
+  # every line and the gate would pass unconditionally.
   local out
   out=$("${runner[@]}" 2>&1) || true
   printf '%s\n' "$out"
 
   local unexpected
-  unexpected=$(printf '%s\n' "$out" \
-    | grep -E 'BUILD-FAIL|FAIL ' \
-    | grep -vE "$(IFS='|'; printf '%s' "${KNOWN_RED_SUITES[*]}")" || true)
-
-  info ""
-  info "Documented non-shipping suites, expected red in this repository:"
-  local suite
-  for suite in "${KNOWN_RED_SUITES[@]}"; do
-    info "  - ${suite}   (see the KNOWN_RED_SUITES block at the top of this script)"
-  done
+  if [ "${#KNOWN_RED_SUITES[@]}" -eq 0 ]; then
+    unexpected=$(printf '%s\n' "$out" | grep -E 'BUILD-FAIL|FAIL ' || true)
+  else
+    unexpected=$(printf '%s\n' "$out" \
+      | grep -E 'BUILD-FAIL|FAIL ' \
+      | grep -vE "$(IFS='|'; printf '%s' "${KNOWN_RED_SUITES[*]}")" || true)
+  fi
 
   if [ -n "$unexpected" ]; then
     printf '\nUnexpected suite regression:\n' >&2
@@ -299,7 +292,7 @@ run_host_tests() {
   fi
 
   info ""
-  info "Only the two documented non-shipping suites are failing."
+  info "All host suites passing."
   record "host-tests" PASS ""
   return 0
 }

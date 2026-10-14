@@ -83,7 +83,7 @@ include/
   BatteryTelemetry.h
   FirmwareVersion.h
 src/
-  bms/          Per-vendor BLE clients and frame decoders
+  bms/          JK BLE client and frame decoder
   cloud/        Device registration, telemetry, remote config clients
   config/       NVS-backed configuration storage
   debug/        Serial logging helpers
@@ -176,8 +176,9 @@ workflows that used to run on every push are now two scripts you run yourself:
 
 `release.sh` requires `OTA_SIGNING_PRIVATE_KEY_B64`, `CLOUDFLARE_API_TOKEN`
 **and** `CLOUDFLARE_ACCOUNT_ID` to be exported, and refuses to publish without
-them. Two host suites (`test_daly_d2_decoder`, `test_ks_bms_decoder`) are
-documented as expected-red and are reported by name on every run.
+them. Every host suite must pass — there is no known-red allowlist: the two
+formerly-red suites (`test_daly_d2_decoder`, `test_ks_bms_decoder`) went away
+with their decoders when the product went JK-only.
 
 Full procedure, required secrets, and the traps encoded in both scripts are in
 [`docs/manual-release-runbook.md`](docs/manual-release-runbook.md).
@@ -281,18 +282,16 @@ Beyond signature + SHA-256 verification, the firmware records the highest versio
 
 ## Scope Rules
 
-- JK-BMS, Daly, JBD, Seplos, ANT, Tianpower, Basen, KS, and Lolan are
-  supported — selected per device via `bmsVendor` in device config. See
-  `devices/README.md` for the full compatibility catalog and each vendor's
+- JK-BMS only — the single supported vendor. A stored legacy non-JK
+  `bmsVendor` value falls back to JK with a serial log line, never selecting
+  another protocol. See `devices/README.md` for the full compatibility catalog
+  (two evidence-carrying profiles plus the JK model matrix) and each model's
   validation-status tier.
-- Every vendor's BMS link is Bluetooth (BLE) only — there is no wired UART
+- The BMS link is Bluetooth (BLE) only — there is no wired UART
   transport. Auto-discovery of the strongest nearby unit is the default;
   set `bmsBleAddress` to pin an explicit MAC address.
-- Seplos and JBD's BLE profiles share the same service/characteristic UUIDs
-  (`0xFF00`/`0xFF01`/`0xFF02`) — configure an explicit `bmsBleAddress` on
-  either vendor if units from both might be advertising nearby.
-- Other BMS vendors are still out of scope; do not add abstractions for
-  them speculatively ahead of an actual pilot decision.
+- Other BMS vendors are out of scope; do not add abstractions for
+  them.
 - Use HTTPS JSON APIs only.
 - MQTT is intentionally out of scope.
 
@@ -331,4 +330,4 @@ Still open:
 
 See [`devices/README.md`](devices/README.md) for the full per-model
 compatibility catalog and validation-status tiers (hardware-tested /
-protocol-verified / synthetic-fixture-only).
+protocol-verified / listed).

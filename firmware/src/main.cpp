@@ -6,15 +6,7 @@
 #include "FirmwareVersion.h"
 #include "HardwareProfile.h"
 #include "bms/BmsBleClient.h"
-#include "bms/AntBmsBleClient.h"
-#include "bms/BasenBmsBleClient.h"
-#include "bms/DalyBmsBleClient.h"
-#include "bms/JbdBmsBleClient.h"
 #include "bms/JkBmsBleClient.h"
-#include "bms/KsBmsBleClient.h"
-#include "bms/LolanBmsBleClient.h"
-#include "bms/SeplosBmsBleClient.h"
-#include "bms/TianpowerBmsBleClient.h"
 #include "cloud/DeviceRegistrationClient.h"
 #include "cloud/TelemetryClient.h"
 #include "cloud/RemoteConfigClient.h"
@@ -35,14 +27,6 @@ using namespace jkbmsr;
 ConfigStore configStore;
 WifiManager wifiManager;
 JkBmsBleClient bmsBleClient;
-DalyBmsBleClient dalyBmsBleClient;
-JbdBmsBleClient jbdBmsBleClient;
-SeplosBmsBleClient seplosBmsBleClient;
-AntBmsBleClient antBmsBleClient;
-BasenBmsBleClient basenBmsBleClient;
-KsBmsBleClient ksBmsBleClient;
-LolanBmsBleClient lolanBmsBleClient;
-TianpowerBmsBleClient tianpowerBmsBleClient;
 DeviceIdentity deviceIdentity;
 DeviceRegistrationClient deviceRegistrationClient(kApiBaseUrl);
 TelemetryClient telemetryClient(kApiBaseUrl);
@@ -65,44 +49,12 @@ uint32_t identityDiscoveryUntilMs = 0;
 uint32_t lastDeviceAuthMs = 0;
 String activeBleVendor = "";
 
-// Selects which BLE client main.cpp polls/configures for config.bmsVendor.
-// Takes an explicit vendor string (rather than always reading
-// config.bmsVendor) so it can also resolve the *previous* vendor's client
-// when stopping it during a vendor switch. Unknown/empty values fall back to
-// JK — same default as DeviceConfig itself.
-BmsBleClient& bleClientForVendor(const String& vendor) {
-  if (vendor == "ant") {
-    return antBmsBleClient;
-  }
-  if (vendor == "basen") {
-    return basenBmsBleClient;
-  }
-  if (vendor == "daly") {
-    return dalyBmsBleClient;
-  }
-  if (vendor == "jbd") {
-    return jbdBmsBleClient;
-  }
-  if (vendor == "ks") {
-    return ksBmsBleClient;
-  }
-  if (vendor == "lolan") {
-    return lolanBmsBleClient;
-  }
-  if (vendor == "seplos") {
-    return seplosBmsBleClient;
-  }
-  if (vendor == "tianpower") {
-    return tianpowerBmsBleClient;
-  }
-  return bmsBleClient;
-}
-
-// Every known vendor name, for validation in normalizeBmsConfig().
+// The gateway is JK-BMS only. A stored bmsVendor from before the product went
+// JK-only (old NVS state or a stale cloud config) must never select another
+// protocol: fall back to JK with a clear serial log line, never brick, and
+// never silently mis-speak another vendor's protocol.
 bool isKnownBmsVendor(const String& vendor) {
-  return vendor == "jk" || vendor == "daly" || vendor == "jbd" || vendor == "seplos" ||
-         vendor == "ant" || vendor == "tianpower" || vendor == "basen" || vendor == "ks" ||
-         vendor == "lolan";
+  return vendor == "jk";
 }
 
 // Retry cadence while offline is now owned by network/WifiRetryPolicy.h +
@@ -361,25 +313,23 @@ bool recoverFromWifiFailure() {
 
 void normalizeBmsConfig(DeviceConfig& target) {
   if (!isKnownBmsVendor(target.bmsVendor)) {
+    logWarn("Stored BMS vendor '" + target.bmsVendor +
+            "' is not supported (JK-BMS only); falling back to 'jk'");
     target.bmsVendor = "jk";
   }
 }
 
-// Starts the BLE client for the configured vendor. The BMS link is Bluetooth
-// (BLE) only — there is no wired transport to configure. Called at boot, after
-// a remote-config or auth update, and after a device-auth refresh so a vendor
-// switch takes effect.
+// Starts the JK BLE client. The BMS link is Bluetooth (BLE) only — there is
+// no wired transport to configure. Called at boot, after a remote-config or
+// auth update, and after a device-auth refresh.
 void applyBmsConfig() {
   normalizeBmsConfig(config);
-  // Stop the previously-active vendor's BLE client before starting the new
-  // one on a vendor switch — each vendor has its own NimBLE connection state,
-  // and only one should ever be scanning/connected.
   if (activeBleVendor.length() > 0 && activeBleVendor != config.bmsVendor) {
-    bleClientForVendor(activeBleVendor).stop();
+    bmsBleClient.stop();
   }
-  bleClientForVendor(config.bmsVendor).begin(config.bmsBleAddress);
+  bmsBleClient.begin(config.bmsBleAddress);
   activeBleVendor = config.bmsVendor;
-  logInfo(config.bmsVendor + "-BMS BLE configured");
+  logInfo("JK-BMS BLE configured");
 }
 
 void applyDeviceAuthResult(const DeviceRegistrationResult& result) {
@@ -749,13 +699,13 @@ void loop() {
     ensureDeviceAuth(true);
   }
 
-  // The BMS link is Bluetooth (BLE) only; drive the configured vendor's
-  // client every loop iteration (it owns its own scan/connect state machine).
-  bleClientForVendor(config.bmsVendor).loop();
+  // The BMS link is Bluetooth (BLE) only; drive the JK client every loop
+  // iteration (it owns its own scan/connect state machine).
+  bmsBleClient.loop();
 
   BatteryTelemetry telemetry;
   if (telemetryDue()) {
-    const bool haveSample = bleClientForVendor(config.bmsVendor).poll(telemetry);
+    const bool haveSample = bmsBleClient.poll(telemetry);
     // With no BMS answering, still report in at a lower cadence so
     // the dashboard shows the gateway online (BMS link flagged down) instead
     // of "last seen never".
@@ -768,9 +718,8 @@ void loop() {
       telemetry.otaUpdateApplied = otaStatus.updateApplied;
       telemetry.otaOfferedVersion = otaStatus.offeredVersion;
       telemetry.otaLastResult = otaStatus.lastResult;
-      // Whichever vendor's client is current. It always reports its own
-      // scan/connect/decode state.
-      const BmsBleStatus bleStatus = bleClientForVendor(config.bmsVendor).status();
+      // The JK client's own scan/connect/decode state.
+      const BmsBleStatus bleStatus = bmsBleClient.status();
       telemetry.bleState = bleStatus.state;
       telemetry.bleAddress = bleStatus.address;
       telemetry.bleAdvertisedName = bleStatus.advertisedName;

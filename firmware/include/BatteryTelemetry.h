@@ -17,8 +17,7 @@ struct BatteryTelemetry {
   float mosfetTemperature = 0.0f;
   float cellVoltages[kMaxCellCount] = {};
   uint8_t cellCount = 0;
-  // Balance-lead resistance per cell, in Ohms. JK02 BLE only (0.0 on every
-  // slot for other vendors' decoders — no known way to request it there); zero
+  // Balance-lead resistance per cell, in Ohms, from the JK02 BLE frame; zero
   // for any slot at or past cellCount, same convention as cellVoltages.
   float wireResistanceOhms[kMaxCellCount] = {};
   float minCellVoltage = 0.0f;

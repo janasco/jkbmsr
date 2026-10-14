@@ -5,15 +5,7 @@
 
 set(JKBMSR_SRCS
   "main.cpp"
-  "bms/AntBmsDecoder.cpp"
-  "bms/BasenBmsDecoder.cpp"
-  "bms/DalyD2Decoder.cpp"
-  "bms/JbdBmsParser.cpp"
   "bms/Jk02Decoder.cpp"
-  "bms/KsBmsDecoder.cpp"
-  "bms/LolanBmsDecoder.cpp"
-  "bms/SeplosBleDecoder.cpp"
-  "bms/TianpowerBmsDecoder.cpp"
   "cloud/DeviceRegistrationClient.cpp"
   "cloud/RemoteConfigClient.cpp"
   "cloud/TelemetryClient.cpp"
@@ -36,15 +28,7 @@ set(JKBMSR_REQUIRES "")
 # (and the bt component they need) are always compiled in. Targets without a
 # radio have been removed from the matrix entirely — the BMS link is BLE-only.
 list(APPEND JKBMSR_SRCS
-  "bms/AntBmsBleClient.cpp"
-  "bms/BasenBmsBleClient.cpp"
-  "bms/DalyBmsBleClient.cpp"
-  "bms/JbdBmsBleClient.cpp"
   "bms/JkBmsBleClient.cpp"
-  "bms/KsBmsBleClient.cpp"
-  "bms/LolanBmsBleClient.cpp"
-  "bms/SeplosBmsBleClient.cpp"
-  "bms/TianpowerBmsBleClient.cpp"
 )
 list(APPEND JKBMSR_REQUIRES bt)
 
