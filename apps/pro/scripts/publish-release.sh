@@ -9,7 +9,9 @@ set -euo pipefail
 #   - Flutter SDK on PATH (3.35.x verified)
 #   - android/key.properties + android/upload-keystore.jks present (gitignored)
 #   - scripts/.env.local present (gitignored) with MOBILE_RELEASE_UPLOAD_SECRET
-#   - `gh` authenticated against jkbmsr/jkbmsr-pro
+#   - `gh` authenticated, with a remote pointing at janasco/jkbmsr
+#     (releases are cut on the consolidated monorepo; the legacy
+#     jkbmsr/jkbmsr-pro name redirects to an archived repo — do not use it).
 #
 # Usage: scripts/publish-release.sh [version]
 #   version defaults to the value in pubspec.yaml (e.g. "1.3.31"). Any "+build"

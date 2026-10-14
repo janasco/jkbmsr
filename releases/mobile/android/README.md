@@ -1,9 +1,11 @@
 # Android Releases
 
-Future Android APK releases for `jkbmsr-pro` will be published here.
+Android release metadata for the mobile apps is published here (per-version
+notes and checksums).
 
 Rules:
 
-- APK files belong in this public release repository, not in the mobile source repository
+- Binaries are never committed here — APKs are served from the API download
+  path and Google Play, not from this tree
 - Android signing keys must never be committed here
-- Release notes and checksums should be published alongside each APK
+- Release notes and checksums should be published alongside each release

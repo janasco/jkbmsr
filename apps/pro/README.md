@@ -44,12 +44,11 @@ Responsibilities:
 
 ## Current Status
 
-- Released. `v1.3.37` is published (signed APK + AAB) via the tag-triggered
-  `release.yml` workflow: full release history lives as GitHub Releases on
-  this repo (private backup, every past build kept), and the latest signed
-  APK is separately pushed to `jkbmsr-api`, which stores it in R2 and serves
-  it at `api.jkbmsr.com/mobile/latest.apk` — the actual public download
-  path. No longer published to `jkbmsr-releases`, which went private.
+- Released. Built and published with `apps/pro/scripts/publish-release.sh`
+  (manual — this repository has no CI): a signed APK + AAB are built locally,
+  the APK goes to the public download path (`api.jkbmsr.com/mobile/latest.apk`,
+  R2-backed) plus a tagged GitHub Release on this repo for history. Current
+  version: see `pubspec.yaml`.
 - The Android/iOS Flutter client has device claiming (including scanning the
   QR code jkbmsr-web renders on `/onboard`), device list, battery dashboard,
   per-cell voltages (animated battery-shape gauges, not plain progress bars),
@@ -129,10 +128,9 @@ Relevant endpoints already available:
 - Android release signing reads `android/key.properties` (gitignored; see
   `android/key.properties.example`) or CI secrets. No keystore and no signing
   password is published in this repository.
-- Signed APK/AAB publishing is done and has shipped multiple releases
-  (currently `v1.3.37`) — GitHub Releases on this repo for full history,
-  latest APK mirrored to `jkbmsr-api`'s R2 bucket for the public download.
-- Not yet started: an actual Google Play Store listing. `jkbmsr-brand/store-listing/`
-  has the icon and feature graphic; screenshots, listing copy, and the privacy
-  policy URL are still needed — see that repo's `store-listing/README.md`.
-- No iOS release pipeline yet (`release.yml` only builds/publishes Android).
+- Signed APK/AAB publishing is done and has shipped multiple releases —
+  tagged GitHub Releases on this repo for full history, latest APK mirrored
+  to R2 for the public download (see above).
+- Not yet finished: the Google Play Store listing. Listing assets and copy
+  exist; the remaining steps need Play Console access.
+- No iOS release pipeline yet (`publish-release.sh` builds/publishes Android only).

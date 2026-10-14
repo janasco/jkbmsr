@@ -1,10 +1,10 @@
 # JK BMS Bluetooth — Bluetooth Monitor & Controller for JK-BMS
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.35.7-02569B?logo=flutter)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.9.2-0175C2?logo=dart)](https://dart.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-3.47.5-02569B?logo=flutter)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.13.4-0175C2?logo=dart)](https://dart.dev)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-green)](https://github.com/janasco/jkbmsr/tree/main/apps/ble)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/jkbmsr/jkbmsr?include_prereleases)](https://github.com/janasco/jkbmsr/releases)
+[![Release](https://img.shields.io/github/v/release/janasco/jkbmsr?include_prereleases)](https://github.com/janasco/jkbmsr/releases)
 
 > **JKBMSR is an independent project.** It is not affiliated with, endorsed by, or sponsored by JK-BMS. "JK-BMS" appears only to describe hardware compatibility.
 
