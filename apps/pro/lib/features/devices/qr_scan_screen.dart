@@ -7,7 +7,7 @@ import '../../widgets/shared/design_system/components.dart';
 
 /// Result of a successful device-claim QR scan: the device ID and claim
 /// code parsed out of the onboard URL (matches the format jkbmsr-web
-/// renders on /onboard: https://app.jkbmsr.com/onboard?device=..&code=..).
+/// renders on /onboard: https://web.jkbmsr.com/onboard?device=..&code=..).
 class DeviceClaimQrResult {
   final String deviceId;
   final String claimCode;
