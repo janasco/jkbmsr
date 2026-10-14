@@ -19,6 +19,8 @@ it yourself.
 | :--- | :--- |
 | `apps/ble/` | **JK BMS Bluetooth** — Android app that talks to a JK-BMS over Bluetooth. No account, no gateway, no cloud. |
 | `apps/pro/` | **JK BMS Remote** — Android app for gateways running the firmware below. Cloud monitoring and alerts. |
+| `apps/contributor/` | **JK BMS Contributor** — Android/iOS app that contributes redacted JK-BMS device data to improve support. Read-only; no account, no cloud login. |
+| `packages/bms_core/` | Shared pure-Dart JK-BMS protocol, telemetry and detection core. No Flutter, no platform channels; any Flutter app can depend on it. |
 | `firmware/` | ESP32 gateway firmware. Talks to the JK-BMS over Bluetooth (BLE), uploads telemetry, verifies signed OTA updates. |
 | `hardware/` | Hardware notes, pinouts, and planning for DIY ESP32 gateway builds. |
 | `docs/` | Documentation site source. |
@@ -26,8 +28,9 @@ it yourself.
 | `releases/` | Signed firmware release artifacts and the OTA index served over CDN. |
 | `scripts/` | The manual build, check and deploy scripts. There is no CI; this is the replacement. |
 
-There are exactly two Android apps. The "Supporter" purchase that removes ads
-from the BLE app is a Google Play in-app product, **not** a third app.
+There are exactly three apps: the local-only Bluetooth app, the cloud-connected
+Pro app, and the Contributor app. The "Supporter" purchase that removes ads from
+the BLE app is a Google Play in-app product, **not** a separate app.
 
 ## Architecture at a glance
 
@@ -77,9 +80,10 @@ scripts/check-all.sh --run                      # every component
 scripts/check-all.sh --run --only firmware      # just the one you touched
 ```
 
-That covers `flutter analyze && flutter test` for both apps, the native
-ASan/UBSan host suites plus the device-profile and hardware-target validators for
-the firmware, `npm run docs:build` for the documentation site, and
+That covers `flutter analyze && flutter test` for the three apps, `dart analyze
+&& dart test` for the shared `packages/bms_core` package, the native ASan/UBSan
+host suites plus the device-profile and hardware-target validators for the
+firmware, `npm run docs:build` for the documentation site, and
 `python3 scripts/validate_release_index.py` for the release index. Run it with no
 arguments to see the plan without executing anything.
 

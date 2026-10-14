@@ -9,12 +9,14 @@
 # it will not be caught unless a person runs this script.
 #
 # The suites, one per component:
-#   apps/ble    flutter analyze && flutter test          (expect 70 passing)
-#   apps/pro    flutter analyze && flutter test          (expect 85 passing)
-#   firmware    native host suites under ASan/UBSan, plus the device-profile
-#               and hardware-target validators — see firmware/scripts/run-checks.sh
-#   docs        npm run docs:build
-#   releases    python3 scripts/validate_release_index.py
+#   apps/ble           flutter analyze && flutter test       (expect 70 passing)
+#   apps/pro           flutter analyze && flutter test       (expect 85 passing)
+#   apps/contributor   flutter analyze && flutter test       (expect 84 passing)
+#   packages/bms_core  dart analyze && dart test             (expect 24 passing)
+#   firmware           native host suites under ASan/UBSan, plus the device-profile
+#                      and hardware-target validators — see firmware/scripts/run-checks.sh
+#   docs               npm run docs:build
+#   releases           python3 scripts/validate_release_index.py
 #
 # Usage:
 #   scripts/check-all.sh                 # dry run: print every command, run nothing
@@ -23,9 +25,9 @@
 #
 # Options:
 #   --run          Actually execute the suites. Without it nothing is executed.
-#   --only NAME    Restrict to a component (apps/ble, apps/pro, firmware, docs,
-#                  releases). Repeatable. Implies nothing about running: still
-#                  needs --run.
+#   --only NAME    Restrict to a component (apps/ble, apps/pro, apps/contributor,
+#                  packages/bms_core, firmware, docs, releases). Repeatable. Implies
+#                  nothing about running: still needs --run.
 #   --strict       Treat a skipped component as a failure. Use it when you are
 #                  the last person before a merge and a green table that skipped
 #                  half the tree is worse than no table.
@@ -37,6 +39,8 @@
 #                            and flutter is not already on PATH)
 #   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 70)
 #   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 85)
+#   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 84)
+#   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 24)
 #
 # Exit status: 0 everything that ran passed (skips are allowed unless --strict),
 # 1 at least one component failed, 2 usage error.
@@ -46,13 +50,15 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
-COMPONENTS=(apps/ble apps/pro firmware docs releases)
+COMPONENTS=(apps/ble apps/pro apps/contributor packages/bms_core firmware docs releases)
 
 RUN=0
 STRICT=0
 ONLY=()
 BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-70}
 PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-85}
+CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-84}
+BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-24}
 LOG_DIR=""
 
 # Result columns, indexed the same way as COMPONENTS.
@@ -130,8 +136,14 @@ fi
 if command -v flutter >/dev/null 2>&1; then
   ok "flutter ($(command -v flutter))"
 else
-  warn "flutter not found — apps/ble and apps/pro cannot be checked."
+  warn "flutter not found — apps/ble, apps/pro and apps/contributor cannot be checked."
   warn "  add it with: export PATH=\$PATH:${FLUTTER_BIN:-/home/jkbmsr/flutter/bin}"
+fi
+if command -v dart >/dev/null 2>&1; then
+  ok "dart ($(command -v dart))"
+else
+  warn "dart not found — packages/bms_core cannot be checked."
+  warn "  it ships with the Flutter SDK: export PATH=\$PATH:${FLUTTER_BIN:-/home/jkbmsr/flutter/bin}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -180,6 +192,42 @@ flutter_suite() {
     fi
   else
     record FAIL "flutter analyze && flutter test failed (see $log)"
+  fi
+}
+
+# The pure-Dart counterpart to flutter_suite(): packages/bms_core depends on the
+# `test` package rather than flutter_test, so it is driven by `dart analyze` /
+# `dart test` and resolves with `dart pub get`. The count check exists for the
+# same reason as flutter_suite's: a suite that silently stops running looks
+# exactly like a passing one.
+dart_suite() {
+  local component=$1 expected=$2 log="$LOG_DIR/${1//\//-}.log"
+  if ! command -v dart >/dev/null 2>&1; then
+    record SKIP "dart not on PATH"
+    return 0
+  fi
+  local app_dir="$REPO_ROOT/$component"
+  if [ ! -f "$app_dir/pubspec.yaml" ]; then
+    record SKIP "no pubspec.yaml"
+    return 0
+  fi
+  if [ ! -f "$app_dir/.dart_tool/package_config.json" ]; then
+    info "$component: .dart_tool/package_config.json missing, running dart pub get"
+    ( cd "$app_dir" && dart pub get ) >>"$log" 2>&1 \
+      || { record FAIL "dart pub get failed (see $log)"; return 0; }
+  fi
+  if ( cd "$app_dir" && dart analyze && dart test ) >"$log" 2>&1; then
+    local count
+    count=$(grep -oE '\+[0-9]+' "$log" | tail -1 | tr -d '+' || true)
+    if [ -z "$count" ]; then
+      record PASS "analyze + test ok (test count not parsed — see $log)"
+    elif [ "$count" -lt "$expected" ]; then
+      record FAIL "$count tests passed, expected at least $expected (see $log)"
+    else
+      record PASS "$count tests passed (expected $expected)"
+    fi
+  else
+    record FAIL "dart analyze && dart test failed (see $log)"
   fi
 }
 
@@ -247,16 +295,18 @@ if [ "$RUN" -eq 0 ]; then
     info "components: ${COMPONENTS[*]}"
   fi
   cat <<'PLAN'
-   ..    apps/ble     flutter analyze && flutter test     (expect 70 passing)
-   ..    apps/pro     flutter analyze && flutter test     (expect 85 passing)
-   ..    firmware     firmware/scripts/run-checks.sh
-                    -> native host suites under ASan/UBSan,
-                       validate-device-profiles.py, validate-hardware-targets.py,
-                       and every PlatformIO environment in platformio.ini.
-                       This is the slow one: expect minutes, not seconds, and
-                       it needs PlatformIO 6.1.19.
-   ..    docs         npm ci (only if node_modules is missing) && npm run docs:build
-   ..    releases     python3 scripts/validate_release_index.py
+   ..    apps/ble            flutter analyze && flutter test     (expect 70 passing)
+   ..    apps/pro            flutter analyze && flutter test     (expect 85 passing)
+   ..    apps/contributor    flutter analyze && flutter test     (expect 84 passing)
+   ..    packages/bms_core   dart analyze && dart test           (expect 24 passing)
+   ..    firmware            firmware/scripts/run-checks.sh
+                          -> native host suites under ASan/UBSan,
+                             validate-device-profiles.py, validate-hardware-targets.py,
+                             and every PlatformIO environment in platformio.ini.
+                             This is the slow one: expect minutes, not seconds, and
+                             it needs PlatformIO 6.1.19.
+   ..    docs                npm ci (only if node_modules is missing) && npm run docs:build
+   ..    releases            python3 scripts/validate_release_index.py
 PLAN
   say ""
   info "this is the default mode: nothing above was executed, nothing was written."
@@ -276,11 +326,13 @@ for component in "${COMPONENTS[@]}"; do
   selected "$component" || continue
   step "$component"
   case "$component" in
-    apps/ble)  flutter_suite apps/ble "$BLE_EXPECTED_TESTS" ;;
-    apps/pro)  flutter_suite apps/pro "$PRO_EXPECTED_TESTS" ;;
-    firmware)  firmware_suite ;;
-    docs)      docs_suite ;;
-    releases)  releases_suite ;;
+    apps/ble)         flutter_suite apps/ble "$BLE_EXPECTED_TESTS" ;;
+    apps/pro)         flutter_suite apps/pro "$PRO_EXPECTED_TESTS" ;;
+    apps/contributor) flutter_suite apps/contributor "$CONTRIBUTOR_EXPECTED_TESTS" ;;
+    packages/bms_core) dart_suite packages/bms_core "$BMS_CORE_EXPECTED_TESTS" ;;
+    firmware)         firmware_suite ;;
+    docs)             docs_suite ;;
+    releases)         releases_suite ;;
   esac
   printf '   ->    %s\n' "${RESULT[-1]}: ${DETAIL[-1]}"
 done
