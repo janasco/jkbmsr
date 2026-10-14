@@ -26,8 +26,8 @@ enum _Stage { idle, scanning, capturing, done, error }
 /// A minimal capture screen: scan → connect → capture → summary → review.
 ///
 /// Capture is consent-gated (a capture cannot start without it), and the
-/// summary's "Review & contribute" opens [ReviewScreen]. Submit and export are
-/// Phase 5 and are left as the explicit seam in the review screen.
+/// summary's "Review & contribute" opens [ReviewScreen], where the user can
+/// submit anonymously or export the payload to a file.
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key, this.controller, this.captureDuration});
 
@@ -134,7 +134,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   /// Fills the Phase 3 seam: open the review screen with the real payload, the
   /// device serial (for the opt-in toggle) and the consent to stamp. Submit and
-  /// export remain Phase 5.
+  /// export happen there (Phase 5).
   void _onReviewPressed() {
     final contribution = _outcome?.contribution;
     if (contribution == null) return;

@@ -25,6 +25,16 @@ dependencies:
   # makes for the same kind of small local setting (`lib/app/theme_controller.dart`),
   # so the family stays consistent. See lib/services/consent_store.dart.
   shared_preferences: ^2.2.0
+  # The anonymous contribution POST. `http` is the family's client (apps/ble and
+  # apps/pro both use it), and its `testing.dart` MockClient is what lets the
+  # uploader's real status handling be driven in a test. See
+  # lib/services/contribution_uploader.dart.
+  http: ^1.2.2
+  # The mandatory offline fallback (plan §3.5): write the payload to the app
+  # documents directory and hand it to the OS share sheet. Both are already used
+  # by apps/pro for its CSV export (lib/features/history/telemetry_history_screen.dart).
+  path_provider: ^2.1.5
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

@@ -11,6 +11,8 @@
 /// is the copy", not an l10n framework.
 library;
 
+import '../services/contribution_uploader.dart';
+
 /// Copy for the first-run consent screen (plan §3.1).
 abstract final class ConsentStrings {
   static const String title = 'Before you contribute';
@@ -77,8 +79,85 @@ abstract final class ReviewStrings {
 
   static const String submit = 'Submit contribution';
   static const String discard = 'Discard';
+}
 
-  /// The Phase 5 seam: nothing is submitted from Phase 4.
-  static const String submitSeam =
-      'Submitting and exporting arrive in the next phase.';
+/// Copy for the submit + offline-export flow (plan §3.5).
+///
+/// Every user-visible string for a submit lives here, including the mapping
+/// from a [SubmitFailureKind] to a sentence, so the wording is in one place and
+/// can be asserted directly in a test without mounting a widget.
+abstract final class SubmitStrings {
+  static const String submitting = 'Sending your contribution…';
+  static const String exportButton = 'Export file instead';
+  static const String exporting = 'Preparing the file…';
+
+  // Success ----------------------------------------------------------------
+  static const String successTitle = 'Contribution received';
+  static const String successBody =
+      'Thank you. It is stored anonymously — no account was created and '
+      'nothing identifies you.';
+  static const String successReceiptLabel = 'Receipt id';
+
+  /// The returned `id`, shown verbatim. It is the server's own receipt and the
+  /// only proof of the submission.
+  static String successReceipt(String id) => id;
+
+  static const String done = 'Done';
+
+  // Failure ----------------------------------------------------------------
+  /// Offered beside every failure so a contribution is never lost.
+  static const String exportHint =
+      'Nothing is lost — you can save the file and send it later.';
+
+  static const String tryAgain = 'Try again';
+
+  /// Turns a [SubmitFailure] into the sentence the user sees. The status code
+  /// and any `Retry-After` are reported honestly rather than smoothed over.
+  static String failureMessage(SubmitFailure failure) {
+    switch (failure.kind) {
+      case SubmitFailureKind.offline:
+        return 'Could not reach the server. Check your connection, or export '
+            'the file and share it later.';
+      case SubmitFailureKind.invalid:
+        return 'The server could not read this contribution. Export the file '
+            'and it can still be sent later.';
+      case SubmitFailureKind.tooLarge:
+        return 'This contribution is larger than the 256 KB the server '
+            'accepts. Export the file instead.';
+      case SubmitFailureKind.unsupportedMediaType:
+        return 'The server refused the upload format. Export the file instead.';
+      case SubmitFailureKind.rateLimited:
+        final wait = failure.retryAfter;
+        final waitText = wait == null
+            ? ''
+            : ' Try again in about ${_humanWait(wait)}.';
+        return 'Too many contributions from this connection right now.'
+            '$waitText You can also export the file instead.';
+      case SubmitFailureKind.server:
+        return 'The server had a problem receiving this contribution. Please '
+            'try again later, or export the file instead.';
+      case SubmitFailureKind.unexpected:
+        final code = failure.statusCode;
+        return code == null
+            ? 'Something went wrong sending this contribution. Export the '
+                'file instead.'
+            : 'Something went wrong (HTTP $code). Export the file instead.';
+    }
+  }
+
+  /// A wait duration in whole minutes (rounded up), or seconds when under a
+  /// minute, so "about 1 minute" never reads as "about 0 minutes".
+  static String _humanWait(Duration d) {
+    if (d.inSeconds < 60) return '${d.inSeconds} seconds';
+    final minutes = (d.inSeconds / 60).ceil();
+    return minutes == 1 ? '1 minute' : '$minutes minutes';
+  }
+
+  // Export ----------------------------------------------------------------
+  static const String exportSuccessTitle = 'File ready to share';
+  static const String exportSuccessBody =
+      'The contribution was saved and sent to your share sheet. You can send '
+      'it later from wherever you saved it.';
+  static const String exportFailed =
+      'Could not write the file. Please try again.';
 }
