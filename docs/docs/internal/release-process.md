@@ -8,9 +8,9 @@ Firmware releases must include:
 
 - Version
 - Target hardware
-- Binary
+- Binary (delivered only by the account-gated API; never attached to the GitHub release)
 - SHA-256 checksum
-- GitHub release assets
+- Signed OTA metadata (the only GitHub release asset — no firmware `.bin`)
 - D1 metadata update
 
 Release flow:

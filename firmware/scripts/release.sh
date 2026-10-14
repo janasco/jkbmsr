@@ -556,7 +556,7 @@ build_target() {
       plan "pio run -e dev --target clean && pio run -e dev        (rebuild the release application after the test compile)"
     fi
     plan "verify the image: non-empty, contains the 'JKBMSR firmware starting' banner, does NOT contain the test runner"
-    plan "sha256sum ${firmware} -> ${asset_name}.sha256"
+    plan "sha256sum ${firmware} -> ${out}/firmware.sha256 (OTA bundle checksum; not a GitHub asset)"
     if [ "$chip_family" != "ESP8266" ]; then
       plan "collect boot_app0.bin from the arduinoespressif32 partitions tool, plus bootloader.bin and partitions.bin"
     fi
@@ -838,8 +838,11 @@ upload_flash_bundle() {
   # from the catalog the flasher's API catalog also derives from.
   generate_flash_manifest "$target" "${out}/flash-manifest.json"
   # Bundle-local checksum naming firmware.bin the way a flasher resolves it.
-  # The staged ${out}/firmware.sha256 is left ALONE: it names the GitHub asset
-  # (jkbmsr-<target>-<version>.bin) and is uploaded as that asset's .sha256.
+  # The staged ${out}/firmware.sha256 is left ALONE: it names the release image
+  # (jkbmsr-<target>-<version>.bin) and is read by
+  # validate-ota-release-bundle.py. It is NOT attached to the GitHub release:
+  # no firmware .bin is, so a lone checksum would describe a file that is not
+  # published there.
   printf '%s  %s\n' "${TARGET_SHA[$target]}" "firmware.bin" >"${out}/flash-firmware.sha256"
 
   # Per-part checksums for the downloadable images only (the manifest and the
@@ -950,6 +953,20 @@ assert_sql_safe() {
 }
 
 # ── Step 9: GitHub release ───────────────────────────────────────────────────
+# The release is created for its title and notes only. The firmware .bin asset
+# is deliberately NOT attached: a public GitHub release asset is downloadable
+# by anyone, which is exactly the ungated delivery path the firmware gate
+# closed. Firmware bytes are served only by the account-gated API
+# (api.jkbmsr.com/v1/flash/*) streaming the four-part bundle from R2.
+#
+# What still gets attached, when the target has an OTA channel, is the signed
+# OTA publish metadata (`<asset>-metadata.json`). It is self-describing -- it
+# carries version, target, releasedAt, the downloadUrl that names the API, the
+# sha256 and the signature -- so the release page stays a verifiable record of
+# what shipped without publishing anything flashable. The standalone `.sha256`
+# is dropped along with the binary: a checksum is only meaningful next to the
+# file it describes, and the binary it used to name is no longer there. Its
+# digest is already carried inside the metadata, so nothing is lost.
 create_github_release() {
   local target="$1"
   local out="${STAGE_DIR}/${target}"
@@ -957,34 +974,26 @@ create_github_release() {
   local assets=()
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    local extras=", ${asset_name}-metadata.json"
-    [ "${TARGET_HAS_OTA[$target]}" = "true" ] || extras=""
+    local assets_desc="(none)"
+    [ "${TARGET_HAS_OTA[$target]}" = "true" ] && assets_desc="${asset_name}-metadata.json"
     plan "gh release create ${RELEASE_TAG} --title \"Firmware ${VERSION}\" --notes \"...\""
-    plan "   assets: ${asset_name}.bin, ${asset_name}.sha256${extras}"
-    plan "   (each target's assets are copied to the real target-scoped name first, so --clobber cannot make all seven targets overwrite one asset)"
+    plan "   assets: ${assets_desc}"
+    plan "   (no firmware .bin is attached: firmware is delivered only by the account-gated API)"
+    plan "   (each target's metadata is copied to the real target-scoped name first, so --clobber cannot make the targets overwrite one asset)"
     plan "   (falls back to: gh release upload ${RELEASE_TAG} <assets> --clobber)"
     return 0
   fi
 
   # gh release upload's local-path#label syntax only sets a *display label* --
   # the stored asset name comes from the local file's own basename. Every target
-  # stages its binary as plain "firmware.bin", so uploading with only a #label
-  # would make all seven targets collide on (and --clobber overwrite) the SAME
-  # stored asset, leaving whichever ran last. Copy to the real target-scoped
-  # name first so each target's asset is genuinely distinct, not just
-  # differently labeled.
-  cp "${out}/firmware.bin" "${out}/${asset_name}.bin"
-  cp "${out}/firmware.sha256" "${out}/${asset_name}.sha256"
-  assets=("${out}/${asset_name}.bin" "${out}/${asset_name}.sha256")
-  if [ -f "${out}/firmware-metadata.json" ]; then
+  # stages its metadata as plain "firmware-metadata.json", so uploading with
+  # only a #label would make every target collide on (and --clobber overwrite)
+  # the SAME stored asset, leaving whichever ran last. Copy to the real
+  # target-scoped name first so each target's metadata is genuinely distinct,
+  # not just differently labeled.
+  if [ "${TARGET_HAS_OTA[$target]}" = "true" ] && [ -f "${out}/firmware-metadata.json" ]; then
     cp "${out}/firmware-metadata.json" "${out}/${asset_name}-metadata.json"
     assets+=("${out}/${asset_name}-metadata.json")
-  fi
-
-  if [ "$DRY_RUN" -eq 1 ]; then
-    plan "gh release create ${RELEASE_TAG} ${assets[*]} --title \"Firmware ${VERSION}\" --notes \"...\""
-    plan "   (falls back to: gh release upload ${RELEASE_TAG} ... --clobber)"
-    return 0
   fi
 
   if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
@@ -994,6 +1003,21 @@ create_github_release() {
         die "tag ${RELEASE_TAG} already exists and does not point at HEAD ($(git -C "$REPO_ROOT" rev-parse --short HEAD)) -- not creating a release from the wrong commit"
       fi
     fi
+  fi
+
+  # A target with no OTA channel contributes no asset, but the release must
+  # still exist for its title and notes. Create it body-only if it is not there
+  # yet; an empty `gh release upload` would simply fail, so do not fall through
+  # to it.
+  if [ "${#assets[@]}" -eq 0 ]; then
+    if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+      gh release create "$RELEASE_TAG" \
+        --title "Firmware ${VERSION}" \
+        --notes "Production release for firmware version ${VERSION} across all supported gateway hardware." \
+        || die "${target}: could not create the GitHub release for ${RELEASE_TAG}"
+    fi
+    info "${target}: GitHub release ${RELEASE_TAG} present (body only; this target has no OTA metadata to attach)"
+    return 0
   fi
 
   # Try create first and fall back to upload, rather than branching on
@@ -1006,7 +1030,7 @@ create_github_release() {
     gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber \
       || die "${target}: could not create or update the GitHub release for ${RELEASE_TAG}"
   fi
-  info "${target}: GitHub release ${RELEASE_TAG} updated (${#assets[@]} assets)"
+  info "${target}: GitHub release ${RELEASE_TAG} updated (${#assets[@]} metadata asset(s), no firmware .bin)"
 }
 
 # ── Step 10: public OTA verification material, committed into THIS repository ─

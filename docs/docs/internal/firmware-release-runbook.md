@@ -25,7 +25,7 @@ Use this runbook when publishing a production firmware update for JKBMSR.
 5. Verify:
    - R2 object upload
    - D1 latest firmware metadata
-   - GitHub release assets
+   - GitHub release notes + signed OTA metadata (no firmware `.bin` is attached)
    - `/v1/ota/latest`
    - authenticated firmware download headers
 

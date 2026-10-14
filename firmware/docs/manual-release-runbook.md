@@ -169,13 +169,16 @@ have an OTA channel):
    `flash/<target>/v<version>/…`. The account-gated API streams the latter.
 4. **Update D1** — the `firmware` row for that target, superseding the previous
    `is_latest` for the same target.
-5. **Create the GitHub release** for `firmware-v<version>`, with
-   target-scoped asset names.
+5. **Create the GitHub release** for `firmware-v<version>` (title + notes). The
+   only asset attached is the signed per-target OTA metadata, under
+   target-scoped names. The firmware `.bin` is deliberately **not** attached:
+   a public release asset is downloadable by anyone, and the account-gated API
+   is the only firmware delivery path.
 6. **Commit the public OTA verification metadata** — `releases/ota/<target>-latest.json`
    and `releases/ota/keys/public/<key id>.pem`, then push.
 
-No firmware binaries or `firmware/**` index are written into this repository or
-published to the CDN.
+No firmware binaries are written into this repository, published to the CDN, or
+attached to the GitHub release; no `firmware/**` index is published either.
 
 A pre-flight runs first and reports **every** problem it finds at once, rather
 than stopping at the first.
