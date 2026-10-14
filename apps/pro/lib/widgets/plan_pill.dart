@@ -42,38 +42,42 @@ class PlanPill extends StatelessWidget {
     final label = '$tierLabel · every ${formatPlanInterval(intervalSeconds)}';
     return Semantics(
       label: '$label, ${_active ? 'active' : 'inactive'} plan',
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? JKBMSRTokens.space8 : JKBMSRTokens.space12,
-          vertical: JKBMSRTokens.space4,
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(JKBMSRTokens.radiusFull),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: JKBMSRTokens.space4),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: JKBMSRTypography.label.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11.0,
+      // Exclude the inner Text so screen readers announce the single
+      // combined label above rather than it plus the visible text.
+      child: ExcludeSemantics(
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? JKBMSRTokens.space8 : JKBMSRTokens.space12,
+            vertical: JKBMSRTokens.space4,
+          ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(JKBMSRTokens.radiusFull),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: JKBMSRTokens.space4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: JKBMSRTypography.label.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11.0,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

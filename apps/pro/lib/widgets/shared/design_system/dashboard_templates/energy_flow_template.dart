@@ -92,6 +92,12 @@ class _JKBMSREnergyFlowTemplateState extends State<JKBMSREnergyFlowTemplate>
             ? context.colors.signal
             : context.colors.textMuted;
     final voltageHistory = widget.history.map((point) => point.voltage).toList();
+    final statusLabel = charging ? 'Charging' : discharging ? 'Discharging' : 'Idle';
+    final statusColor = charging
+        ? context.colors.accent
+        : discharging
+            ? context.colors.warning
+            : context.colors.textMuted;
 
     return Container(
       width: double.infinity,
@@ -104,6 +110,32 @@ class _JKBMSREnergyFlowTemplateState extends State<JKBMSREnergyFlowTemplate>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Status pill (web BatteryOverviewCards style) ──
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: JKBMSRTokens.space12,
+                vertical: JKBMSRTokens.space4,
+              ),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(JKBMSRTokens.radiusFull),
+                border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                charging && (t?.power ?? 0) > 0
+                    ? '$statusLabel · ${((t?.power ?? 0) / 1000).toStringAsFixed(2)} kW'
+                    : statusLabel,
+                style: JKBMSRTypography.label.copyWith(
+                  color: statusColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.0,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: JKBMSRTokens.space8),
           // ── Hero: SOC ring ──
           Center(
             child: SizedBox(
@@ -165,37 +197,66 @@ class _JKBMSREnergyFlowTemplateState extends State<JKBMSREnergyFlowTemplate>
           ),
           const SizedBox(height: JKBMSRTokens.space16),
 
-          // ── Live stats ──
-          Row(
-            children: [
-              Expanded(
-                child: TemplateStatCard(
-                  icon: Icons.electrical_services,
-                  label: 'VOLTAGE',
-                  value: '${(t?.voltage ?? 0.0).toStringAsFixed(2)} V',
-                  valueColor: context.colors.textPrimary,
+          // ── Live stats: web-style reading rows (label left, value right) ──
+          _ReadingRow(
+            label: 'Pack voltage',
+            value: '${(t?.voltage ?? 0.0).toStringAsFixed(2)}',
+            unit: 'V',
+            valueColor: context.colors.textPrimary,
+          ),
+          const SizedBox(height: JKBMSRTokens.space12),
+          _ReadingRow(
+            label: 'Current',
+            value: '${charging ? '+' : ''}${current.toStringAsFixed(1)}',
+            unit: 'A',
+            valueColor: flowColor,
+            sub: charging ? 'charging in' : discharging ? 'drawing out' : 'idle',
+          ),
+          const SizedBox(height: JKBMSRTokens.space12),
+          _ReadingRow(
+            label: 'Power',
+            value: '${(t?.power ?? 0.0).abs().toStringAsFixed(0)}',
+            unit: 'W',
+            valueColor: flowColor,
+          ),
+          const SizedBox(height: JKBMSRTokens.space12),
+
+          // ── Legend: charge / discharge / balancing dots ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: JKBMSRTokens.space12,
+              vertical: JKBMSRTokens.space8,
+            ),
+            decoration: BoxDecoration(
+              color: context.colors.panel,
+              borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+              border: Border.all(color: context.colors.line),
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: JKBMSRTokens.space12,
+              runSpacing: JKBMSRTokens.space4,
+              children: [
+                _LegendDot(
+                  label: 'Charge',
+                  active: charging,
+                  activeColor: context.colors.accent,
                 ),
-              ),
-              const SizedBox(width: JKBMSRTokens.space12),
-              Expanded(
-                child: TemplateStatCard(
-                  icon: Icons.swap_vert,
-                  label: 'CURRENT',
-                  value: '${current.abs().toStringAsFixed(1)} A',
-                  sub: charging ? 'charging in' : discharging ? 'drawing out' : 'idle',
-                  valueColor: flowColor,
+                _LegendDot(
+                  label: 'Discharge',
+                  active: discharging,
+                  activeColor: context.colors.warning,
                 ),
-              ),
-              const SizedBox(width: JKBMSRTokens.space12),
-              Expanded(
-                child: TemplateStatCard(
-                  icon: Icons.flash_on,
-                  label: 'POWER',
-                  value: '${(t?.power ?? 0.0).abs().toStringAsFixed(0)} W',
-                  valueColor: flowColor,
+                _LegendDot(
+                  label: (bms?.balancing ?? false) && (bms?.balancingCurrent ?? 0) > 0
+                      ? 'Balancing ${(bms?.balancingCurrent ?? 0).toStringAsFixed(2)}A'
+                      : 'Balancing',
+                  active: bms?.balancing ?? false,
+                  activeColor: context.colors.signal,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: JKBMSRTokens.space16),
 
@@ -218,6 +279,126 @@ class _JKBMSREnergyFlowTemplateState extends State<JKBMSREnergyFlowTemplate>
           TemplateStatusRow(lastSeen: widget.lastSeen, bms: bms ?? BmsExtras.fromJson(null)),
         ],
       ),
+    );
+  }
+}
+
+/// Web-style pack reading row: muted label on the left, big tabular mono
+/// value on the right, mirroring BatteryOverviewCards' definition list.
+class _ReadingRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final Color valueColor;
+  final String? sub;
+
+  const _ReadingRow({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.valueColor,
+    this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: JKBMSRTypography.body.copyWith(color: context.colors.textMuted),
+          ),
+        ),
+        const SizedBox(width: JKBMSRTokens.space16),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text.rich(
+                  TextSpan(
+                    style: JKBMSRTypography.pageHeading.copyWith(
+                      color: valueColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    children: [
+                      TextSpan(text: value),
+                      TextSpan(
+                        text: ' $unit',
+                        style: JKBMSRTypography.body.copyWith(
+                          color: context.colors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                ),
+              ),
+              if (sub != null)
+                Text(
+                  sub!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: JKBMSRTypography.label.copyWith(color: context.colors.textMuted),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Legend dot: lit in its state color when active, muted track color when
+/// not — the Charge / Discharge / Balancing row under the readings.
+class _LegendDot extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color activeColor;
+
+  const _LegendDot({
+    required this.label,
+    required this.active,
+    required this.activeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: active ? activeColor : context.colors.control,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: JKBMSRTokens.space4),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: JKBMSRTypography.label.copyWith(
+              color: active ? context.colors.textPrimary : context.colors.textMuted,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

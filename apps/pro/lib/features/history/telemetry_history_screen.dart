@@ -11,6 +11,7 @@ import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
 import '../../models/cloud_history_point.dart';
+import '../devices/widgets/kpi_strip.dart';
 import '../../utils/error_messages.dart';
 
 class TelemetryHistoryScreen extends StatefulWidget {
@@ -301,6 +302,11 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
                     padding: const EdgeInsets.only(bottom: JKBMSRTokens.space8),
                     child: Text('Showing averaged trend for readability', style: JKBMSRTypography.label),
                   ),
+                // KPI strip: latest values as compact tiles, mirroring the
+                // web TelemetryHistoryPanel. Read-only summary of _points —
+                // the CloudServiceRequiredException gating above is untouched.
+                _LatestKpiStrip(points: _points),
+                const SizedBox(height: JKBMSRTokens.space12),
                 _chart(context, 'Voltage (V)', _points.map((p) => p.voltage).toList(), context.colors.accent),
                 const SizedBox(height: JKBMSRTokens.space12),
                 _chart(context, 'Current (A)', _points.map((p) => p.current).toList(), context.colors.warning),
@@ -321,6 +327,86 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Latest-values KPI strip for the history screen: one compact tile per
+/// metric (value + sublabel), mirroring the web TelemetryHistoryPanel strip.
+/// Takes the last non-null reading per metric; null renders as '—'.
+class _LatestKpiStrip extends StatelessWidget {
+  final List<CloudHistoryPoint> points;
+
+  const _LatestKpiStrip({required this.points});
+
+  double? _latest(double? Function(CloudHistoryPoint) pick) {
+    for (var i = points.length - 1; i >= 0; i--) {
+      final v = pick(points[i]);
+      if (v != null) return v;
+    }
+    return null;
+  }
+
+  String _fmt(double? v, int decimals, String unit) =>
+      v == null ? '—' : '${v.toStringAsFixed(decimals)} $unit';
+
+  @override
+  Widget build(BuildContext context) {
+    final current = _latest((p) => p.current);
+    final power = _latest((p) => p.power);
+    return JKBMSRKpiStrip(
+      tiles: [
+        JKBMSRKpiTileData(
+          label: 'Voltage',
+          value: _fmt(_latest((p) => p.voltage), 1, 'V'),
+          sublabel: 'pack',
+        ),
+        JKBMSRKpiTileData(
+          label: 'Current',
+          value: _fmt(current, 1, 'A'),
+          sublabel: current == null
+              ? 'idle'
+              : current > 0.05
+                  ? 'charge'
+                  : current < -0.05
+                      ? 'discharge'
+                      : 'idle',
+          valueColor: current == null
+              ? null
+              : current > 0.05
+                  ? context.colors.accent
+                  : current < -0.05
+                      ? context.colors.warning
+                      : null,
+        ),
+        JKBMSRKpiTileData(
+          label: 'SOC',
+          value: _fmt(_latest((p) => p.soc), 0, '%'),
+          sublabel: 'state',
+        ),
+        JKBMSRKpiTileData(
+          label: 'Power',
+          value: _fmt(power, 0, 'W'),
+          sublabel: 'flow',
+          valueColor: power == null
+              ? null
+              : power >= 0
+                  ? context.colors.accent
+                  : context.colors.warning,
+        ),
+        JKBMSRKpiTileData(
+          label: 'Temp 1',
+          value: _fmt(_latest((p) => p.temperature1), 1, '°'),
+          sublabel: 'sensor',
+          valueColor: context.colors.signal,
+        ),
+        JKBMSRKpiTileData(
+          label: 'Temp 2',
+          value: _fmt(_latest((p) => p.temperature2), 1, '°'),
+          sublabel: 'sensor',
+          valueColor: context.colors.signal,
+        ),
+      ],
     );
   }
 }

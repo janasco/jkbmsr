@@ -65,14 +65,20 @@ void main() {
     expect(find.text('LOAD'), findsOneWidget);
     expect(find.text('Charging · +646 W in'), findsOneWidget);
 
-    // Live stats row.
-    expect(find.text('VOLTAGE'), findsOneWidget);
-    expect(find.text('CURRENT'), findsOneWidget);
-    expect(find.text('POWER'), findsOneWidget);
-    expect(find.text('52.10 V'), findsOneWidget);
-    expect(find.text('12.4 A'), findsOneWidget);
+    // Live stats: web-style reading rows (label left, big value right).
+    expect(find.text('Pack voltage'), findsOneWidget);
+    expect(find.text('Current'), findsOneWidget);
+    expect(find.text('Power'), findsOneWidget);
+    expect(find.text('52.10 V', findRichText: true), findsOneWidget);
+    expect(find.text('+12.4 A', findRichText: true), findsOneWidget);
     expect(find.text('charging in'), findsOneWidget);
-    expect(find.text('646 W'), findsOneWidget);
+    expect(find.text('646 W', findRichText: true), findsOneWidget);
+
+    // Status pill + charge/discharge/balancing legend.
+    expect(find.text('Charging · 0.65 kW'), findsOneWidget);
+    expect(find.text('Charge'), findsOneWidget);
+    expect(find.text('Discharge'), findsOneWidget);
+    expect(find.text('Balancing'), findsOneWidget);
 
     // Voltage trend drawn from 3 history points.
     expect(find.text('VOLTAGE TREND'), findsOneWidget);

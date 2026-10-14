@@ -6,6 +6,7 @@ import '../../widgets/shared/design_system/tokens.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../widgets/shared/design_system/next_update_countdown.dart';
+import '../../widgets/plan_pill.dart';
 import '../../services/api_client.dart';
 import '../../models/device.dart';
 import '../../models/device_wifi_target.dart';
@@ -27,6 +28,7 @@ import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
 import 'widgets/bms_link_banner.dart';
 import 'widgets/offline_alert_controls.dart';
+import 'widgets/temperature_tiles.dart';
 
 // All 8 of jkbmsr-web's dashboard templates are now ported, plus the
 // mobile-only hero 'Energy Flow' renderer used for the 'default' key. A
@@ -64,6 +66,12 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
   // render as "nothing" rather than a false healthy state.
   WifiAlertState? _wifiAlert;
   bool _alertActionBusy = false;
+  // Cloud Service plan chrome for the header pill. Null until the device
+  // config lands (see _schedulePolling) — the pill renders only once these
+  // are known rather than showing a guessed tier.
+  String? _planTierLabel;
+  int? _planTierIntervalSeconds;
+  String _planStatus = 'inactive';
 
   @override
   void initState() {
@@ -109,7 +117,15 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
       intervalSeconds = (config['telemetryIntervalSeconds'] as num? ?? 30).toInt();
       final animationsEnabled = config['batteryAnimationsEnabled'] as bool? ?? true;
       if (mounted) {
-        setState(() => _batteryAnimationsEnabled = animationsEnabled);
+        setState(() {
+          _batteryAnimationsEnabled = animationsEnabled;
+          // The device's entitled Cloud Service tier (id/label for display;
+          // the interval is the fastest cadence the owner can select).
+          _planTierLabel = config['subscriptionTierLabel'] as String?;
+          _planTierIntervalSeconds =
+              (config['subscriptionTierIntervalSeconds'] as num?)?.toInt() ?? intervalSeconds;
+          _planStatus = config['subscriptionStatus'] as String? ?? 'inactive';
+        });
       }
     } catch (_) {
       // Fall back to the default interval; a silent refresh failure here
@@ -518,7 +534,24 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                     ),
                   ),
                   const SizedBox(width: JKBMSRTokens.space12),
-                  JKBMSRStatusBadge(status: _mapStatus(_device!.status)),
+                  Flexible(
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: JKBMSRTokens.space8,
+                      runSpacing: JKBMSRTokens.space8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (_planTierLabel != null)
+                          PlanPill(
+                            tierLabel: _planTierLabel!,
+                            intervalSeconds: _planTierIntervalSeconds ?? 30,
+                            status: _planStatus,
+                            compact: true,
+                          ),
+                        JKBMSRStatusBadge(status: _mapStatus(_device!.status)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: JKBMSRTokens.space16),
@@ -565,6 +598,12 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
 
               if (_hasTelemetry(_telemetry)) ...[
                 _buildDashboardTemplate(devName),
+                const SizedBox(height: JKBMSRTokens.space16),
+                JKBMSRTemperatureTiles(
+                  temperature1: _telemetry?.temperature1 ?? 0.0,
+                  temperature2: _telemetry?.temperature2 ?? 0.0,
+                  mosfetTemperature: _telemetry?.bms.mosfetTemperature ?? 0.0,
+                ),
                 const SizedBox(height: JKBMSRTokens.space16),
                 JKBMSRBmsInfoCard(telemetry: _telemetry),
               ] else ...[

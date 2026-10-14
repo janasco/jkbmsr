@@ -30,6 +30,8 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
   bool _batteryAnimationsEnabled = true;
 
   double _current = 0.0;
+  bool _balancing = false;
+  double _balancingCurrent = 0.0;
 
   @override
   void initState() {
@@ -116,6 +118,8 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
       setState(() {
         _cells = telemetry.cells;
         _current = telemetry.current;
+        _balancing = telemetry.bms.balancing;
+        _balancingCurrent = telemetry.bms.balancingCurrent;
         _isLoading = false;
       });
 
@@ -229,6 +233,8 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
                 isCharging: _current > 0.05,
                 isDischarging: _current < -0.05,
                 animationsEnabled: _batteryAnimationsEnabled,
+                balancing: _balancing,
+                balancingCurrent: _balancingCurrent,
               ),
             ],
           ],
