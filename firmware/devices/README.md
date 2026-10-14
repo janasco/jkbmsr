@@ -1,7 +1,12 @@
 # Supported devices
 
-The gateway is **JK-BMS only**. Each subdirectory is a compatibility profile
-for one JK protocol family. The product speaks the JK BLE protocol
+The gateway is **JK-BMS only**. Looking for your exact model number? Skip to
+the [JK model matrix](#jk-model-matrix) below — it lists every supported
+series. The two profile folders above it are *protocol evidence packs*, not
+one-folder-per-model: every JK smart BMS speaks the same JK BLE protocol
+family (`FFE0`/`FFE1`, auto-discovery), so one shared implementation serves
+them all and a new folder is only added when a model needs distinct handling
+or contributes its own hardware-test fixtures. The product speaks the JK BLE protocol
 (`FFE0`/`FFE1`, auto-discovery) and nothing else: a stored `bmsVendor` value
 from before the product went JK-only falls back to `"jk"` with a serial log
 line in `src/main.cpp`, never selecting another protocol.
