@@ -2,7 +2,7 @@
 
 JK BMS Remote firmware is installed **from the logged-in browser flasher**:
 
-- <https://jkbmsr.com/flash>
+- <https://web.jkbmsr.com/flash>
 
 An account is required. Firmware is delivered only through the authenticated
 JK BMS Remote API (`api.jkbmsr.com`), which streams the release to a signed-in
@@ -11,8 +11,8 @@ no longer serves firmware binaries or a `firmware/` index.
 
 ## Installing firmware
 
-1. Sign in at <https://app.jkbmsr.com>.
-2. Open the flasher at <https://jkbmsr.com/flash> (Chrome or Edge, desktop).
+1. Sign in at <https://web.jkbmsr.com>.
+2. Open the flasher at <https://web.jkbmsr.com/flash> (Chrome or Edge, desktop).
 3. Connect the gateway over a USB **data** cable and click **Connect and
    install**.
 4. Complete Wi‑Fi provisioning (Improv Serial) when prompted, then claim the

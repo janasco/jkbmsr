@@ -54,6 +54,6 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions-secure.csv"
 # in this codebase ever called esp_ota_mark_app_valid_cancel_rollback(), and
 # this Kconfig option was never set, so ESP-IDF's own anti-brick rollback
 # was silently off for every idf-family env. Matters most on flash-encrypted
-# units, where jkbmsr.com/flash can no longer physically re-recover a bricked
+# units, where web.jkbmsr.com/flash can no longer physically re-recover a bricked
 # board at all -- see main.cpp's call to esp_ota_mark_app_valid_cancel_rollback().
 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y

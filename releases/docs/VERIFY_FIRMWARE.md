@@ -10,7 +10,7 @@ For an OTA-capable target, the public material under `https://cdn.jkbmsr.com` is
 - `ota/keys/public/<key id>.pem` — the OTA public verification key
 
 The firmware binaries themselves are not downloadable from this host; they are
-installed from the logged-in flasher at <https://jkbmsr.com/flash>, which shows
+installed from the logged-in flasher at <https://web.jkbmsr.com/flash>, which shows
 the release checksum and verifies each flashed part.
 
 ## Verify Signed OTA Metadata

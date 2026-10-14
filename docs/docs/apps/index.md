@@ -22,6 +22,7 @@ works from anywhere (same data as the web dashboard) and adds:
 - Alert list grouped by gateway, with one-tap clear
 - Firmware (OTA) status and release history
 - Biometric unlock after a session timeout
+- Google Play: [JK BMS Remote](https://play.google.com/store/apps/details?id=com.jkbmsr.pro)
 
 ## JK BMS Bluetooth (Android)
 
@@ -34,8 +35,10 @@ JK-BMS.
 - Best for: on-site checks with no gateway, cloud, or account in the way.
 - Includes per-cell monitoring with a balance trend, control switches, and
   parameter editing on the JK-BMS protocols this app implements.
+- Google Play: [JK BMS Bluetooth](https://play.google.com/store/apps/details?id=com.jkbmsr.ble)
 
 ## Getting the apps
 
 - Android (JK BMS Remote and JK BMS Bluetooth): [jkbmsr.com/download](https://jkbmsr.com/download)
+- Google Play: [JK BMS Remote](https://play.google.com/store/apps/details?id=com.jkbmsr.pro) · [JK BMS Bluetooth](https://play.google.com/store/apps/details?id=com.jkbmsr.ble)
 - Web dashboard: [web.jkbmsr.com](https://web.jkbmsr.com)

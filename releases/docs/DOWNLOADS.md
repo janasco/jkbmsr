@@ -3,7 +3,7 @@
 ## Firmware
 
 Firmware is installed from the **logged-in browser flasher** at
-<https://jkbmsr.com/flash>. An account is required; the flasher fetches the
+<https://web.jkbmsr.com/flash>. An account is required; the flasher fetches the
 release from the authenticated JK BMS Remote API (`api.jkbmsr.com/v1/flash/*`),
 which streams it from the private R2 bucket.
 

@@ -14,9 +14,9 @@ For the first board, follow the full runbook: [First device setup](/getting-star
 
 ## Basic Steps
 
-1. Flash firmware at [jkbmsr.com/flash](https://jkbmsr.com/flash) (sign in first; or PlatformIO for local builds).
+1. Flash firmware at [web.jkbmsr.com/flash](https://web.jkbmsr.com/flash) (sign in first).
 2. Join Wi‑Fi with Improv Serial (same USB cable) or SoftAP fallback.
-3. Claim the device at [app.jkbmsr.com/onboard](https://app.jkbmsr.com/onboard) with the device ID and claim code.
+3. Claim the device at [web.jkbmsr.com/onboard](https://web.jkbmsr.com/onboard) with the device ID and claim code.
 4. Make sure the JK-BMS is powered and within Bluetooth range of the ESP32 gateway.
 5. Confirm telemetry appears in the dashboard.
 

@@ -5,7 +5,7 @@ Check that the SSID and password are correct and that the ESP32 gateway is withi
 ## Browser Improv
 
 - Use Chrome or Edge on the same USB cable used for flash.
-- If Improv never appears, power-cycle the board and reopen [jkbmsr.com/flash](https://jkbmsr.com/flash).
+- If Improv never appears, power-cycle the board and reopen [web.jkbmsr.com/flash](https://web.jkbmsr.com/flash).
 - Captive portals / enterprise Wi‑Fi that block unknown HTTPS hosts will prevent cloud register after join.
 
 ## SoftAP fallback

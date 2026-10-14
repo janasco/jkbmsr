@@ -32,7 +32,7 @@ The flasher sends you to `/onboard?device=…&code=…`. Auth should preserve th
 If the link is lost:
 
 1. Re-open the URL from the flasher success screen, or
-2. Enter device ID + claim code manually at [app.jkbmsr.com/devices/claim](https://app.jkbmsr.com/devices/claim).
+2. Enter device ID + claim code manually at [web.jkbmsr.com/devices/claim](https://web.jkbmsr.com/devices/claim).
 
 ## SoftAP works but claim fails
 

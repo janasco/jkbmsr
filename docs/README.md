@@ -28,7 +28,7 @@ Implemented system pieces:
 - Cloudflare Worker API is deployed at `https://api.jkbmsr.com`.
 - Cloudflare D1 schema has grown well beyond the original users/devices/telemetry/alerts/firmware/api_keys set (20 migrations as of this writing) — device config, WiFi management, BLE config, OTA commands, push tokens, licensing, and more.
 - Cloudflare R2 stores firmware binaries.
-- Cloudflare Pages serves the unified public site + dashboard at `https://jkbmsr.com` from `jkbmsr-web` (`app.jkbmsr.com` is now just a legacy redirect to the apex domain). `jkbmsr-site`, the original separate marketing repo, is archived — its content was absorbed into `jkbmsr-web`.
+- Cloudflare Pages serves the marketing site at `https://jkbmsr.com` (project `jkbmsr-marketing`) and the web dashboard at `https://web.jkbmsr.com` (project `jkbmsr-web`). `app.jkbmsr.com` does not exist — use `web.jkbmsr.com` for the dashboard and flasher. `jkbmsr-site`, the original separate marketing repo, is archived — its content was absorbed into the current site.
 - OTA release automation is implemented for `jkbmsr-firmware`.
 - Android mobile app is released (`jkbmsr-pro`, signed APK/AAB published to `jkbmsr-releases`) — includes QR-code device claiming, device rename, and push notifications on Android.
 - `jkbmsr-admin` — internal admin console at `admin.jkbmsr.com`, behind Cloudflare Access + an `is_admin` gate.
@@ -100,7 +100,8 @@ docs/
 
 ## Live System References
 
-- Public site + web dashboard: `https://jkbmsr.com` (`app.jkbmsr.com` redirects here)
+- Public site: `https://jkbmsr.com`
+- Web dashboard + browser flasher: `https://web.jkbmsr.com` (`/flash`, `/onboard`, `/dashboard`)
 - Admin console: `https://admin.jkbmsr.com`
 - Cloud API: `https://api.jkbmsr.com`
 - Public release artifacts: `https://cdn.jkbmsr.com`

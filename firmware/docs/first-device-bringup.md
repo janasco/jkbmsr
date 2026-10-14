@@ -7,7 +7,7 @@ Public runbook (keep this in sync): https://jkbmsr.com/docs/getting-started/firs
 
 ## Option A — Browser flash
 
-1. Sign in at https://app.jkbmsr.com, then open https://jkbmsr.com/flash in
+1. Sign in at https://web.jkbmsr.com, then open https://web.jkbmsr.com/flash in
    Chrome/Edge. Firmware is delivered only to a signed-in account — `cdn.jkbmsr.com`
    no longer serves firmware. The published `0.1.4` artifact was an embedded test
    runner and must not be used.

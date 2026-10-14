@@ -1,7 +1,7 @@
 # Release Notes
 
 Firmware is installed from the logged-in browser flasher at
-<https://jkbmsr.com/flash>. The current version per target is resolved from the
+<https://web.jkbmsr.com/flash>. The current version per target is resolved from the
 authenticated API, not a static public file.
 
 Highlights of recent releases:

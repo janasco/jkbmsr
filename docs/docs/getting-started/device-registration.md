@@ -30,6 +30,6 @@ Authenticated customer request:
 - If email verification is enabled, the account must be verified first (403 otherwise).
 - Claiming before the device finishes register returns 401 — retry after Wi‑Fi/register completes.
 
-Browser path: flash → Improv → [app.jkbmsr.com/onboard](https://app.jkbmsr.com/onboard)?device=…&code=….
+Browser path: flash → Improv → [web.jkbmsr.com/onboard](https://web.jkbmsr.com/onboard)?device=…&code=….
 
 See [First device setup](/getting-started/first-device-setup) and [Claim and onboard issues](/troubleshooting/claim-and-onboard-issues).

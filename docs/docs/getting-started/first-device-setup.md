@@ -8,15 +8,15 @@ Use this for the first physical board. Encrypted / Secure Boot prototypes are a 
 
 - ESP32 (USB-C) and a Chrome or Edge browser
 - Wi‑Fi credentials for a 2.4 GHz network
-- A JK BMS Remote account at [app.jkbmsr.com](https://app.jkbmsr.com)
+- A JK BMS Remote account at [web.jkbmsr.com](https://web.jkbmsr.com)
 - The JK-BMS powered and within Bluetooth (BLE) range of the gateway (claim works without BMS data)
 
 ## Happy path (flasher)
 
-1. Sign in at [app.jkbmsr.com](https://app.jkbmsr.com), then open [jkbmsr.com/flash](https://jkbmsr.com/flash) in Chrome or Edge. Firmware is served only to a signed-in account.
-2. Connect the ESP32 over USB and flash the latest firmware (`0.1.4` or newer).
+1. Sign in at [web.jkbmsr.com](https://web.jkbmsr.com), then open [web.jkbmsr.com/flash](https://web.jkbmsr.com/flash) in Chrome or Edge. Firmware is served only to a signed-in account.
+2. Connect the ESP32 over USB and flash the latest firmware.
 3. When Improv Serial appears, join your Wi‑Fi network on the same cable.
-4. The flasher redirects to `https://app.jkbmsr.com/onboard?device=…&code=…`.
+4. The flasher redirects to `https://web.jkbmsr.com/onboard?device=…&code=…`.
 5. Sign in or create an account (the onboard URL is preserved through login/register).
 6. Confirm the prefilled device ID and claim code, then **Claim device**.
 7. Open the dashboard — the gateway should appear. Pack SOC/cells stay empty until the BMS is in Bluetooth range and the BLE link is up.
@@ -27,7 +27,7 @@ If Improv is unavailable (phone-only, field install):
 
 1. After flash, the SoftAP `JKBMSR-Setup-XXXX` appears (password = claim code).
 2. Join that network and complete captive-portal Wi‑Fi setup.
-3. Claim at [app.jkbmsr.com/onboard](https://app.jkbmsr.com/onboard) using the device ID and claim code from the serial log or device label.
+3. Claim at [web.jkbmsr.com/onboard](https://web.jkbmsr.com/onboard) using the device ID and claim code from the serial log or device label.
 
 ## Serial log cues (USB monitor @ 115200)
 
@@ -42,14 +42,14 @@ Expect lines that include:
 
 | Symptom | Cause | What to do |
 | --- | --- | --- |
-| Claim says “Invalid device credentials” right after Wi‑Fi | Device has not finished `POST /device/register` yet | Keep the form open — the dashboard retries for ~90s. Or wait and claim again. |
+| Claim says “Invalid device credentials” right after Wi‑Fi | Device has not finished registering yet | Keep the form open — the dashboard retries for ~90s. Or wait and claim again. |
 | Claim says verify your email (403) | Email verification is enabled in production | Open the verification link, then sign in (return path is preserved when possible). |
 | Device online, SOC 0%, no cells | Claim succeeded; BMS not in Bluetooth range or asleep | Confirm the BMS is powered/awake and within range; check BLE state and address in device diagnostics. |
 | Redirect lost after register | Opened verify email on another device | Sign in on the original browser, or reopen the onboard URL from the flasher. |
 
 ## After claim
 
-1. Confirm the device row on [app.jkbmsr.com/dashboard](https://app.jkbmsr.com/dashboard).
+1. Confirm the device row on [web.jkbmsr.com/dashboard](https://web.jkbmsr.com/dashboard).
 2. Confirm the JK-BMS BLE link (see [JK-BMS connection](/getting-started/jk-bms-wiring)).
 3. Confirm live telemetry and optional OTA from device settings.
 
