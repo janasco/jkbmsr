@@ -9,6 +9,11 @@ abstract final class AppInfo {
   /// User-facing app name.
   static const String appName = 'JK BMS Contributor';
 
+  /// Build version, carried in a contribution's `app.version`. Kept in step
+  /// with pubspec's `version:` by hand — it is a single constant, and reading
+  /// it at runtime would add a plugin for one string.
+  static const String version = '0.1.0+1';
+
   /// One-line description shown on the home screen.
   static const String tagline =
       'Help improve JK-BMS support by contributing your device data.';

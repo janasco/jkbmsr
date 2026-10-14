@@ -1,0 +1,77 @@
+import 'package:bms_core/bms_core.dart';
+import 'package:jkbmsr_contributor/models/contribution.dart';
+
+/// Real, CRC-valid JK02 frames used by the capture/model tests.
+///
+/// Provenance:
+///  * [devInfo24sHex] — the JK02_24S device-info capture printed in
+///    syssi/esphome-jk-bms `jk_bms_ble.cpp` `decode_device_info_` and already
+///    asserted by `packages/bms_core`'s tests.
+///  * [cellInfo24sHex] — the real JK-B2A24S capture documented in
+///    syssi/esphome-jk-bms (`tests/components/jk_bms_ble/frames.h`) and used
+///    by `firmware/test/test_jk02_decoder`.
+///  * [logbookHex] — the captured logbook frame at syssi/esphome-jk-bms
+///    `frames_logbook.h`.
+const devInfo24sHex =
+    '55aaeb90039f4a4b2d4232413234533135500000000031302e585700000031302e303700000040af0100060000'
+    '004a4b2d4232413234533135500000000031323334000000000000000000000000323230343037000032303231'
+    '363032303936003030303000496e70757420557365726461746100003132333435360000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000065';
+
+const cellInfo24sHex =
+    '55aaeb90028cff0c010d010dff0c010d010dff0c010d010d010d010dff0c010d010d010d010d0000'
+    '0000000000000000000000000000ffff0000000d000000009d0196018c0187018401840183018401'
+    '850181018301860182018201830185010000000000000000000000000000000000000000000003d0'
+    '00000000000000000000be00bf00d2000000000000548e0b0100683c0100000000003d0400006400'
+    '7904ca0310000101aa06000000000000000000000000070001000000d50200000000aed63b400000'
+    '000058aafdff0000000100020000ece64f0000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000000000cd';
+
+const logbookHex =
+    '55aaeb90051f04000000030000000001ee00000044af5c26001bd85c26001c0000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+    '00000000000000000000000000000000000000000000000000000000009a';
+
+/// Hex string -> bytes.
+List<int> bytesFromHex(String hex) {
+  final out = <int>[];
+  for (var i = 0; i + 1 < hex.length; i += 2) {
+    out.add(int.parse(hex.substring(i, i + 2), radix: 16));
+  }
+  return out;
+}
+
+/// Splits [data] into [size]-byte fragments, as BLE notifications arrive.
+List<List<int>> chunk(List<int> data, [int size = 20]) {
+  final out = <List<int>>[];
+  for (var i = 0; i < data.length; i += size) {
+    out.add(data.sublist(i, i + size > data.length ? data.length : i + size));
+  }
+  return out;
+}
+
+/// A small, valid contribution built from the captured fixtures, for UI tests.
+Contribution sampleContribution() {
+  final deviceInfo = BmsProtocolHelper.parseJk02DeviceInfoFrame(bytesFromHex(devInfo24sHex));
+  final status = BmsProtocolHelper.parseJk02CellInfoFrame(bytesFromHex(cellInfo24sHex))!;
+  return Contribution.fromCapture(
+    app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+    remoteId: 'AA:BB:CC:11:22:33',
+    advertisedName: 'JK_B2A24S15P',
+    rssi: -63,
+    serviceUuids: const ['0000ffe0-0000-1000-8000-00805f9b34fb'],
+    deviceInfo: deviceInfo,
+    is32s: false,
+    samples: [TelemetrySample.fromStatus(status, tOffsetMs: 0)],
+    contributionId: 'c_01926f6a-1c00-7000-8000-000000000001',
+    capturedAt: DateTime.utc(2026, 10, 14, 9, 20),
+  );
+}

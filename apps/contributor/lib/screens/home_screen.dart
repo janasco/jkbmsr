@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/app_info.dart';
 import '../widgets/brand_mark.dart';
+import 'capture_screen.dart';
 
 /// Placeholder home screen.
 ///
@@ -39,6 +40,14 @@ class HomeScreen extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
+              ),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CaptureScreen()),
+                ),
+                icon: const Icon(Icons.bluetooth_searching_rounded),
+                label: const Text('Start a capture'),
               ),
             ],
           ),
