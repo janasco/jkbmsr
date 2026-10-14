@@ -16,7 +16,7 @@
 #   firmware           native host suites under ASan/UBSan, plus the device-profile
 #                      and hardware-target validators — see firmware/scripts/run-checks.sh
 #   docs               npm run docs:build
-#   releases           python3 scripts/validate_release_index.py
+#   releases           python3 scripts/validate_ota_metadata.py
 #
 # Usage:
 #   scripts/check-all.sh                 # dry run: print every command, run nothing
@@ -73,6 +73,27 @@ die()  { printf '\ncheck-all: %s\n' "$*" >&2; exit 2; }
 
 usage() { sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; $d'; }
 
+# Resolve PlatformIO the same way the firmware scripts do (`PIO_BIN`, defaulting
+# to a known venv/path), so the firmware stage and the toolchain report agree on
+# which binary they mean. PlatformIO is NOT pip-installable on this host (PEP 668
+# externally-managed-environment) and its venv is deliberately not on the default
+# PATH, so "pio not found" is the normal state for a plain shell — not evidence
+# that the firmware is broken. Order: an explicit PIO_BIN, then the known venv,
+# then whatever is on PATH.
+resolve_pio() {
+  if [ -n "${PIO_BIN:-}" ] && command -v "${PIO_BIN}" >/dev/null 2>&1; then
+    printf '%s\n' "${PIO_BIN}"; return 0
+  fi
+  if [ -x /home/jkbmsr/.pio-venv/bin/pio ]; then
+    printf '%s\n' /home/jkbmsr/.pio-venv/bin/pio; return 0
+  fi
+  if command -v pio >/dev/null 2>&1; then
+    printf '%s\n' pio; return 0
+  fi
+  return 1
+}
+PIO_RESOLVED="$(resolve_pio || true)"
+
 cleanup() {
   local status=$?
   if [ "$status" -eq 0 ] && [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
@@ -128,10 +149,11 @@ for tool in node npm python3 g++; do
     warn "$tool not found on PATH"
   fi
 done
-if command -v pio >/dev/null 2>&1; then
-  ok "pio ($(pio --version 2>&1 | head -1))"
+if [ -n "$PIO_RESOLVED" ]; then
+  ok "pio ($PIO_RESOLVED; $("$PIO_RESOLVED" --version 2>&1 | head -1))"
 else
-  warn "pio not found — the firmware suite builds 25 PlatformIO environments and needs 6.1.19"
+  warn "pio not found via PIO_BIN, /home/jkbmsr/.pio-venv/bin/pio or PATH — the firmware suite will SKIP"
+  warn "  it is pinned to 6.1.19 and is not pip-installable on this host (externally-managed-environment)"
 fi
 if command -v flutter >/dev/null 2>&1; then
   ok "flutter ($(command -v flutter))"
@@ -250,38 +272,63 @@ docs_suite() {
 releases_suite() {
   local log="$LOG_DIR/releases.log"
   local releases_dir="$REPO_ROOT/releases"
-  if [ ! -f "$releases_dir/scripts/validate_release_index.py" ]; then
-    record SKIP "validate_release_index.py not found"
+  # Validates the material this repository still publishes: the signed OTA
+  # metadata (ota/<target>-latest.json) and the OTA public keys
+  # (ota/keys/public/*.pem). The old release-index validator required
+  # releases/firmware/releases.json, a firmware mirror deliberately stripped on
+  # 2026-10-13 when firmware delivery moved behind the account-gated API — see
+  # AGENTS.md (History, 2026-10-13). That tree is correctly absent, so the check
+  # was failing on input the repository is right not to carry.
+  if [ ! -f "$releases_dir/scripts/validate_ota_metadata.py" ]; then
+    record SKIP "validate_ota_metadata.py not found"
     return 0
   fi
-  if ( cd "$releases_dir" && python3 scripts/validate_release_index.py ) >"$log" 2>&1; then
-    record PASS "release index consistent"
+  if ( cd "$releases_dir" && python3 scripts/validate_ota_metadata.py ) >"$log" 2>&1; then
+    record PASS "$(tail -1 "$log")"
   else
-    record FAIL "validate_release_index.py failed (see $log)"
+    record FAIL "validate_ota_metadata.py failed (see $log)"
   fi
 }
 
 firmware_suite() {
   local log="$LOG_DIR/firmware.log"
   local runner="$REPO_ROOT/firmware/scripts/run-checks.sh"
-  if [ -x "$runner" ]; then
-    if "$runner" >"$log" 2>&1; then
-      record PASS "firmware/scripts/run-checks.sh ok"
-    else
-      record FAIL "firmware/scripts/run-checks.sh failed (see $log)"
-    fi
+  if [ ! -x "$runner" ]; then
+    # Not a failure and not a pass. Reporting it as either would be a lie: the
+    # firmware suites are the ones this project most needs run, and a component
+    # that was never checked is not a component that passed. --strict turns this
+    # into a failure for whoever is about to merge.
+    record SKIP "firmware/scripts/run-checks.sh not present yet"
+    info "expected path: firmware/scripts/run-checks.sh"
+    info "until it lands, run by hand:"
+    info "  cd firmware && ./scripts/run-host-tests.sh"
+    info "  python3 firmware/scripts/validate-device-profiles.py"
+    info "  python3 firmware/scripts/validate-hardware-targets.py"
     return 0
   fi
-  # Not a failure and not a pass. Reporting it as either would be a lie: the
-  # firmware suites are the ones this project most needs run, and a component
-  # that was never checked is not a component that passed. --strict turns this
-  # into a failure for whoever is about to merge.
-  record SKIP "firmware/scripts/run-checks.sh not present yet"
-  info "expected path: firmware/scripts/run-checks.sh"
-  info "until it lands, run by hand:"
-  info "  cd firmware && ./scripts/run-host-tests.sh"
-  info "  python3 firmware/scripts/validate-device-profiles.py"
-  info "  python3 firmware/scripts/validate-hardware-targets.py"
+  if [ -z "$PIO_RESOLVED" ]; then
+    # An honest SKIP, never an abort. PlatformIO is pinned to 6.1.19, is not
+    # pip-installable here, and its venv is not on the default PATH; without it
+    # the build stage cannot run, but the validator and native host-suite stages
+    # can, so point at those rather than reporting the firmware as broken.
+    record SKIP "PlatformIO not found (PIO_BIN, /home/jkbmsr/.pio-venv/bin/pio, PATH); pinned to 6.1.19"
+    info "the validate + host-tests stages need no PlatformIO; run them by hand:"
+    info "  cd firmware && python3 scripts/validate-device-profiles.py"
+    info "  cd firmware && python3 scripts/validate-hardware-targets.py"
+    info "  cd firmware && ./scripts/run-host-tests.sh"
+    info "or install PlatformIO 6.1.19 and set PIO_BIN=/path/to/pio"
+    return 0
+  fi
+  # Pass the resolved PIO_BIN through so run-checks.sh's ensure_platformio()
+  # accepts the 6.1.19 that is already present instead of trying to pip-install
+  # it. PLATFORMIO_CORE_DIR is deliberately NOT overridden here: run-checks.sh
+  # defaults it to firmware/.platformio-core and applies its per-platform
+  # isolation on top, and duplicating that logic here would let the two drift.
+  if PIO_BIN="$PIO_RESOLVED" "$runner" >"$log" 2>&1; then
+    record PASS "firmware/scripts/run-checks.sh ok (pio $PIO_RESOLVED)"
+  else
+    record FAIL "firmware/scripts/run-checks.sh failed (see $log)"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -303,10 +350,12 @@ if [ "$RUN" -eq 0 ]; then
                           -> native host suites under ASan/UBSan,
                              validate-device-profiles.py, validate-hardware-targets.py,
                              and every PlatformIO environment in platformio.ini.
-                             This is the slow one: expect minutes, not seconds, and
-                             it needs PlatformIO 6.1.19.
+                             This is the slow one: expect minutes, not seconds. It
+                             needs PlatformIO 6.1.19; if it is not found via PIO_BIN,
+                             the known venv or PATH, the component SKIPs with that
+                             reason rather than failing.
    ..    docs                npm ci (only if node_modules is missing) && npm run docs:build
-   ..    releases            python3 scripts/validate_release_index.py
+   ..    releases            python3 scripts/validate_ota_metadata.py
 PLAN
   say ""
   info "this is the default mode: nothing above was executed, nothing was written."

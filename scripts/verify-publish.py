@@ -26,8 +26,8 @@ through the standard library's urllib.
 Usage:
   scripts/verify-publish.py --url https://cdn.jkbmsr.com/index.html \
       --file releases/dist/index.html
-  scripts/verify-publish.py --url https://cdn.jkbmsr.com/firmware/releases.json \
-      --expect-sha256 1a2b3c... --attempts 6 --delay 10
+  scripts/verify-publish.py --url https://cdn.jkbmsr.com/ota/esp32-s3-4mb-latest.json \
+      --file releases/dist/ota/esp32-s3-4mb-latest.json
 
 Exit status:
   0  every URL fetched and matched

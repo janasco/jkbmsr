@@ -29,7 +29,7 @@ packaging step in `scripts/deploy-releases.sh` dies if one appears. A historical
 published. See `jkbmsr-private/ops/internal-notes/firmware-delivery-gate-spec.md`.
 
 Installing firmware is done from the logged-in flasher at
-`https://jkbmsr.com/flash`.
+`https://web.jkbmsr.com/flash`.
 
 ## Layout
 
@@ -78,7 +78,10 @@ this domain.
 Before merging public artifact updates:
 
 1. Confirm the public OTA metadata (`ota/<target>-latest.json`) and public key
-   describe the release the API and D1 also report.
+   describe the release the API and D1 also report. Run
+   `python3 releases/scripts/validate_ota_metadata.py` (also run by
+   `scripts/check-all.sh`) to check the metadata is well formed and that every
+   signature verifies against the published key.
 2. Confirm no `firmware/` directory is added back to this tree.
 3. Confirm no private keys, Cloudflare tokens, or internal-only files were
    added.

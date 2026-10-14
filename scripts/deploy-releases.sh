@@ -181,10 +181,12 @@ fi
 #    (pages.yml, "Prepare static artifact")
 # ---------------------------------------------------------------------------
 # NOTE: the release-index and per-target checksum steps that used to run here
-# are gone with the firmware bundle. `releases/scripts/validate_release_index.py`
-# and `firmware/scripts/update_release_index.py` remain in the tree but are no
-# longer invoked by this deploy: there is no published firmware index to keep
-# aligned. The account-gated API derives its catalog from R2 + D1 instead.
+# are gone with the firmware bundle. `releases/scripts/validate_ota_metadata.py`
+# (which replaced `validate_release_index.py`) and the now-unused
+# `firmware/scripts/update_release_index.py` are not invoked by this deploy:
+# there is no published firmware index to keep aligned, only the signed OTA
+# metadata and public keys under releases/ota/. The account-gated API derives
+# its catalog from R2 + D1 instead.
 if [ "$MODE" = "dry-run" ]; then
   step "plan: package and publish"
   cat <<PLAN

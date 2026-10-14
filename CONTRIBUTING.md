@@ -66,7 +66,8 @@ fail loudly if it is absent — do not add a default.
   It covers `flutter analyze && flutter test` for both apps, the native
   ASan/UBSan host suites plus the device-profile and hardware-target
   validators for the firmware, `npm run docs:build` for the docs site, and
-  `python3 scripts/validate_release_index.py` for the release index. `SKIP` in
+  `python3 scripts/validate_ota_metadata.py` for the published OTA material
+  (signed metadata + public keys). `SKIP` in
   its table is not `PASS`; add `--strict` when you are the last person before a
   merge and want an unrun component to be a failure.
 

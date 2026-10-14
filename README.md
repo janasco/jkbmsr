@@ -84,7 +84,7 @@ That covers `flutter analyze && flutter test` for the three apps, `dart analyze
 && dart test` for the shared `packages/bms_core` package, the native ASan/UBSan
 host suites plus the device-profile and hardware-target validators for the
 firmware, `npm run docs:build` for the documentation site, and
-`python3 scripts/validate_release_index.py` for the release index. Run it with no
+`python3 scripts/validate_ota_metadata.py` for the published OTA material. Run it with no
 arguments to see the plan without executing anything.
 
 Publishing is manual as well. `scripts/stage-docs-at-apex.sh` stages the docs
