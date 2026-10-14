@@ -18,6 +18,13 @@ dependencies:
   bms_core:
     path: ../../packages/bms_core
   flutter_blue_plus: ^1.34.4
+  # Persists the single first-run consent decision (a bool + a UTC timestamp).
+  # apps/ble has no local key-value store (its persistent state is the sqflite
+  # logbook), and Contributor has none at all yet, so a minimal key-value store
+  # is the right size. `shared_preferences` is already the choice `apps/pro`
+  # makes for the same kind of small local setting (`lib/app/theme_controller.dart`),
+  # so the family stays consistent. See lib/services/consent_store.dart.
+  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:

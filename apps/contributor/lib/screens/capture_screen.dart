@@ -7,7 +7,9 @@ import '../models/contribution.dart';
 import '../services/app_info.dart';
 import '../services/ble_transport.dart';
 import '../services/capture_service.dart';
+import '../services/consent_controller.dart';
 import '../services/flutter_blue_plus_transport.dart';
+import 'review_screen.dart';
 
 /// Default app/OS provenance for a contribution, read from the platform.
 AppProvenance buildAppProvenance() {
@@ -21,11 +23,11 @@ AppProvenance buildAppProvenance() {
 
 enum _Stage { idle, scanning, capturing, done, error }
 
-/// A minimal capture screen: scan → connect → capture → summary.
+/// A minimal capture screen: scan → connect → capture → summary → review.
 ///
-/// It deliberately stops at the summary. The consent gate, the review screen
-/// and submit/export are Phases 4/5 of the plan and are left as an explicit
-/// seam ([_onReviewPressed]) rather than half-built here.
+/// Capture is consent-gated (a capture cannot start without it), and the
+/// summary's "Review & contribute" opens [ReviewScreen]. Submit and export are
+/// Phase 5 and are left as the explicit seam in the review screen.
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key, this.controller, this.captureDuration});
 
@@ -130,19 +132,69 @@ class _CaptureScreenState extends State<CaptureScreen> {
     });
   }
 
-  /// Phase 4/5 seam. The consent gate, review-before-submit and submit/export
-  /// flows land here; nothing is submitted from Phase 3.
+  /// Fills the Phase 3 seam: open the review screen with the real payload, the
+  /// device serial (for the opt-in toggle) and the consent to stamp. Submit and
+  /// export remain Phase 5.
   void _onReviewPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Review and submit arrive in the next phase.')),
+    final contribution = _outcome?.contribution;
+    if (contribution == null) return;
+    final consent = ConsentScope.maybeOf(context);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ReviewScreen(
+          contribution: contribution,
+          rawSerial: _outcome?.session?.deviceInfo?.serialNumber,
+          consent: consent?.record,
+        ),
+      ),
     );
+  }
+
+  /// True when there is no gate in scope, or the gate has granted consent.
+  bool _consentGranted(BuildContext context) {
+    final consent = ConsentScope.maybeOf(context);
+    return consent == null || consent.isGranted;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Capture')),
-      body: SafeArea(child: _buildBody(context)),
+      body: SafeArea(
+        child: _consentGranted(context)
+            ? _buildBody(context)
+            : _buildConsentRequired(context),
+      ),
+    );
+  }
+
+  /// Defence in depth: the gate already blocks this screen, but a capture must
+  /// never start without consent even if the screen is reached another way.
+  Widget _buildConsentRequired(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.shield_outlined, size: 56, color: theme.colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Contributing is switched off.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No capture can start until you agree to contribute.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -304,7 +356,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         row('Payload size', '${c.encodedBytes()} bytes'),
         row('Serial number', c.redaction.serialNumber == 'shared' ? 'shared' : 'withheld'),
         const SizedBox(height: 24),
-        // Phase 4/5 seam.
+        // Opens the review screen (Phase 4); submit/export is the Phase 5 seam.
         FilledButton(
           onPressed: _onReviewPressed,
           child: const Text('Review & contribute'),

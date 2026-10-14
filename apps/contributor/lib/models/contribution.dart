@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:bms_core/bms_core.dart';
 
+import 'contribution_selection.dart';
+
 /// The versioned donation payload — the exact JSON a Contributor capture
 /// produces, and the shape the backend stores.
 ///
@@ -151,22 +153,99 @@ class Contribution {
     );
   }
 
+  // ---- Selection (review-before-submit, Phase 4) ---------------------------
+
+  /// Returns a copy with the serial **shared** ([include] true and a non-empty
+  /// [serial]) or withheld. The serial is never carried unless this is called
+  /// with `include: true`, so it is read only when the user opts in.
+  Contribution withSerial(String? serial, {required bool include}) {
+    final shared = include && (serial != null && serial.trim().isNotEmpty);
+    return Contribution(
+      schemaVersion: schemaVersion,
+      contributionId: contributionId,
+      capturedAt: capturedAt,
+      app: app,
+      consent: consent,
+      bms: BmsProvenance(
+        brand: bms.brand,
+        modelName: bms.modelName,
+        hardwareVersion: bms.hardwareVersion,
+        softwareVersion: bms.softwareVersion,
+        cellCountReported: bms.cellCountReported,
+        layout: bms.layout,
+        manufacturingYearMonth: bms.manufacturingYearMonth,
+        powerOnCountBucket: bms.powerOnCountBucket,
+        serialHash: shared ? serial : null,
+      ),
+      advertisement: advertisement,
+      samples: samples,
+      settings: settings,
+      logbook: logbook,
+      rawFrames: rawFrames,
+      redaction: RedactionInfo(
+        serialNumber: shared ? 'shared' : 'withheld',
+        omittedFields: redaction.omittedFields,
+      ),
+      sizeBytes: sizeBytes,
+    );
+  }
+
+  /// Returns a copy carrying the recorded [record] (or none).
+  Contribution withConsent(ConsentRecord? record) => Contribution(
+        schemaVersion: schemaVersion,
+        contributionId: contributionId,
+        capturedAt: capturedAt,
+        app: app,
+        consent: record,
+        bms: bms,
+        advertisement: advertisement,
+        samples: samples,
+        settings: settings,
+        logbook: logbook,
+        rawFrames: rawFrames,
+        redaction: redaction,
+        sizeBytes: sizeBytes,
+      );
+
   // ---- Serialisation -------------------------------------------------------
 
-  Map<String, dynamic> toJson() {
+  /// Serialises the payload.
+  ///
+  /// When [selection] is null the full, untrimmed document is written (this is
+  /// what the tests and a plain export see). When it is given, every field the
+  /// user switched off is **omitted** — the key is absent, not zeroed — and
+  /// which ones were withheld is recorded in `redaction.omittedFields`.
+  Map<String, dynamic> toJson({ContributionSelection? selection}) {
+    final fullJson = selection == null ? null : toJson();
+    final omitted = fullJson == null ? const <String>[] : selection!.omittedIn(fullJson);
+
     final map = <String, dynamic>{
       'schemaVersion': currentSchemaVersion,
       'contributionId': contributionId,
       'capturedAt': utcIso(capturedAt),
-      'app': app.toJson(),
+      if (_include(selection, 'app')) 'app': app.toJson(),
       if (consent != null) 'consent': consent!.toJson(),
-      'bms': bms.toJson(),
-      'advertisement': advertisement.toJson(),
-      'samples': samples.map((s) => s.toJson()).toList(),
-      if (settings != null) 'settings': settings!.toJson(),
-      if (logbook != null) 'logbook': logbook!.toJson(),
-      'rawFrames': rawFrames.map((f) => f.toJson()).toList(),
-      'redaction': redaction.toJson(),
+      'bms': bms.toJson(
+        include: (key) => _include(selection, 'bms.$key'),
+      ),
+      // Advertisement has no top-level field of its own: it is carried when at
+      // least one of its sub-fields is selected, and dropped when none is.
+      if (_advertisementSelected(selection))
+        'advertisement': advertisement.toJson(
+          include: (key) => _include(selection, 'advertisement.$key'),
+        ),
+      if (_include(selection, 'samples'))
+        'samples': samples.map((s) => s.toJson()).toList(),
+      if (settings != null && _include(selection, 'settings'))
+        'settings': settings!.toJson(),
+      if (logbook != null && _include(selection, 'logbook'))
+        'logbook': logbook!.toJson(),
+      if (_include(selection, 'rawFrames'))
+        'rawFrames': rawFrames.map((f) => f.toJson()).toList(),
+      'redaction': RedactionInfo(
+        serialNumber: redaction.serialNumber,
+        omittedFields: omitted,
+      ).toJson(),
     };
     // Measured before the sizeBytes field is added, so the number is not
     // self-referential.
@@ -174,14 +253,32 @@ class Contribution {
     return map;
   }
 
+  static bool _include(ContributionSelection? selection, String id) =>
+      selection == null || selection.includes(id);
+
+  /// Advertisement is carried when any of its sub-fields is selected (or when
+  /// there is no selection at all).
+  static bool _advertisementSelected(ContributionSelection? selection) {
+    if (selection == null) return true;
+    return const [
+      'advertisement.namePattern',
+      'advertisement.serviceUuids',
+      'advertisement.rssiBucket',
+      'advertisement.addressMasked',
+    ].any(selection.includes);
+  }
+
   /// Encodes to the wire document.
-  String encode() => jsonEncode(toJson());
+  String encode({ContributionSelection? selection}) =>
+      jsonEncode(toJson(selection: selection));
 
   /// The exact byte length of [encode].
-  int encodedBytes() => utf8.encode(encode()).length;
+  int encodedBytes({ContributionSelection? selection}) =>
+      utf8.encode(encode(selection: selection)).length;
 
   /// Whether the payload is within [maxPayloadBytes].
-  bool isWithinSizeCap() => encodedBytes() <= maxPayloadBytes;
+  bool isWithinSizeCap({ContributionSelection? selection}) =>
+      encodedBytes(selection: selection) <= maxPayloadBytes;
 
   /// Decodes a wire document. Throws [FormatException] when a required field
   /// is missing or malformed, and [UnsupportedSchemaVersion] for an unknown
@@ -196,8 +293,8 @@ class Contribution {
     }
 
     final bms = _asMap(json['bms'], 'bms');
-    final advertisement = _asMap(json['advertisement'], 'advertisement');
-    final app = _asMap(json['app'], 'app');
+    final advertisement = _asMapOrEmpty(json['advertisement']);
+    final app = _asMapOrEmpty(json['app']);
 
     return Contribution(
       schemaVersion: version,
@@ -209,9 +306,11 @@ class Contribution {
           : ConsentRecord.fromJson(_asMap(json['consent'], 'consent')),
       bms: BmsProvenance.fromJson(bms),
       advertisement: AdvertisementInfo.fromJson(advertisement),
-      samples: _asList(json['samples'], 'samples')
-          .map((e) => TelemetrySample.fromJson(_asMap(e, 'samples[]')))
-          .toList(growable: false),
+      samples: json['samples'] == null
+          ? const []
+          : _asList(json['samples'], 'samples')
+              .map((e) => TelemetrySample.fromJson(_asMap(e, 'samples[]')))
+              .toList(growable: false),
       settings: json['settings'] == null
           ? null
           : SettingsCapture.fromJson(_asMap(json['settings'], 'settings')),
@@ -392,17 +491,23 @@ class BmsProvenance {
     this.serialHash,
   });
 
-  Map<String, dynamic> toJson() => {
-        'brand': brand,
-        'modelName': modelName,
-        'hardwareVersion': hardwareVersion,
-        'softwareVersion': softwareVersion,
-        'cellCountReported': cellCountReported,
-        'layout': layout,
+  Map<String, dynamic> toJson({bool Function(String key)? include}) {
+    bool inc(String key) => include == null || include(key);
+    return {
+      'brand': brand,
+      if (inc('modelName')) 'modelName': modelName,
+      if (inc('hardwareVersion')) 'hardwareVersion': hardwareVersion,
+      if (inc('softwareVersion')) 'softwareVersion': softwareVersion,
+      if (inc('cellCountReported')) 'cellCountReported': cellCountReported,
+      if (inc('layout')) 'layout': layout,
+      if (inc('manufacturingYearMonth'))
         'manufacturingYearMonth': manufacturingYearMonth,
-        'powerOnCountBucket': powerOnCountBucket,
-        'serialHash': serialHash,
-      };
+      if (inc('powerOnCountBucket')) 'powerOnCountBucket': powerOnCountBucket,
+      // The serial is governed by Contribution.withSerial (opt-in, default
+      // withheld), not by the review selection, so it is always written here.
+      'serialHash': serialHash,
+    };
+  }
 
   factory BmsProvenance.fromJson(Map<String, dynamic> json) => BmsProvenance(
         brand: json['brand'] as String? ?? 'jkbms',
@@ -431,12 +536,15 @@ class AdvertisementInfo {
     this.addressMasked,
   });
 
-  Map<String, dynamic> toJson() => {
-        'namePattern': namePattern,
-        'serviceUuids': serviceUuids,
-        'rssiBucket': rssiBucket,
-        'addressMasked': addressMasked,
-      };
+  Map<String, dynamic> toJson({bool Function(String key)? include}) {
+    bool inc(String key) => include == null || include(key);
+    return {
+      if (inc('namePattern')) 'namePattern': namePattern,
+      if (inc('serviceUuids')) 'serviceUuids': serviceUuids,
+      if (inc('rssiBucket')) 'rssiBucket': rssiBucket,
+      if (inc('addressMasked')) 'addressMasked': addressMasked,
+    };
+  }
 
   factory AdvertisementInfo.fromJson(Map<String, dynamic> json) => AdvertisementInfo(
         namePattern: json['namePattern'] as String? ?? '(unnamed)',
@@ -658,12 +766,26 @@ class RawFrame {
 class RedactionInfo {
   final String serialNumber;
 
-  const RedactionInfo({this.serialNumber = 'withheld'});
+  /// Field ids the user switched off on the review screen, when they held a
+  /// value. Empty on a full (untrimmed) payload.
+  final List<String> omittedFields;
 
-  Map<String, dynamic> toJson() => {'serialNumber': serialNumber};
+  const RedactionInfo({
+    this.serialNumber = 'withheld',
+    this.omittedFields = const [],
+  });
 
-  factory RedactionInfo.fromJson(Map<String, dynamic> json) =>
-      RedactionInfo(serialNumber: json['serialNumber'] as String? ?? 'withheld');
+  Map<String, dynamic> toJson() => {
+        'serialNumber': serialNumber,
+        if (omittedFields.isNotEmpty) 'omittedFields': omittedFields,
+      };
+
+  factory RedactionInfo.fromJson(Map<String, dynamic> json) => RedactionInfo(
+        serialNumber: json['serialNumber'] as String? ?? 'withheld',
+        omittedFields: (json['omittedFields'] as List<dynamic>? ?? const [])
+            .map((e) => e as String)
+            .toList(growable: false),
+      );
 }
 
 // ---- small JSON helpers ----------------------------------------------------
@@ -672,6 +794,10 @@ Map<String, dynamic> _asMap(Object? value, String field) {
   if (value is Map<String, dynamic>) return value;
   throw FormatException('Contribution field "$field" must be an object');
 }
+
+/// A section that is optional in a trimmed payload: absent reads as empty.
+Map<String, dynamic> _asMapOrEmpty(Object? value) =>
+    value is Map<String, dynamic> ? value : const {};
 
 List<dynamic> _asList(Object? value, String field) {
   if (value is List) return value;
