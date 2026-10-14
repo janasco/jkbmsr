@@ -90,11 +90,15 @@ and the artwork under `assets/` come from the shared JKBMSR brand source. Do not
 hand-edit the PNGs; regenerate them from the brand source instead.
 
 The launcher icon set is the family's canonical "cells in an orbit ring" mark,
-byte-identical to the generator's `icons/android/ble/` output
-(`jkbmsr-private/brand/scripts/brand-asset-gen/generate-remote-mark.js`). There
-is currently no `contributor`-specific variant of the mark, so Contributor and
-the BLE app share the same launcher artwork; a distinct accent is a brand-repo
-design decision, not an app change.
+emitted by the generator's **`contributor` variant**
+(`jkbmsr-private/brand/scripts/brand-asset-gen/generate-remote-mark.js`, output
+`icons/android/contributor/`). It is the same glyph as the BLE app with a
+distinct **violet** accent (`#A78BFA` → `#7C3AED`; the on-light tile uses
+`#6D28D9`), so the three apps are distinguishable in a launcher drawer while
+reading as one family. The adaptive `background` (navy gradient) and
+`monochrome` (pure black, system-tinted) layers carry no accent and are
+intentionally byte-identical to BLE's; the accent lives in the foreground,
+legacy launcher, logo and iOS layers.
 
 ## Version
 
