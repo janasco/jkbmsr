@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:bms_core/bms_core.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
+import '../l10n/strings.dart';
 import '../models/contribution.dart';
 import 'ble_transport.dart';
 
@@ -71,14 +73,25 @@ class CaptureOutcome {
   final Jk02CaptureSession? session;
   final String? error;
 
-  const CaptureOutcome._({this.contribution, this.session, this.error});
+  /// Set only for a failure with a classified cause (Bluetooth off, out of
+  /// range), for the error view's icon; a protocol failure carries no kind and
+  /// a success carries none either.
+  final BleCaptureFailureKind? failureKind;
+
+  const CaptureOutcome._({
+    this.contribution,
+    this.session,
+    this.error,
+    this.failureKind,
+  });
 
   bool get success => contribution != null;
 
   factory CaptureOutcome.success(Contribution contribution, Jk02CaptureSession session) =>
       CaptureOutcome._(contribution: contribution, session: session);
 
-  factory CaptureOutcome.failure(String error) => CaptureOutcome._(error: error);
+  factory CaptureOutcome.failure(String error, {BleCaptureFailureKind? failureKind}) =>
+      CaptureOutcome._(error: error, failureKind: failureKind);
 }
 
 /// Decodes complete JK02 frames into the pieces a donation carries.
@@ -212,9 +225,15 @@ abstract interface class CaptureController {
 /// The transport is injected, so the whole flow except the radio calls is
 /// unit-tested with a fake.
 class CaptureService implements CaptureController {
-  CaptureService({required BleTransport transport}) : _transport = transport;
+  /// [log] is an injectable seam (like `FlutterBluePlusTransport.log`) that
+  /// records the raw reason a capture failed — which is never shown to the
+  /// user.
+  CaptureService({required BleTransport transport, void Function(String message)? log})
+      : _transport = transport,
+        _log = log ?? debugPrint;
 
   final BleTransport _transport;
+  final void Function(String message) _log;
 
   /// How long to wait for the device-info (0x03) handshake before giving up.
   static const Duration defaultHandshakeTimeout = Duration(seconds: 5);
@@ -272,9 +291,7 @@ class CaptureService implements CaptureController {
         await Future<void>.delayed(_pollInterval);
       }
       if (session.deviceInfo == null) {
-        return CaptureOutcome.failure(
-          'No device-info response from the BMS (frame 0x03). Is this a JK-BMS?',
-        );
+        return CaptureOutcome.failure(CaptureStrings.noDeviceInfo);
       }
 
       await ble.write(
@@ -290,9 +307,7 @@ class CaptureService implements CaptureController {
       onProgress?.call(_progress(session, 'Finishing…'));
 
       if (session.statuses.isEmpty) {
-        return CaptureOutcome.failure(
-          'No cell-info frames arrived (frame 0x02). Nothing to contribute.',
-        );
+        return CaptureOutcome.failure(CaptureStrings.noCellInfo);
       }
 
       // Best-effort logbook read; a device that ignores it changes nothing.
@@ -326,7 +341,16 @@ class CaptureService implements CaptureController {
 
       return CaptureOutcome.success(contribution, session);
     } catch (e) {
-      return CaptureOutcome.failure('Capture failed: $e');
+      // A failure after the scan — Bluetooth switched off mid-session, the pack
+      // going out of range, a GATT error — is classified like a scan failure:
+      // the user gets a plain, actionable sentence plus the existing retry,
+      // and the raw cause is kept here in the logs, never in the product text.
+      final failure = classifyCaptureFailure(e);
+      _log('Capture failed (${failure.kind.name}): ${failure.cause ?? e}');
+      return CaptureOutcome.failure(
+        CaptureStrings.captureFailure(failure.kind),
+        failureKind: failure.kind,
+      );
     } finally {
       await subscription?.cancel();
       try {

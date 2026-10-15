@@ -147,3 +147,92 @@ BleScanException classifyScanFailure(Object error) {
   }
   return BleScanException(BleScanFailureKind.other, cause: error);
 }
+
+/// Why a **capture** (connect + collect) failed, in terms the UI can act on.
+///
+/// A sibling of [BleScanFailureKind] rather than a wider version of it, because
+/// the two list different questions: the scan kinds name reasons a scan cannot
+/// *start* (`permissionDenied`, `locationServicesOff`, `unsupported`) that are
+/// meaningless once a connection exists, while a capture adds
+/// [outOfRange] — the link dropping mid-session — which a scan can never
+/// report. Sharing one enum would mean adding `outOfRange` to a type named
+/// "Scan" and extending `ScanStrings.scanFailure`'s exhaustive switch for a
+/// case no scan produces. Only [bluetoothOff] genuinely lines up, and the two
+/// give it different copy, so the classification of that one shared condition
+/// is reused (see [classifyCaptureFailure]) while the vocabulary is not.
+enum BleCaptureFailureKind {
+  /// The device's Bluetooth adapter was switched off mid-capture.
+  bluetoothOff,
+
+  /// The pack moved out of range or the link dropped. From the error text the
+  /// two are indistinguishable, so they share one actionable condition.
+  outOfRange,
+
+  /// Anything else (a generic GATT error, a read failure), still surfaced as a
+  /// sentence rather than swallowed.
+  other,
+}
+
+/// A capture failure translated out of the plugin's raw exception.
+///
+/// [cause] keeps the original error so the service can record the real reason
+/// in the logs; the user-facing sentence comes from
+/// `CaptureStrings.captureFailure(kind)`, so a `PlatformException`'s
+/// `toString()` never reaches the product.
+class BleCaptureException implements Exception {
+  const BleCaptureException(this.kind, {this.cause});
+
+  final BleCaptureFailureKind kind;
+
+  /// The original error, for logging only — never shown to the user.
+  final Object? cause;
+
+  @override
+  String toString() => 'BleCaptureException(${kind.name}, cause: $cause)';
+}
+
+/// Wording that says the link to the pack is gone rather than the radio being
+/// off or the error being a protocol one. A connection that "failed"/"timed
+/// out" or a device that "disconnected" mid-session is the same user-fixable
+/// condition as going out of range; a generic GATT error (a write or a
+/// service/characteristic lookup) is not, and deliberately matches none of
+/// these — hence no bare "not found", which would mislabel a GATT lookup
+/// failure as a range problem.
+const List<String> _captureConnectionLostNeedles = [
+  'out of range',
+  'not in range',
+  'connection failed',
+  'failed to connect',
+  'could not connect',
+  'connect failed',
+  'timed out',
+  'timeout',
+  'disconnect',
+  'not connected',
+];
+
+/// Classifies a raw error thrown during a capture (connect, handshake or the
+/// collection writes).
+///
+/// Bluetooth-off is the one condition the capture and scan paths share, so its
+/// match is reused from [classifyScanFailure] rather than duplicated — a
+/// language the plugin changes in one place it changes in both. Everything else
+/// is a lost link ([BleCaptureFailureKind.outOfRange]) or unknown, and an
+/// unknown failure maps to [BleCaptureFailureKind.other] rather than being
+/// rethrown, so a capture failure is always surfaced as an actionable condition
+/// and never silently swallowed.
+BleCaptureException classifyCaptureFailure(Object error) {
+  if (error is BleCaptureException) return error;
+
+  if (classifyScanFailure(error).kind == BleScanFailureKind.bluetoothOff) {
+    return BleCaptureException(BleCaptureFailureKind.bluetoothOff, cause: error);
+  }
+
+  final haystack = '$error'.toLowerCase();
+  for (final needle in _captureConnectionLostNeedles) {
+    if (haystack.contains(needle)) {
+      return BleCaptureException(BleCaptureFailureKind.outOfRange, cause: error);
+    }
+  }
+  return BleCaptureException(BleCaptureFailureKind.other, cause: error);
+}

@@ -157,6 +157,65 @@ void main() {
     });
   });
 
+  group('classifyCaptureFailure', () {
+    test('Bluetooth off is the one condition shared with the scan path', () {
+      final failure = classifyCaptureFailure(PlatformException(
+        code: 'connect',
+        message: 'Bluetooth must be turned on',
+      ));
+      expect(failure.kind, BleCaptureFailureKind.bluetoothOff);
+      // The raw exception is kept for the logs, not shown to the user.
+      expect(failure.cause, isA<PlatformException>());
+    });
+
+    test('an out-of-range wording is outOfRange', () {
+      final failure = classifyCaptureFailure(PlatformException(
+        code: 'connect',
+        message: 'connection failed: device is out of range',
+      ));
+      expect(failure.kind, BleCaptureFailureKind.outOfRange);
+    });
+
+    test('a dropped link mid-session is outOfRange too', () {
+      final failure = classifyCaptureFailure(PlatformException(
+        code: 'disconnect',
+        message: 'device disconnected',
+      ));
+      expect(failure.kind, BleCaptureFailureKind.outOfRange);
+    });
+
+    test('a generic GATT error is other, not mislabelled out-of-range', () {
+      final failure = classifyCaptureFailure(PlatformException(
+        code: 'gatt',
+        message: 'GATT error: could not write characteristic',
+      ));
+      expect(failure.kind, BleCaptureFailureKind.other);
+      expect(failure.cause, isA<PlatformException>());
+    });
+
+    test('a GATT lookup failure is other, not mislabelled out-of-range', () {
+      // "not found" is deliberately absent from the connection-lost wording:
+      // a service/characteristic lookup failure is a GATT error, not a range
+      // problem, and must keep its generic, honest sentence.
+      final failure = classifyCaptureFailure(PlatformException(
+        code: 'gatt',
+        message: 'service 0000ffe0-0000-1000-8000-00805f9b34fb not found',
+      ));
+      expect(failure.kind, BleCaptureFailureKind.other);
+    });
+
+    test('an unrecognised error still becomes an actionable failure', () {
+      final failure = classifyCaptureFailure(StateError('something odd'));
+      expect(failure.kind, BleCaptureFailureKind.other);
+      expect(failure.cause, isA<StateError>());
+    });
+
+    test('an already-classified failure passes through unchanged', () {
+      const original = BleCaptureException(BleCaptureFailureKind.outOfRange);
+      expect(identical(classifyCaptureFailure(original), original), isTrue);
+    });
+  });
+
   group('FlutterBluePlusTransport.scan', () {
     test('a Bluetooth-off PlatformException never reaches the stream raw; '
         'it becomes a bluetoothOff failure and is logged', () async {

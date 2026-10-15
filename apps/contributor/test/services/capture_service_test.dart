@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_contributor/l10n/strings.dart';
 import 'package:jkbmsr_contributor/models/contribution.dart';
 import 'package:jkbmsr_contributor/services/ble_transport.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
@@ -163,7 +165,8 @@ void main() {
   group('CaptureService.capture', () {
     test('builds an anonymised contribution from a fake radio', () async {
       final transport = FakeBleTransport();
-      final service = CaptureService(transport: transport);
+      final logs = <String>[];
+      final service = CaptureService(transport: transport, log: logs.add);
 
       final outcome = await service.capture(
         transport.device,
@@ -173,6 +176,9 @@ void main() {
       );
 
       expect(outcome.success, isTrue, reason: outcome.error);
+      // A success carries no failure kind and logs nothing.
+      expect(outcome.failureKind, isNull);
+      expect(logs, isEmpty);
       final c = outcome.contribution!;
       expect(c.bms.modelName, 'JK-B2A24S15P');
       expect(c.bms.hardwareVersion, '10.XW');
@@ -207,6 +213,88 @@ void main() {
 
       expect(outcome.success, isFalse);
       expect(outcome.error, contains('device-info'));
+    });
+  });
+
+  group('CaptureService.capture failure translation', () {
+    Future<CaptureOutcome> run(_ThrowingTransport transport, List<String> logs) =>
+        CaptureService(transport: transport, log: logs.add).capture(
+          transport.device,
+          duration: const Duration(milliseconds: 20),
+          handshakeTimeout: const Duration(milliseconds: 200),
+          app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+        );
+
+    test('Bluetooth switched off mid-capture shows the plain sentence and logs the cause',
+        () async {
+      // flutter_blue_plus reports a disabled adapter as a raw exception. It
+      // arrives *after* a successful scan — mid-session — and used to surface as
+      // `Capture failed: PlatformException(...)`.
+      final logs = <String>[];
+      final outcome = await run(
+        _ThrowingTransport(
+          error: PlatformException(
+            code: 'connect',
+            message: 'Bluetooth must be turned on',
+          ),
+        ),
+        logs,
+      );
+
+      expect(outcome.success, isFalse);
+      expect(outcome.failureKind, BleCaptureFailureKind.bluetoothOff);
+      expect(
+        outcome.error,
+        CaptureStrings.captureFailure(BleCaptureFailureKind.bluetoothOff),
+      );
+      expect(outcome.error, isNot(contains('PlatformException')));
+      expect(outcome.error, isNot(contains('Bluetooth must be turned on')));
+      expect(outcome.error, isNot(contains('Capture failed')));
+      // The raw reason is kept for the logs, never shown.
+      expect(logs.join('\n'), contains('Bluetooth must be turned on'));
+    });
+
+    test('the pack going out of range is a distinct, actionable condition', () async {
+      final logs = <String>[];
+      final outcome = await run(
+        _ThrowingTransport(
+          error: PlatformException(
+            code: 'connect',
+            message: 'connection failed: device is out of range',
+          ),
+        ),
+        logs,
+      );
+
+      expect(outcome.failureKind, BleCaptureFailureKind.outOfRange);
+      expect(
+        outcome.error,
+        CaptureStrings.captureFailure(BleCaptureFailureKind.outOfRange),
+      );
+      expect(outcome.error, isNot(contains('PlatformException')));
+      expect(logs.join('\n'), contains('out of range'));
+    });
+
+    test('a generic GATT error is not mislabelled as out-of-range', () async {
+      final logs = <String>[];
+      final outcome = await run(
+        _ThrowingTransport(
+          error: PlatformException(
+            code: 'gatt',
+            message: 'GATT error: could not write characteristic',
+          ),
+        ),
+        logs,
+      );
+
+      expect(outcome.failureKind, BleCaptureFailureKind.other);
+      expect(
+        outcome.error,
+        CaptureStrings.captureFailure(BleCaptureFailureKind.other),
+      );
+      expect(outcome.error, isNot(contains('GATT error')));
+      // Still recorded for support, just not shown.
+      expect(logs.join('\n'), contains('GATT error'));
     });
   });
 }
@@ -247,6 +335,69 @@ class _SilentSession implements BleSession {
 
   @override
   Future<void> write(List<int> data) async {}
+
+  @override
+  Future<void> disconnect() async {
+    await _controller.close();
+  }
+}
+
+/// A transport that presents a normal device-info handshake, then fails the
+/// write that follows — the shape of every mid-capture failure (adapter off,
+/// out of range, GATT error), which happens *after* a successful scan.
+class _ThrowingTransport implements BleTransport {
+  _ThrowingTransport({required this.error});
+
+  final Object error;
+
+  final BleScanResult device = const BleScanResult(
+    id: 'AA:BB:CC:11:22:33',
+    name: 'JK_B2A24S15P',
+    rssi: -63,
+  );
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Stream<List<BleScanResult>> scan({Duration timeout = const Duration(seconds: 12)}) =>
+      Stream.value([device]);
+
+  @override
+  Future<BleSession> connect(String deviceId) async => _ThrowingSession(error);
+}
+
+class _ThrowingSession implements BleSession {
+  _ThrowingSession(this.error);
+
+  final Object error;
+  final StreamController<List<int>> _controller = StreamController<List<int>>.broadcast();
+
+  @override
+  String get deviceName => 'JK_B2A24S15P';
+
+  @override
+  int get rssi => -63;
+
+  @override
+  List<String> get serviceUuids => const [];
+
+  @override
+  Stream<List<int>> get notifications => _controller.stream;
+
+  @override
+  Future<void> write(List<int> data) async {
+    final register = data.length > 4 ? data[4] : -1;
+    if (register == 0x97) {
+      // Answer the device-info request so the handshake completes…
+      for (final fragment in chunk(bytesFromHex(devInfo24sHex))) {
+        _controller.add(fragment);
+      }
+      return;
+    }
+    // …then fail on the next write, as a dropped link does.
+    throw error;
+  }
 
   @override
   Future<void> disconnect() async {

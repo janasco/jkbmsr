@@ -51,8 +51,13 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   /// Set only for a scan that failed for a user-fixable reason (Bluetooth off,
   /// a denied permission, Location Services off). Drives the icon on the error
-  /// view; a capture failure leaves it null.
+  /// view.
   BleScanFailureKind? _errorKind;
+
+  /// Set only for a *capture* that failed for a classified reason (Bluetooth
+  /// switched off mid-session, the pack out of range). Drives the same error
+  /// view's icon, alongside [_errorKind].
+  BleCaptureFailureKind? _captureErrorKind;
   List<BleScanResult> _devices = const [];
   StreamSubscription<List<BleScanResult>>? _scanSubscription;
   bool _scanComplete = false;
@@ -74,6 +79,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _devices = const [];
       _error = null;
       _errorKind = null;
+      _captureErrorKind = null;
       _scanComplete = false;
     });
 
@@ -118,6 +124,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _progress = null;
       _outcome = null;
       _errorKind = null;
+      _captureErrorKind = null;
     });
 
     final outcome = await _controller.capture(
@@ -142,6 +149,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       } else {
         _stage = _Stage.error;
         _error = outcome.error;
+        _captureErrorKind = outcome.failureKind;
       }
     });
   }
@@ -393,7 +401,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              _errorKind == BleScanFailureKind.bluetoothOff
+              _errorKind == BleScanFailureKind.bluetoothOff ||
+                      _captureErrorKind == BleCaptureFailureKind.bluetoothOff
                   ? Icons.bluetooth_disabled_rounded
                   : Icons.error_outline_rounded,
               size: 56,

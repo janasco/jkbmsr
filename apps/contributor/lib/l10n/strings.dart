@@ -98,6 +98,38 @@ abstract final class ScanStrings {
   }
 }
 
+/// Copy for the capture flow (connect → collect → build).
+///
+/// A capture fails for reasons the user can fix — Bluetooth switched off
+/// mid-session, the pack moving out of range — as well as for protocol reasons
+/// (no device-info, no telemetry) and generic GATT errors. `CaptureService`
+/// classifies the thrown error and returns the sentence from [captureFailure],
+/// keeping the raw cause in the logs; the error view's "Try again" restarts the
+/// scan beside every one of these.
+abstract final class CaptureStrings {
+  /// The BMS never answered the device-info request: the wrong device, or not a
+  /// JK-BMS.
+  static const String noDeviceInfo =
+      'No device-info response from the BMS (frame 0x03). Is this a JK-BMS?';
+
+  /// The connection worked but no telemetry frames arrived in the window.
+  static const String noCellInfo =
+      'No cell-info frames arrived (frame 0x02). Nothing to contribute.';
+
+  /// Turns a [BleCaptureFailureKind] into the sentence the user sees.
+  static String captureFailure(BleCaptureFailureKind kind) {
+    switch (kind) {
+      case BleCaptureFailureKind.bluetoothOff:
+        return 'Bluetooth is off. Turn Bluetooth on to capture from your JK-BMS.';
+      case BleCaptureFailureKind.outOfRange:
+        return 'Lost the connection to your JK-BMS. Keep the pack powered and '
+            'nearby, then try again.';
+      case BleCaptureFailureKind.other:
+        return 'The capture failed. Please try again.';
+    }
+  }
+}
+
 /// Copy for the review-before-submit screen (plan §3.4).
 abstract final class ReviewStrings {
   static const String title = 'Review before you contribute';

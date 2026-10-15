@@ -114,6 +114,53 @@ void main() {
   });
 
   testWidgets(
+      'a capture failure after a good scan shows a plain message, logs the raw '
+      'cause, and retries — never the raw exception', (WidgetTester tester) async {
+    // This drives the *real* CaptureService over a transport that fails the
+    // post-handshake write, so the whole classify→copy→screen path is exercised
+    // with a genuine PlatformException, not a hand-fed string.
+    final transport = _FailingCaptureTransport(
+      error: PlatformException(
+        code: 'connect',
+        message: 'Bluetooth must be turned on',
+      ),
+    );
+    final logs = <String>[];
+    final service = CaptureService(transport: transport, log: logs.add);
+    await tester.pumpWidget(MaterialApp(home: CaptureScreen(controller: service)));
+
+    await tester.tap(find.text('Scan for JK-BMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JK_B2A24S15P'));
+    // The capture awaits its stream subscription's `cancel()` at the end,
+    // whose future the widget-test fake clock does not drive (same reason the
+    // scan retry below nudges it); let it finish, then settle the error view.
+    await tester.pump();
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(CaptureStrings.captureFailure(BleCaptureFailureKind.bluetoothOff)),
+      findsOneWidget,
+    );
+    expect(find.textContaining('PlatformException'), findsNothing);
+    expect(find.textContaining('Capture failed'), findsNothing);
+    expect(find.byIcon(Icons.bluetooth_disabled_rounded), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    // The raw reason is kept for the logs.
+    expect(logs.join('\n'), contains('Bluetooth must be turned on'));
+
+    // Retry restarts the scan and finds the device again.
+    await tester.tap(find.text('Try again'));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('JK_B2A24S15P'), findsOneWidget);
+  });
+
+  testWidgets(
       'Bluetooth off shows a plain, actionable message — never the raw '
       'PlatformException — with a retry that works', (WidgetTester tester) async {
     // The exact error flutter_blue_plus throws on Android when the adapter is
@@ -183,4 +230,65 @@ void main() {
     expect(find.textContaining('weird'), findsNothing);
     expect(find.text('Try again'), findsOneWidget);
   });
+}
+
+/// A transport whose session answers the device-info handshake, then fails the
+/// following write — the shape of a mid-capture failure (adapter off, out of
+/// range, GATT error) — so the screen can be driven with a real raw exception.
+class _FailingCaptureTransport implements BleTransport {
+  _FailingCaptureTransport({required this.error});
+
+  final Object error;
+
+  final BleScanResult device = const BleScanResult(
+    id: 'AA:BB:CC:11:22:33',
+    name: 'JK_B2A24S15P',
+    rssi: -63,
+  );
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Stream<List<BleScanResult>> scan({Duration timeout = const Duration(seconds: 12)}) =>
+      Stream.value([device]);
+
+  @override
+  Future<BleSession> connect(String deviceId) async => _FailingSession(error);
+}
+
+class _FailingSession implements BleSession {
+  _FailingSession(this.error);
+
+  final Object error;
+  final StreamController<List<int>> _controller = StreamController<List<int>>.broadcast();
+
+  @override
+  String get deviceName => 'JK_B2A24S15P';
+
+  @override
+  int get rssi => -63;
+
+  @override
+  List<String> get serviceUuids => const [];
+
+  @override
+  Stream<List<int>> get notifications => _controller.stream;
+
+  @override
+  Future<void> write(List<int> data) async {
+    final register = data.length > 4 ? data[4] : -1;
+    if (register == 0x97) {
+      for (final fragment in chunk(bytesFromHex(devInfo24sHex))) {
+        _controller.add(fragment);
+      }
+      return;
+    }
+    throw error;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    await _controller.close();
+  }
 }
