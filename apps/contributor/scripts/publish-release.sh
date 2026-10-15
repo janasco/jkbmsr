@@ -97,10 +97,13 @@ else
 fi
 
 echo
-echo "==> Manual steps (human, Play Console):"
-echo "    1. Upload ${AAB_NAME} to Play Console → Internal testing."
-echo "    2. Complete the Data safety form — see"
-echo "       jkbmsr-private/brand/store-listing/DATA-SAFETY-CONTRIBUTOR.md."
-echo "    3. Add the listing copy and >=2 real screenshots (owner step)."
-echo "    4. Promote to production once internal testing passes."
+# The listing, the data-safety form, the screenshots and the app's FIRST publish
+# were all completed by hand on 2026-10-15. Since then the bundle is uploaded and
+# promoted through the Play Publisher API, so there is no console step here — and
+# an earlier version of this block told the reader to upload to Internal testing
+# and fill forms that were already done.
+echo "==> Publishing (no console step needed):"
+echo "    Upload ${AAB_NAME} and promote via the Play Publisher API. See"
+echo "    jkbmsr-private/brand/store-listing/PLAY-LISTING-CONTRIBUTOR.md for the"
+echo "    procedure and the current track state."
 echo "==> No CDN upload: Contributor has no api.jkbmsr.com download endpoint."
