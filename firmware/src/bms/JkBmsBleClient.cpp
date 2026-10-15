@@ -66,6 +66,12 @@ void JkBmsBleClient::stop() {
   status_.state = "disabled";
   deviceInfoReceived_ = false;
   assemblyLength_ = 0;
+  // A fresh begin() must start from the fast path, not inherit a previous
+  // outage's widened retry cadence.
+  reconnectBackoff_.reset();
+  streamRequestBackoff_.reset();
+  nextConnectAttemptAtMs_ = 0;
+  nextStreamRequestAtMs_ = 0;
   if (client_ != nullptr) {
     auto* client = static_cast<NimBLEClient*>(client_);
     if (client->isConnected()) {
@@ -100,17 +106,21 @@ void JkBmsBleClient::loop() {
 }
 
 void JkBmsBleClient::connectIfDue() {
-  if (lastConnectAttemptMs_ != 0 && millis() - lastConnectAttemptMs_ < kReconnectIntervalMs) {
+  // A first attempt (nextConnectAttemptAtMs_ == 0) is due immediately; after
+  // that the wait between attempts is owned by reconnectBackoff_, which widens
+  // on consecutive failures so a dead link is not retried -- and its audible
+  // 0x96 -- at a fixed 30 s forever.
+  if (static_cast<int32_t>(millis() - nextConnectAttemptAtMs_) < 0) {
     return;
   }
-  lastConnectAttemptMs_ = millis();
   deviceInfoReceived_ = false;
   assemblyLength_ = 0;
 
   if (targetAddress_.length() == 0 && !discoverTarget()) {
     status_.state = "not_found";
     status_.lastError = "No compatible JK-BMS advertisement found";
-    logWarn("No JK-BMS BLE advertisement found; retrying in 30s");
+    logWarn("No JK-BMS BLE advertisement found; retrying in " +
+            String(scheduleNextConnect() / 1000) + "s");
     return;
   }
 
@@ -132,7 +142,8 @@ void JkBmsBleClient::connectIfDue() {
       targetAddressType_ = targetAddressType_ == BLE_ADDR_PUBLIC ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
       status_.addressType = targetAddressType_;
     }
-    logWarn("JK-BMS BLE connection failed; retrying in 30s");
+    logWarn("JK-BMS BLE connection failed; retrying in " +
+            String(scheduleNextConnect() / 1000) + "s");
     return;
   }
 
@@ -145,8 +156,16 @@ void JkBmsBleClient::connectIfDue() {
     status_.state = "service_unavailable";
     status_.lastError = "FFE0/FFE1 service unavailable";
     client->disconnect();
+    scheduleNextConnect();
     return;
   }
+
+  // A successful connection resets the reconnect backoff to the fast path. The
+  // next attempt (after this link drops) is still held to the base delay, so a
+  // link that flaps within 30 s is not reconnected -- and re-beeped -- faster
+  // than before.
+  reconnectBackoff_.reset();
+  nextConnectAttemptAtMs_ = millis() + kReconnectBaseDelayMs;
 
   logInfo("JK-BMS BLE connected");
   status_.connected = true;
@@ -155,6 +174,12 @@ void JkBmsBleClient::connectIfDue() {
   status_.lastConnectedAtMs = millis();
   lastCommandMs_ = millis();
   sendReadOnlyCommand(JkBmsReadOnlyCommand::kDeviceInfo);
+}
+
+uint32_t JkBmsBleClient::scheduleNextConnect() {
+  reconnectBackoff_.noteFailure();
+  nextConnectAttemptAtMs_ = millis() + reconnectBackoff_.nextDelayMs();
+  return reconnectBackoff_.nextDelayMs();
 }
 
 bool JkBmsBleClient::discoverTarget() {
@@ -263,6 +288,12 @@ void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
     return;
   }
 
+  // A well-formed frame proves the link is alive, so the stalled-stream
+  // backoff drops straight back to the fast path: the next stall is re-requested
+  // after the base delay, not the widest one a previous outage reached.
+  streamRequestBackoff_.reset();
+  nextStreamRequestAtMs_ = 0;
+
   switch (jk02FrameTypeOf(frame, length)) {
     case Jk02FrameType::kDeviceInfo: {
       if (decodeJk02DeviceInfo(frame, length, deviceInfo_)) {
@@ -340,10 +371,17 @@ bool JkBmsBleClient::poll(BatteryTelemetry& telemetry) {
   // The BMS auto-streams cell-info frames continuously once the one-time 0x96
   // request from processFrame() starts the stream, so no per-poll request is
   // needed (every 0x96 the hardware accepts is an audible beep). Only
-  // re-request when the stream stalls; non-auto-streaming units fall back to
-  // a fresh request on each poll and keep the old cadence.
-  if (deviceInfoReceived_ && (!latest_.valid || millis() - latest_.capturedAtMs > kStreamStaleMs)) {
+  // re-request when the stream stalls, and then only as often as the backoff
+  // allows: a brief stall still recovers on the base delay, while a dead stream
+  // beeps at widening intervals (5, 10, 20, 40, 80, then every 120 s) instead of
+  // on every poll. A decoded frame resets the backoff (processFrame), so a
+  // healthy stream restores the fast path immediately.
+  const bool streamStalled = !latest_.valid || millis() - latest_.capturedAtMs > kStreamStaleMs;
+  if (deviceInfoReceived_ && streamStalled &&
+      static_cast<int32_t>(millis() - nextStreamRequestAtMs_) >= 0) {
     sendReadOnlyCommand(JkBmsReadOnlyCommand::kSettingsAndTelemetryStream);
+    streamRequestBackoff_.noteFailure();
+    nextStreamRequestAtMs_ = millis() + streamRequestBackoff_.nextDelayMs();
   }
   if (!latest_.valid || millis() - latest_.capturedAtMs > kSampleFreshMs) {
     return false;

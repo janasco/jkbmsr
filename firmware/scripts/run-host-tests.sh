@@ -61,6 +61,9 @@ SUITES=(
   "test_wifi_retry"
   # NimBLE-Arduino 1.x/2.x setConnectTimeout() unit conversion (header-only).
   "test_bms_ble_connect_timeout"
+  # Bounded exponential backoff for the beep-producing 0x96 requests
+  # (header-only; see include/bms/BmsRequestBackoff.h).
+  "test_bms_request_backoff"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the
