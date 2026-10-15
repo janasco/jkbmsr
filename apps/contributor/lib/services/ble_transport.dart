@@ -8,6 +8,8 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/services.dart' show PlatformException;
+
 /// One discovered BLE device, reduced to what the capture flow needs.
 class BleScanResult {
   /// Platform device id. On Android this is the MAC address (which the
@@ -67,4 +69,81 @@ abstract interface class BleTransport {
 
   /// Connects to [deviceId] and binds the BMS notify/write characteristics.
   Future<BleSession> connect(String deviceId);
+}
+
+/// Why a scan could not start, in terms the UI can act on.
+///
+/// Bluetooth being switched off is an **expected, common state**, not a
+/// failure: classifying it here (rather than letting the plugin's raw
+/// exception reach the screen) is what lets the UI show plain, actionable copy
+/// and a retry instead of `PlatformException(...)`.
+enum BleScanFailureKind {
+  /// The device's Bluetooth adapter is switched off.
+  bluetoothOff,
+
+  /// The scan permission was not granted.
+  permissionDenied,
+
+  /// Android needs Location Services enabled before it will scan.
+  locationServicesOff,
+
+  /// The hardware has no Bluetooth LE support.
+  unsupported,
+
+  /// Anything else, still surfaced as a sentence rather than swallowed.
+  other,
+}
+
+/// A scan failure translated out of the plugin's raw exception.
+///
+/// [cause] keeps the original error so the transport can record the real reason
+/// in the logs; the user-facing sentence comes from
+/// `ScanStrings.scanFailure(kind)`, so a `PlatformException`'s `toString()`
+/// never reaches the product.
+class BleScanException implements Exception {
+  const BleScanException(this.kind, {this.cause});
+
+  final BleScanFailureKind kind;
+
+  /// The original error, for logging only — never shown to the user.
+  final Object? cause;
+
+  @override
+  String toString() => 'BleScanException(${kind.name}, cause: $cause)';
+}
+
+/// Classifies a raw error thrown while starting a scan.
+///
+/// Detection uses the plugin exception's `code`/`message` (Android says
+/// "Bluetooth must be turned on", iOS/Android permission and location errors
+/// name themselves). An unknown failure maps to [BleScanFailureKind.other]
+/// rather than being rethrown, so a scan failure is always surfaced as an
+/// actionable condition and never silently swallowed.
+BleScanException classifyScanFailure(Object error) {
+  if (error is BleScanException) return error;
+
+  var code = '';
+  var message = '';
+  if (error is PlatformException) {
+    code = error.code;
+    message = error.message ?? '';
+  }
+  // `FlutterBluePlusException.toString()` also names the function/code, so the
+  // whole error text is searched, not just the PlatformException fields.
+  final haystack = '$code $message $error'.toLowerCase();
+
+  if (haystack.contains('must be turned on')) {
+    return BleScanException(BleScanFailureKind.bluetoothOff, cause: error);
+  }
+  if (haystack.contains('location services')) {
+    return BleScanException(BleScanFailureKind.locationServicesOff, cause: error);
+  }
+  if (haystack.contains('permission') || haystack.contains('unauthori')) {
+    return BleScanException(BleScanFailureKind.permissionDenied, cause: error);
+  }
+  if (haystack.contains('does not support bluetooth') ||
+      code.toLowerCase() == 'bluetoothunavailable') {
+    return BleScanException(BleScanFailureKind.unsupported, cause: error);
+  }
+  return BleScanException(BleScanFailureKind.other, cause: error);
 }

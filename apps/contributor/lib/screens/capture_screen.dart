@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../models/contribution.dart';
 import '../services/app_info.dart';
 import '../services/ble_transport.dart';
@@ -47,6 +48,11 @@ class _CaptureScreenState extends State<CaptureScreen> {
   _Stage _stage = _Stage.idle;
   String _status = '';
   String? _error;
+
+  /// Set only for a scan that failed for a user-fixable reason (Bluetooth off,
+  /// a denied permission, Location Services off). Drives the icon on the error
+  /// view; a capture failure leaves it null.
+  BleScanFailureKind? _errorKind;
   List<BleScanResult> _devices = const [];
   StreamSubscription<List<BleScanResult>>? _scanSubscription;
   bool _scanComplete = false;
@@ -67,6 +73,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _status = 'Scanning for a JK-BMS…';
       _devices = const [];
       _error = null;
+      _errorKind = null;
       _scanComplete = false;
     });
 
@@ -78,9 +85,15 @@ class _CaptureScreenState extends State<CaptureScreen> {
       },
       onError: (Object e) {
         if (!mounted) return;
+        // Bluetooth-off (and permission/location failures) are actionable
+        // states, not internal errors: show the plain sentence, and keep the
+        // raw reason in the logs rather than in the product text.
+        final failure = classifyScanFailure(e);
+        debugPrint('Scan failed (${failure.kind.name}): ${failure.cause ?? e}');
         setState(() {
           _stage = _Stage.error;
-          _error = 'Scan failed: $e';
+          _error = ScanStrings.scanFailure(failure.kind);
+          _errorKind = failure.kind;
         });
       },
       onDone: () => completer.complete(),
@@ -104,6 +117,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _status = 'Connecting to ${device.name}…';
       _progress = null;
       _outcome = null;
+      _errorKind = null;
     });
 
     final outcome = await _controller.capture(
@@ -378,7 +392,13 @@ class _CaptureScreenState extends State<CaptureScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline_rounded, size: 56, color: theme.colorScheme.error),
+            Icon(
+              _errorKind == BleScanFailureKind.bluetoothOff
+                  ? Icons.bluetooth_disabled_rounded
+                  : Icons.error_outline_rounded,
+              size: 56,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: 16),
             Text(
               _error ?? 'Something went wrong.',

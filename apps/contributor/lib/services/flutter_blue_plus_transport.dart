@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bms_core/bms_core.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'ble_transport.dart';
@@ -12,6 +13,16 @@ import 'ble_transport.dart';
 /// decoding and capture logic lives in `CaptureService` + `bms_core`, so the
 /// subtle part is unit-tested without this file.
 class FlutterBluePlusTransport implements BleTransport {
+  /// [adapterState] and [log] are injectable seams for tests: the adapter state
+  /// is read before scanning so Bluetooth-off can be reported as a plain message
+  /// without waiting for [FlutterBluePlus.startScan] to throw, and [log] records
+  /// the raw reason (which is never shown to the user).
+  FlutterBluePlusTransport({
+    Future<BluetoothAdapterState> Function()? adapterState,
+    void Function(String message)? log,
+  })  : _adapterState = adapterState ?? _platformAdapterState,
+        _log = log ?? debugPrint;
+
   // JK-BMS GATT. 0xFFE0/0xFFE1 is the classic JK-BMS BLE-UART bridge;
   // 0xFF00/0xFF02/0xFF01 is the JK02 triad. Both are JK-only in the JKBMSR
   // GATT map (0xFFF0 is Daly/Offgridtec and is never bound here). The service
@@ -19,6 +30,16 @@ class FlutterBluePlusTransport implements BleTransport {
   static const String _jkCharFfe1 = '0000ffe1-0000-1000-8000-00805f9b34fb';
   static const String _jkNotifyFf02 = '0000ff02-0000-1000-8000-00805f9b34fb';
   static const String _jkWriteFf01 = '0000ff01-0000-1000-8000-00805f9b34fb';
+
+  final Future<BluetoothAdapterState> Function() _adapterState;
+  final void Function(String message) _log;
+
+  /// The current adapter state. `adapterState.first` triggers the plugin's own
+  /// `getAdapterState` when nothing has listened yet (which is the case here:
+  /// Contributor never subscribes to the adapter-state stream), so it returns
+  /// the real state rather than the cached `unknown`.
+  static Future<BluetoothAdapterState> _platformAdapterState() =>
+      FlutterBluePlus.adapterState.first;
 
   @override
   Future<bool> isSupported() => FlutterBluePlus.isSupported;
@@ -37,6 +58,16 @@ class FlutterBluePlusTransport implements BleTransport {
           await controller.close();
           return;
         }
+
+        // Bluetooth being switched off (or the OS blocking it) is an expected
+        // state, not a failure. Report it as a plain, actionable condition
+        // *before* scanning, so the UI never sees a raw PlatformException.
+        final adapterFailure = _adapterFailure(await _adapterState());
+        if (adapterFailure != null) {
+          _reportScanFailure(controller, adapterFailure);
+          return;
+        }
+
         sub = FlutterBluePlus.scanResults.listen((results) {
           var changed = false;
           for (final r in results) {
@@ -70,8 +101,11 @@ class FlutterBluePlusTransport implements BleTransport {
 
         await FlutterBluePlus.startScan(timeout: timeout);
         await FlutterBluePlus.isScanning.where((scanning) => !scanning).first;
-      } catch (e) {
-        controller.addError(e);
+      } catch (e, st) {
+        // The plugin's raw error (and, in particular, the wording it uses for
+        // a disabled adapter) is a fallback: classify it into the same friendly
+        // kinds the pre-check produces, so no PlatformException reaches the UI.
+        _reportScanFailure(controller, classifyScanFailure(e), stackTrace: st);
       } finally {
         await sub?.cancel();
         try {
@@ -83,6 +117,34 @@ class FlutterBluePlusTransport implements BleTransport {
 
     unawaited(run());
     return controller.stream;
+  }
+
+  /// Maps an adapter state the user can act on to a scan failure, or null when
+  /// scanning may proceed. `unknown`/`turningOn`/`turningOff` are left to the
+  /// scan itself: the exception path classifies whatever it throws.
+  static BleScanException? _adapterFailure(BluetoothAdapterState state) {
+    switch (state) {
+      case BluetoothAdapterState.off:
+        return const BleScanException(BleScanFailureKind.bluetoothOff);
+      case BluetoothAdapterState.unauthorized:
+        return const BleScanException(BleScanFailureKind.permissionDenied);
+      case BluetoothAdapterState.unavailable:
+        return const BleScanException(BleScanFailureKind.unsupported);
+      default:
+        return null;
+    }
+  }
+
+  /// Records the raw reason in the logs and pushes the friendly failure down
+  /// the stream. The product shows only the sentence; the cause stays here.
+  void _reportScanFailure(
+    StreamController<List<BleScanResult>> controller,
+    BleScanException failure, {
+    StackTrace? stackTrace,
+  }) {
+    _log('BLE scan failed (${failure.kind.name}): ${failure.cause}'
+        '${stackTrace == null ? '' : '\n$stackTrace'}');
+    controller.addError(failure, stackTrace);
   }
 
   @override

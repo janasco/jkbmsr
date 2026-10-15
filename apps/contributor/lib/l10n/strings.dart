@@ -11,6 +11,7 @@
 /// is the copy", not an l10n framework.
 library;
 
+import '../services/ble_transport.dart';
 import '../services/contribution_uploader.dart';
 
 /// Copy for the first-run consent screen (plan §3.1).
@@ -67,6 +68,34 @@ abstract final class ConsentStrings {
 
   static const String declineNote =
       'The app still works. You can turn contributing on any time from Home.';
+}
+
+/// Copy for the scan flow.
+///
+/// A scan can fail for reasons the user can fix (Bluetooth off, a permission
+/// not granted, Location Services off). Those are expected states, not errors,
+/// so each maps to a plain, actionable sentence rather than a raw
+/// `PlatformException` — the reason is logged separately, never shown as the
+/// product. The screen offers "Try again" beside every one of these.
+abstract final class ScanStrings {
+  /// Turns a [BleScanFailureKind] into the sentence the user sees.
+  static String scanFailure(BleScanFailureKind kind) {
+    switch (kind) {
+      case BleScanFailureKind.bluetoothOff:
+        return 'Bluetooth is off. Turn Bluetooth on to scan for your JK-BMS.';
+      case BleScanFailureKind.permissionDenied:
+        return 'JK BMS Contributor needs Bluetooth permission to scan. Allow it '
+            'and try again.';
+      case BleScanFailureKind.locationServicesOff:
+        return 'Turn on Location Services, then try again — Android needs it to '
+            'scan for Bluetooth devices.';
+      case BleScanFailureKind.unsupported:
+        return 'This device does not support Bluetooth LE, so it cannot scan '
+            'for a JK-BMS.';
+      case BleScanFailureKind.other:
+        return 'Could not start the scan. Please try again.';
+    }
+  }
 }
 
 /// Copy for the review-before-submit screen (plan §3.4).
