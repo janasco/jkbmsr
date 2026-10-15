@@ -12,8 +12,8 @@ abstract final class AppInfo {
   /// Build version, carried in a contribution's `app.version`. Kept in step
   /// with pubspec's `version:` by hand — it is a single constant, and reading
   /// it at runtime would add a plugin for one string. Must match
-  /// pubspec.yaml's `version:` (currently `1.0.0+1`).
-  static const String version = '1.0.0+1';
+  /// pubspec.yaml's `version:` (currently `1.0.1+2`).
+  static const String version = '1.0.1+2';
 
   /// One-line description shown on the home screen.
   static const String tagline =

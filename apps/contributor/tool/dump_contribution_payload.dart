@@ -9,6 +9,7 @@
 // by the tests, so the document is real decoded data, not invented values.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test/support/jk02_fixtures.dart';
@@ -20,7 +21,7 @@ void main() {
     final out = Platform.environment['OUT'] ?? 'build/contribution-payload.json';
     File(out).writeAsStringSync(payload);
     // The app's own cap, checked the same way the uploader checks it.
-    print('wrote $out  chars=${payload.length}  bytes=${contribution.encodedBytes()}  '
+    debugPrint('wrote $out  chars=${payload.length}  bytes=${contribution.encodedBytes()}  '
         'withinCap=${contribution.isWithinSizeCap()}');
   });
 }
