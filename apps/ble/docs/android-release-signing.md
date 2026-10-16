@@ -52,7 +52,9 @@ unsigned artifact.
 
 - **Google Play** — the user-facing distribution channel for BLE. Upload the
   AAB with `scripts/upload_to_play_console.py`; see that script's `--help` for
-  authentication.
+  authentication. It needs **no Python packages** (stdlib only — no
+  `google-api-python-client`), and it uploads in resumable chunks, so a stalled
+  connection costs one chunk rather than the whole release.
 - **`api.jkbmsr.com/ble/latest.apk`** — the sideload download path. The API
   keeps only the most recent signed APK (R2 key `ble-latest.apk`), so the URL
   always resolves to the current build and is deliberately not versioned.

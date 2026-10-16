@@ -1,43 +1,53 @@
 #!/usr/bin/env python3
-"""Upload a signed .aab to a Google Play track via the Android Publisher API.
+"""Android Publisher API primitives shared by the Play upload scripts.
 
-Deliberately self-contained: no `google-api-python-client` and no
-`google-auth` are required, because the release host does not have them. Auth
-is an RS256 JWT signed with `openssl`; the bundle is uploaded with an 8 MiB
-chunked resumable upload (the API rejects a single-shot PUT of a 64 MB bundle
-often enough to matter).
+Deliberately self-contained: no `google-api-python-client` and no `google-auth`.
+Auth is an RS256 JWT signed with `openssl`, and the bundle goes up as a
+**chunked resumable upload**.
 
-Usage:
-  upload_to_play_internal.py \\
-      --aab jkbmsr-pro-v1.3.37.aab \\
-      --track internal --status completed \\
-      --release-name 1.3.37 \\
-      --release-notes-file whatsnew-en-US.txt
+WHY THE UPLOAD IS CHUNKED AND RESUMPTABLE
+  A Play bundle is tens of megabytes, and a single-shot write of one stalls on
+  this host's link often enough to matter. Measured 2026-10-16 during the BLE
+  4.17.29 release: four consecutive `TimeoutError: The write operation timed
+  out` at 61.8 MB — a size that had uploaded fine hours earlier, so the link and
+  not the build. `googleapiclient`'s `bundles().upload()` writes the whole body
+  in one blocking request through httplib2, so one stalled send loses the entire
+  attempt. A resumable session sends 8 MiB chunks and resumes from the last
+  offset the server acknowledged, so a stall costs one chunk rather than the
+  release. This was first written for `upload_to_play_internal.py` on 2026-10-03;
+  it is here now so there is exactly one implementation.
 
-Auth (first found wins):
-  --service-account PATH
-  $GOOGLE_PLAY_SERVICE_ACCOUNT_JSON   (raw JSON content, not a path)
+  The upload host needs Google's `/upload/` prefix
+  (`.../upload/androidpublisher/v3/...`). Without it the bundle is parsed as
+  JSON and rejected with `Unexpected token PK`.
 
-The service account and its Play Console scoping live only in the private
-operations tree; nothing here is a secret.
+Nothing here is a secret; the service account and its Play Console scoping live
+only in the private operations tree.
 """
-import argparse
 import base64
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
-PACKAGE_DEFAULT = "com.jkbmsr.pro"
-CHUNK_SIZE = 8 * 1024 * 1024  # 8 MiB, and a multiple of the 256 KiB minimum.
+# 8 MiB, and a multiple of the 256 KiB minimum the resumable protocol requires.
+CHUNK_SIZE = 8 * 1024 * 1024
 API_ROOT = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications"
 UPLOAD_ROOT = "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications"
 TOKEN_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
+USER_AGENT = "jkbmsr-release/1.0"
+
+
+class PlayApiError(RuntimeError):
+    """An Android Publisher API call failed.
+
+    Raised rather than SystemExit so a caller owns the message: the CLI can say
+    what it left behind, and a library caller can decide for itself.
+    """
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -55,13 +65,15 @@ def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
-def _load_service_account(path: str | None) -> dict:
+def load_service_account(path: str | None = None) -> dict:
+    """Read the service account JSON from a path, else the env var."""
     if path:
         with open(path, encoding="utf-8") as fh:
             return json.load(fh)
     raw = os.environ.get("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
     if not raw:
-        raise SystemExit("provide --service-account PATH or GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+        raise PlayApiError(
+            "provide --service-account PATH or GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
     return json.loads(raw)
 
 
@@ -101,7 +113,7 @@ def access_token(sa: dict) -> str:
     }).encode()
     req = urllib.request.Request(sa["token_uri"], data=body, headers={
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "jkbmsr-release/1.0",
+        "User-Agent": USER_AGENT,
     })
     with _OPENER.open(req, timeout=30) as resp:
         return json.load(resp)["access_token"]
@@ -112,7 +124,7 @@ def api(method: str, url: str, token: str, body: dict | None = None):
     req = urllib.request.Request(url, data=data, method=method, headers={
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        "User-Agent": "jkbmsr-release/1.0",
+        "User-Agent": USER_AGENT,
     })
     try:
         with _OPENER.open(req, timeout=120) as resp:
@@ -126,8 +138,15 @@ def api(method: str, url: str, token: str, body: dict | None = None):
 def open_edit(package: str, token: str) -> str:
     status, result = api("POST", f"{API_ROOT}/{package}/edits", token, body={})
     if status != 200:
-        raise SystemExit(f"could not open a Play edit: {status} {result}")
+        raise PlayApiError(f"could not open a Play edit: {status} {result}")
     return result["id"]
+
+
+def delete_edit(package: str, edit_id: str, token: str) -> None:
+    """Discard an edit without committing it. Used by --dry-run."""
+    status, result = api("DELETE", f"{API_ROOT}/{package}/edits/{edit_id}", token)
+    if status not in (200, 204):
+        raise PlayApiError(f"could not delete the edit: {status} {result}")
 
 
 def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
@@ -140,15 +159,15 @@ def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
         "Content-Type": "application/json",
         "X-Upload-Content-Type": "application/octet-stream",
         "X-Upload-Content-Length": str(total),
-        "User-Agent": "jkbmsr-release/1.0",
+        "User-Agent": USER_AGENT,
     })
     try:
         with _OPENER.open(req, timeout=60) as resp:
             session_uri = resp.headers.get("Location")
     except urllib.error.HTTPError as err:
-        raise SystemExit(f"could not start the upload session: {err.code} {err.read()!r}")
+        raise PlayApiError(f"could not start the upload session: {err.code} {err.read()!r}")
     if not session_uri:
-        raise SystemExit("upload session response had no Location header")
+        raise PlayApiError("upload session response had no Location header")
 
     offset = 0
     with open(aab_path, "rb") as fh:
@@ -159,7 +178,7 @@ def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
             if status in (200, 201):
                 return int(body["versionCode"])
             if status != 308:
-                raise SystemExit(f"bundle upload failed: {status} {body!r}")
+                raise PlayApiError(f"bundle upload failed: {status} {body!r}")
             offset = end + 1
 
         # A total that is an exact multiple of the chunk size needs one final
@@ -167,7 +186,7 @@ def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
         status, body = _put_chunk(session_uri, b"", None, None, total)
         if status in (200, 201):
             return int(body["versionCode"])
-        raise SystemExit(f"bundle upload finalisation failed: {status} {body!r}")
+        raise PlayApiError(f"bundle upload finalisation failed: {status} {body!r}")
 
 
 def _put_chunk(session_uri, chunk, start, end, total):
@@ -179,7 +198,7 @@ def _put_chunk(session_uri, chunk, start, end, total):
         "Content-Type": "application/octet-stream",
         "Content-Length": str(len(chunk)),
         "Content-Range": content_range,
-        "User-Agent": "jkbmsr-release/1.0",
+        "User-Agent": USER_AGENT,
     })
     try:
         with _OPENER.open(req, timeout=600) as resp:
@@ -193,22 +212,24 @@ def _put_chunk(session_uri, chunk, start, end, total):
         return err.code, raw
 
 
-def set_track(package, edit_id, token, track, version_code, name, notes):
-    release = {"versionCodes": [str(version_code)], "status": "completed"}
+def set_track(package, edit_id, token, track, version_code, status,
+              name=None, notes=None):
+    release = {"versionCodes": [str(version_code)], "status": status}
     if name:
         release["name"] = name
     if notes:
         release["releaseNotes"] = [{"language": "en-US", "text": notes}]
-    status, result = api(
+    status_code, result = api(
         "PUT", f"{API_ROOT}/{package}/edits/{edit_id}/tracks/{track}", token,
         body={"track": track, "releases": [release]},
     )
-    if status != 200:
-        raise SystemExit(f"could not attach versionCode {version_code} to '{track}': {status} {result}")
+    if status_code != 200:
+        raise PlayApiError(
+            f"could not attach versionCode {version_code} to '{track}': {status_code} {result}")
     return result
 
 
-def commit_edit(package, edit_id, token):
+def commit_edit(package: str, edit_id: str, token: str):
     """Commit, adapting to the app's publishing mode.
 
     Apps with managed publishing enabled require
@@ -230,46 +251,3 @@ def commit_edit(package, edit_id, token):
         if status == 200:
             return "changesNotSentForReview=true", result
     raise SystemExit(f"commit failed: {status} {text}")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--package-name", default=PACKAGE_DEFAULT)
-    parser.add_argument("--aab", required=True)
-    parser.add_argument("--track", default="internal",
-                        choices=["internal", "alpha", "beta", "production"])
-    parser.add_argument("--release-name", default="")
-    parser.add_argument("--release-notes-file")
-    parser.add_argument("--service-account")
-    args = parser.parse_args()
-
-    if not os.path.isfile(args.aab):
-        raise SystemExit(f"no such .aab: {args.aab}")
-
-    notes = None
-    if args.release_notes_file:
-        with open(args.release_notes_file, encoding="utf-8") as fh:
-            notes = fh.read().strip() or None
-
-    sa = _load_service_account(args.service_account)
-    token = access_token(sa)
-    print(f"Authenticated as {sa['client_email']}")
-
-    edit_id = open_edit(args.package_name, token)
-    print(f"Opened edit {edit_id}")
-
-    version_code = upload_bundle(args.package_name, edit_id, token, args.aab)
-    print(f"Uploaded bundle, versionCode={version_code}")
-
-    set_track(args.package_name, edit_id, token, args.track, version_code,
-              args.release_name, notes)
-    print(f"Attached versionCode {version_code} to '{args.track}'")
-
-    flavour, _ = commit_edit(args.package_name, edit_id, token)
-    print(f"Edit committed ({flavour}).")
-    print(f"RESULT versionCode={version_code} track={args.track}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
