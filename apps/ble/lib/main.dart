@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/ble_service.dart';
+import 'services/bluetooth_on.dart';
 import 'services/entitlement_service.dart';
 import 'services/theme_service.dart';
 import 'widgets/app_update_prompt.dart';
@@ -161,6 +162,31 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       if (!mounted) return;
       promptForAppUpdate(contextProvider: () => context);
     });
+  }
+
+  /// Ask the platform to enable Bluetooth, and say something when it will not.
+  ///
+  /// `FlutterBluePlus.turnOn()` opens the system dialog on Android, but on
+  /// Android 13+ it can be refused outright (the companion-device policy path)
+  /// and throw, and it throws `userRejected` when the user dismisses the
+  /// dialog. This used to be a bare `catch (_) {}`, so tapping TURN ON could do
+  /// nothing at all and say nothing — a button that reads as broken. A decline
+  /// stays silent because it is the user's choice; anything else explains the
+  /// next step, and the raw cause is kept in the log.
+  Future<void> _requestBluetoothOn() async {
+    try {
+      await FlutterBluePlus.turnOn();
+    } catch (error) {
+      final failure = classifyBluetoothOnFailure(error);
+      debugPrint('FlutterBluePlus.turnOn: ${failure.name} — $error');
+      if (failure == BluetoothOnFailure.declined || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(bluetoothOnUnavailableMessage),
+          duration: Duration(seconds: 6),
+        ),
+      );
+    }
   }
 
   @override
@@ -403,11 +429,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () async {
-                            try {
-                              await FlutterBluePlus.turnOn();
-                            } catch (_) {}
-                          },
+                          onPressed: _requestBluetoothOn,
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(0xFFEF4444),
                             padding: const EdgeInsets.symmetric(horizontal: 10),

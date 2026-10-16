@@ -37,9 +37,9 @@
 #   FLUTTER_BIN              directory to prepend to PATH (default
 #                            /home/jkbmsr/flutter/bin, prepended only if it exists
 #                            and flutter is not already on PATH)
-#   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 143)
+#   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 172)
 #   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 180)
-#   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 88)
+#   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 127)
 #   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 24)
 #
 # Exit status: 0 everything that ran passed (skips are allowed unless --strict),
@@ -55,9 +55,9 @@ COMPONENTS=(apps/ble apps/pro apps/contributor packages/bms_core firmware docs r
 RUN=0
 STRICT=0
 ONLY=()
-BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-143}
+BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-172}
 PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-180}
-CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-88}
+CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-127}
 BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-24}
 LOG_DIR=""
 
