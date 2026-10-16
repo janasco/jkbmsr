@@ -6,9 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'services/ble_service.dart';
 import 'services/entitlement_service.dart';
 import 'services/theme_service.dart';
+import 'widgets/app_update_prompt.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'widgets/bms_drawer.dart';
-import 'widgets/software_update_modal.dart';
 import 'widgets/support_modal.dart';
 import 'widgets/about_modal.dart';
 import 'screens/status_screen.dart';
@@ -154,6 +154,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         _welcomeChecked = true;
       });
     });
+    // Prompt once per launch if a newer build has been published. A
+    // Play-installed copy updates through Play's in-app flow; a sideloaded copy
+    // keeps the direct-APK prompt (see promptForAppUpdate).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      promptForAppUpdate(contextProvider: () => context);
+    });
   }
 
   @override
@@ -184,10 +191,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     }
   }
 
-  void _showSoftwareUpdateModal() {
-    showDialog(
-      context: context,
-      builder: (ctx) => SoftwareUpdateModal(onClose: () => Navigator.pop(ctx)),
+  // The drawer's "Software Update" row. Routed through the shared update flow
+  // so a Play-installed copy gets Play's In-App Update, while a sideloaded copy
+  // still gets the existing direct-APK `SoftwareUpdateModal`.
+  void _checkForSoftwareUpdate() {
+    promptForAppUpdate(
+      contextProvider: () => mounted ? context : null,
+      manual: true,
     );
   }
 
@@ -244,7 +254,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFF8FAFC),
       drawer: BmsDrawer(
         onNavigateToDevices: () => _switchTab(NavTab.devices),
-        onOpenSoftwareUpdate: _showSoftwareUpdateModal,
+        onOpenSoftwareUpdate: _checkForSoftwareUpdate,
         onOpenSupport: _showSupportModal,
         onOpenAbout: _showAboutModal,
       ),
