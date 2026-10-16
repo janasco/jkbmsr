@@ -55,6 +55,23 @@ VERSION="${1:-$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')}"
 VERSION_NUMBER="${VERSION%%+*}"
 TAG="contributor-v${VERSION_NUMBER}"
 
+# `gh release create` targets the REMOTE default branch, so an unpushed release
+# commit makes the tag land on the PREVIOUS commit silently: the release exists,
+# its assets are right, and it points at the wrong source. Measured 2026-10-16 —
+# contributor-v1.0.2 tagged the commit before the bump and had to be re-pointed
+# by hand. Refuse instead.
+if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+  if ! git merge-base --is-ancestor HEAD '@{u}' 2>/dev/null; then
+    echo "HEAD is not pushed to $(git rev-parse --abbrev-ref '@{u}')." >&2
+    echo "Push it first, or the release tag will point at the wrong commit." >&2
+    exit 1
+  fi
+else
+  echo "No upstream is configured for this branch, so the tag target cannot be" >&2
+  echo "verified. Set one, or the release tag may point at the wrong commit." >&2
+  exit 1
+fi
+
 echo "==> Building signed release APK + AAB (${VERSION})"
 flutter pub get
 flutter build apk --release
