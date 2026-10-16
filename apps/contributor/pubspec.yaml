@@ -42,6 +42,14 @@ dependencies:
   # by apps/pro for its CSV export (lib/features/history/telemetry_history_screen.dart).
   path_provider: ^2.1.5
   share_plus: ^10.1.2
+  # Google Play In-App Updates: Contributor ships only through Play, so this is
+  # its whole update mechanism (there is no self-hosted APK channel). The
+  # Play-vs-non-Play branch is in lib/services/app_update_service.dart. Same
+  # version as apps/pro and apps/ble.
+  in_app_update: ^5.0.0
+  # Reads the installer package (com.android.vending) that created this
+  # install, which decides whether Play's in-app update flow applies at all.
+  package_info_plus: ^8.1.1
 
 dev_dependencies:
   flutter_test:
