@@ -20,8 +20,8 @@ This directory is packaged and published to the Cloudflare Pages project
 
 Firmware is **not published here**. Since 2026-10-13 the browser flash bundle
 is delivered only by the **account-gated JK BMS Remote API**
-(`api.jkbmsr.com/v1/flash/*`), which streams it from the private R2 bucket. The
-device OTA channel (`/v1/ota/*`) serves the single OTA image from R2.
+(`api.jkbmsr.com/v1/flash/*`), which streams it from private firmware storage. The
+device OTA channel (`/v1/ota/*`) serves the single OTA image from the same private storage.
 
 There is deliberately no `firmware/` directory in the packaged deploy: the
 packaging step in `scripts/deploy-releases.sh` dies if one appears. A historical
@@ -67,7 +67,7 @@ this domain.
   host.
 - `api.jkbmsr.com` is the authenticated channel: device OTA (`/v1/ota/*`) and
   the account-gated browser firmware API (`/v1/flash/*`).
-- `jkbmsr-firmware` (R2 bucket) is the private source of truth for the released
+- `jkbmsr-firmware` (private storage) is the private source of truth for the released
   firmware objects.
 - `firmware/scripts/release.sh` writes the per-target OTA metadata and public
   key into `releases/ota/`; it does not write firmware binaries or a
@@ -78,7 +78,7 @@ this domain.
 Before merging public artifact updates:
 
 1. Confirm the public OTA metadata (`ota/<target>-latest.json`) and public key
-   describe the release the API and D1 also report. Run
+   describe the release the API and database also report. Run
    `python3 releases/scripts/validate_ota_metadata.py` (also run by
    `scripts/check-all.sh`) to check the metadata is well formed and that every
    signature verifies against the published key.

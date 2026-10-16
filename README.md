@@ -45,7 +45,7 @@ the BLE app is a Google Play in-app product, **not** a separate app.
                                          │ HTTPS
                                          ▼
                                api.jkbmsr.com
-                               (Cloudflare Worker + D1 + R2)
+                               (managed API + database + private storage)
                                          ▲
                         ┌────────────────┴────────────────┐
                         │                                 │
