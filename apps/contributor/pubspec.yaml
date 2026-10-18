@@ -8,7 +8,7 @@ publish_to: 'none'
 # The Android build reads both from here (android/app/build.gradle.kts uses
 # flutter.versionName / flutter.versionCode), and lib/services/app_info.dart
 # mirrors it by hand for the payload's `app.version`.
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
