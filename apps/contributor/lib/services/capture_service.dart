@@ -345,7 +345,9 @@ class CaptureService implements CaptureController {
       // going out of range, a GATT error — is classified like a scan failure:
       // the user gets a plain, actionable sentence plus the existing retry,
       // and the raw cause is kept here in the logs, never in the product text.
-      final failure = classifyCaptureFailure(e);
+      // `ble != null` tells the classifier whether the link was already up, so
+      // a timeout mid-capture is not reported as the pack moving away.
+      final failure = classifyCaptureFailure(e, linkEstablished: ble != null);
       _log('Capture failed (${failure.kind.name}): ${failure.cause ?? e}');
       return CaptureOutcome.failure(
         CaptureStrings.captureFailure(failure.kind),

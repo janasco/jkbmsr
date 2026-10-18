@@ -6,6 +6,60 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'ble_transport.dart';
 
+/// A GATT characteristic reduced to the two properties the JK choice depends
+/// on, so the decision can be tested without a radio.
+typedef GattCharacteristicView = ({String uuid, bool canNotify, bool canWrite});
+
+/// A GATT service reduced to its UUID and characteristics.
+typedef GattServiceView = ({String uuid, List<GattCharacteristicView> characteristics});
+
+/// The chosen notify and write characteristic UUIDs, or null where none fits.
+typedef JkCharacteristicChoice = ({String? notify, String? write});
+
+/// Chooses the notify and write characteristics for a JK-BMS.
+///
+/// Scoping is the whole point. A real device exposes other `notify`/`indicate`
+/// characteristics — the Generic Attribute service's Service Changed (0x2A05)
+/// is `indicate`, and it is discovered *before* the JK service — so scanning
+/// every service binds one the BMS never sends telemetry on, and the capture
+/// then fails looking like a range problem. apps/ble scopes to the documented
+/// service for exactly this reason.
+///
+/// Within the scope the documented characteristic wins outright; the first
+/// notify/write found is only a fallback for hardware that does not expose the
+/// documented UUIDs. The previous version used one `??=` for both, so whichever
+/// characteristic happened to be discovered first won and the documented one
+/// could never correct it.
+JkCharacteristicChoice chooseJkCharacteristics(Iterable<GattServiceView> services) {
+  final all = services.toList();
+  final scoped = all.where((s) => FlutterBluePlusTransport.jkServices.contains(s.uuid)).toList();
+  final pool = scoped.isNotEmpty ? scoped : all;
+
+  String? notify;
+  String? write;
+  String? fallbackNotify;
+  String? fallbackWrite;
+  for (final service in pool) {
+    for (final c in service.characteristics) {
+      if (c.canNotify) {
+        if (FlutterBluePlusTransport.jkNotifyCharacteristics.contains(c.uuid)) {
+          notify ??= c.uuid;
+        } else {
+          fallbackNotify ??= c.uuid;
+        }
+      }
+      if (c.canWrite) {
+        if (FlutterBluePlusTransport.jkWriteCharacteristics.contains(c.uuid)) {
+          write ??= c.uuid;
+        } else {
+          fallbackWrite ??= c.uuid;
+        }
+      }
+    }
+  }
+  return (notify: notify ?? fallbackNotify, write: write ?? fallbackWrite);
+}
+
 /// `flutter_blue_plus` implementation of [BleTransport].
 ///
 /// Deliberately thin: it scans, connects, binds the JK-BMS GATT
@@ -30,6 +84,17 @@ class FlutterBluePlusTransport implements BleTransport {
   static const String _jkCharFfe1 = '0000ffe1-0000-1000-8000-00805f9b34fb';
   static const String _jkNotifyFf02 = '0000ff02-0000-1000-8000-00805f9b34fb';
   static const String _jkWriteFf01 = '0000ff01-0000-1000-8000-00805f9b34fb';
+
+  /// The services those characteristics live in. The search is scoped to
+  /// these so a `notify`/`indicate` characteristic from any other service
+  /// (Generic Attribute's Service Changed, 0x2A05, is the one that bites)
+  /// cannot be bound instead.
+  static const String _jkServiceClassic = '0000ffe0-0000-1000-8000-00805f9b34fb';
+  static const String _jkServiceTriad = '0000ff00-0000-1000-8000-00805f9b34fb';
+
+  static const Set<String> jkServices = {_jkServiceClassic, _jkServiceTriad};
+  static const Set<String> jkNotifyCharacteristics = {_jkCharFfe1, _jkNotifyFf02};
+  static const Set<String> jkWriteCharacteristics = {_jkCharFfe1, _jkWriteFf01};
 
   final Future<BluetoothAdapterState> Function() _adapterState;
   final void Function(String message) _log;
@@ -154,25 +219,27 @@ class FlutterBluePlusTransport implements BleTransport {
     try {
       final services = await device.discoverServices();
 
-      BluetoothCharacteristic? notify;
-      BluetoothCharacteristic? writeChar;
-      for (final service in services) {
-        for (final c in service.characteristics) {
-          final uuid = c.uuid.str128.toLowerCase();
-          final canNotify = c.properties.notify || c.properties.indicate;
-          final canWrite = c.properties.write || c.properties.writeWithoutResponse;
-          if (canNotify && (uuid == _jkCharFfe1 || uuid == _jkNotifyFf02)) {
-            notify ??= c;
-          } else if (canNotify && notify == null) {
-            notify = c;
-          }
-          if (canWrite && (uuid == _jkCharFfe1 || uuid == _jkWriteFf01)) {
-            writeChar ??= c;
-          } else if (canWrite && writeChar == null) {
-            writeChar = c;
-          }
-        }
-      }
+      final choice = chooseJkCharacteristics([
+        for (final s in services)
+          (
+            uuid: s.uuid.str128.toLowerCase(),
+            characteristics: [
+              for (final c in s.characteristics)
+                (
+                  uuid: c.uuid.str128.toLowerCase(),
+                  canNotify: c.properties.notify || c.properties.indicate,
+                  canWrite: c.properties.write || c.properties.writeWithoutResponse,
+                ),
+            ],
+          ),
+      ]);
+
+      final byUuid = <String, BluetoothCharacteristic>{
+        for (final s in services)
+          for (final c in s.characteristics) c.uuid.str128.toLowerCase(): c,
+      };
+      final notify = byUuid[choice.notify];
+      final writeChar = byUuid[choice.write];
 
       if (notify == null) {
         throw StateError('No notify characteristic for JK-BMS on $deviceId');

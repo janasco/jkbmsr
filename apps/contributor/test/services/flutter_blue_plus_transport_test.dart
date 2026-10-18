@@ -322,4 +322,114 @@ void main() {
       expect(platform.stopScanCount, greaterThanOrEqualTo(1));
     });
   });
+
+  group('chooseJkCharacteristics', () {
+    // The regression this exists for: a real device lists the Generic Attribute
+    // service (0x1801) with Service Changed (0x2A05, indicate) BEFORE the JK
+    // service. The old single-`??=` version bound Service Changed and then
+    // never received telemetry, and the failure read as a range problem.
+    GattServiceView genericAttribute() => (
+          uuid: '00001801-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '00002a05-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: false),
+          ],
+        );
+    GattServiceView jkClassic() => (
+          uuid: '0000ffe0-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '0000ffe1-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: true),
+          ],
+        );
+
+    test('an earlier Service Changed does not steal the binding', () {
+      final choice = chooseJkCharacteristics([genericAttribute(), jkClassic()]);
+      expect(choice.notify, '0000ffe1-0000-1000-8000-00805f9b34fb');
+      expect(choice.write, '0000ffe1-0000-1000-8000-00805f9b34fb');
+    });
+
+    test('the documented characteristic wins over an earlier fallback in the same service', () {
+      final choice = chooseJkCharacteristics([
+        (
+          uuid: '0000ffe0-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '0000ffe9-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: true),
+            (uuid: '0000ffe1-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: true),
+          ],
+        ),
+      ]);
+      expect(choice.notify, '0000ffe1-0000-1000-8000-00805f9b34fb');
+      expect(choice.write, '0000ffe1-0000-1000-8000-00805f9b34fb');
+    });
+
+    test('the JK02 triad is accepted as well as the classic pair', () {
+      final choice = chooseJkCharacteristics([
+        (
+          uuid: '0000ff00-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '0000ff02-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: false),
+            (uuid: '0000ff01-0000-1000-8000-00805f9b34fb', canNotify: false, canWrite: true),
+          ],
+        ),
+      ]);
+      expect(choice.notify, '0000ff02-0000-1000-8000-00805f9b34fb');
+      expect(choice.write, '0000ff01-0000-1000-8000-00805f9b34fb');
+    });
+
+    test('a device without the JK services still falls back to the first pair', () {
+      final choice = chooseJkCharacteristics([
+        (
+          uuid: '0000fff0-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '0000fff1-0000-1000-8000-00805f9b34fb', canNotify: true, canWrite: true),
+          ],
+        ),
+      ]);
+      expect(choice.notify, '0000fff1-0000-1000-8000-00805f9b34fb');
+      expect(choice.write, '0000fff1-0000-1000-8000-00805f9b34fb');
+    });
+
+    test('nothing suitable yields nulls rather than a wrong guess', () {
+      final choice = chooseJkCharacteristics([
+        (
+          uuid: '00001800-0000-1000-8000-00805f9b34fb',
+          characteristics: [
+            (uuid: '00002a00-0000-1000-8000-00805f9b34fb', canNotify: false, canWrite: false),
+          ],
+        ),
+      ]);
+      expect(choice.notify, isNull);
+      expect(choice.write, isNull);
+    });
+  });
+
+  group('classifyCaptureFailure and the link', () {
+    test('a timeout mid-capture is NOT reported as the pack moving away', () {
+      // Measured 2026-10-18: the app told the user to keep the pack powered and
+      // nearby while they were standing next to it and the same pack connected
+      // fine to another app. A GATT operation that timed out after the link was
+      // up is not evidence of range, so it must not borrow that sentence.
+      final failure = classifyCaptureFailure(
+        PlatformException(code: 'write', message: 'write timed out'),
+        linkEstablished: true,
+      );
+      expect(failure.kind, BleCaptureFailureKind.other);
+      expect(failure.cause, isA<PlatformException>());
+    });
+
+    test('a timeout while connecting is still the reachability sentence', () {
+      final failure = classifyCaptureFailure(
+        PlatformException(code: 'connect', message: 'connection timed out'),
+        linkEstablished: false,
+      );
+      expect(failure.kind, BleCaptureFailureKind.outOfRange);
+    });
+
+    test('a genuine disconnect mid-capture is still outOfRange', () {
+      final failure = classifyCaptureFailure(
+        PlatformException(code: 'disconnect', message: 'device disconnected'),
+        linkEstablished: true,
+      );
+      expect(failure.kind, BleCaptureFailureKind.outOfRange);
+    });
+  });
 }

@@ -191,25 +191,28 @@ class BleCaptureException implements Exception {
   String toString() => 'BleCaptureException(${kind.name}, cause: $cause)';
 }
 
-/// Wording that says the link to the pack is gone rather than the radio being
-/// off or the error being a protocol one. A connection that "failed"/"timed
-/// out" or a device that "disconnected" mid-session is the same user-fixable
-/// condition as going out of range; a generic GATT error (a write or a
-/// service/characteristic lookup) is not, and deliberately matches none of
-/// these — hence no bare "not found", which would mislabel a GATT lookup
-/// failure as a range problem.
-const List<String> _captureConnectionLostNeedles = [
+/// Wording that means the link to the pack is gone, or never formed.
+const List<String> _linkLostNeedles = [
   'out of range',
   'not in range',
   'connection failed',
   'failed to connect',
   'could not connect',
   'connect failed',
-  'timed out',
-  'timeout',
   'disconnect',
   'not connected',
 ];
+
+/// Wording that counts as a lost link **only before the link is up**.
+///
+/// A timeout while connecting means "could not reach it", which the range
+/// sentence describes correctly. A timeout *after* connecting does not: a GATT
+/// operation that failed to complete is not evidence that the pack moved away,
+/// and telling the user to keep it nearby sends them after a cause that is not
+/// the problem. Measured 2026-10-18 — a real-device capture reported "lost the
+/// connection ... keep the pack powered and nearby" while the phone was next to
+/// the pack and the same pack connected fine to another app.
+const List<String> _preConnectTimeoutNeedles = ['timed out', 'timeout'];
 
 /// Classifies a raw error thrown during a capture (connect, handshake or the
 /// collection writes).
@@ -221,7 +224,11 @@ const List<String> _captureConnectionLostNeedles = [
 /// unknown failure maps to [BleCaptureFailureKind.other] rather than being
 /// rethrown, so a capture failure is always surfaced as an actionable condition
 /// and never silently swallowed.
-BleCaptureException classifyCaptureFailure(Object error) {
+///
+/// [linkEstablished] is the caller's knowledge of whether the connection was
+/// already up, which is what makes a timeout readable: before the link exists
+/// it means "could not reach it", and after it does not mean the link dropped.
+BleCaptureException classifyCaptureFailure(Object error, {bool linkEstablished = false}) {
   if (error is BleCaptureException) return error;
 
   if (classifyScanFailure(error).kind == BleScanFailureKind.bluetoothOff) {
@@ -229,7 +236,10 @@ BleCaptureException classifyCaptureFailure(Object error) {
   }
 
   final haystack = '$error'.toLowerCase();
-  for (final needle in _captureConnectionLostNeedles) {
+  final needles = linkEstablished
+      ? _linkLostNeedles
+      : [..._linkLostNeedles, ..._preConnectTimeoutNeedles];
+  for (final needle in needles) {
     if (haystack.contains(needle)) {
       return BleCaptureException(BleCaptureFailureKind.outOfRange, cause: error);
     }
