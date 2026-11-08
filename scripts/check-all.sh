@@ -59,7 +59,7 @@ ONLY=()
 BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-172}
 PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-180}
 CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-148}
-BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-24}
+BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-27}
 LOG_DIR=""
 
 # Result columns, indexed the same way as COMPONENTS.
@@ -355,7 +355,7 @@ if [ "$RUN" -eq 0 ]; then
    ..    apps/ble            flutter analyze && flutter test     (expect 70 passing)
    ..    apps/pro            flutter analyze && flutter test     (expect 85 passing)
    ..    apps/contributor    flutter analyze && flutter test     (expect 84 passing)
-   ..    packages/bms_core   dart analyze && dart test           (expect 24 passing)
+   ..    packages/bms_core   dart analyze && dart test           (expect 27 passing)
    ..    firmware            firmware/scripts/run-checks.sh
                           -> native host suites under ASan/UBSan,
                              validate-device-profiles.py, validate-hardware-targets.py,
