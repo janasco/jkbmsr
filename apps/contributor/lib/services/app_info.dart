@@ -17,7 +17,7 @@ abstract final class AppInfo {
   /// was not, and "which build did this come from" was unanswerable from the
   /// data. `test/services/app_version_test.dart` now fails if the two disagree,
   /// which is cheaper than a plugin and catches the mistake where it is made.
-  static const String version = '1.0.6+7';
+  static const String version = '1.0.7+8';
 
   /// One-line description shown on the home screen.
   static const String tagline =

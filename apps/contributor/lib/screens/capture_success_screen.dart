@@ -46,21 +46,15 @@ class CaptureSuccessScreen extends StatelessWidget {
         bms.cellCountReported ?? contribution.samples.last.cellVoltagesV.length;
     final serialShared = contribution.redaction.serialNumber == 'shared';
 
+    // No app bar. A lone close button floating in the top-right corner with no
+    // title above it reads as a stray control - in a listing screenshot it looked
+    // like a banner - and it duplicated the two exits pinned at the bottom. The
+    // system back gesture still pops the route.
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            icon: const Icon(Icons.close_rounded),
-            tooltip: 'Close',
-          ),
-        ],
-      ),
       body: SafeArea(
-        top: false,
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
           children: [
             const SizedBox(height: 8),
             const Center(child: _SuccessBadge()),
