@@ -113,6 +113,12 @@ Future<GlobalKey> _mount(WidgetTester tester, Widget home,
     ),
   );
   await tester.pumpAndSettle();
+  // Images decode asynchronously; without real time the FIRST shot of a run
+  // captures the empty placeholder. (It was the consent screen's brand mark -
+  // a blank circle - while every later shot, by then cached, looked right.)
+  await tester
+      .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 120)));
+  await tester.pumpAndSettle();
   return key;
 }
 

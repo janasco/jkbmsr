@@ -37,7 +37,10 @@ class AppSurface extends StatelessWidget {
             ? Border.all(color: scheme.outlineVariant.withValues(alpha: 0.55))
             : null,
       ),
-      child: child,
+      // A transparent Material ancestor: a ListTile inside a decorated box
+      // otherwise asserts, because it paints its ink on the nearest Material
+      // and this box's background would hide it.
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return decorated;
     return Material(

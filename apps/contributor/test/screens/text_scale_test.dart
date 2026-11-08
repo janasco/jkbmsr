@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_contributor/l10n/strings.dart';
 import 'package:jkbmsr_contributor/screens/capture_screen.dart';
 import 'package:jkbmsr_contributor/screens/capture_success_screen.dart';
+import 'package:jkbmsr_contributor/screens/consent_screen.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
+import 'package:jkbmsr_contributor/services/consent_controller.dart';
+import 'package:jkbmsr_contributor/services/consent_store.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
 import '../support/fake_flutter_blue_plus.dart';
@@ -32,18 +36,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the capture screen holds up at 2x text', (WidgetTester tester) async {
+  testWidgets('the capture screen holds up at 2x text',
+      (WidgetTester tester) async {
     await mountAt2x(tester, const CaptureScreen());
 
     expect(find.text('Capture your JK-BMS'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the success screen holds up at 2x text', (WidgetTester tester) async {
+  testWidgets('the consent screen holds up at 2x text',
+      (WidgetTester tester) async {
+    await mountAt2x(
+      tester,
+      ConsentScreen(
+          controller: ConsentController(store: InMemoryConsentStore())),
+    );
+
+    expect(find.text(ConsentStrings.title), findsOneWidget);
+    // The decision is pinned, so it must still be reachable at large text.
+    expect(find.text(ConsentStrings.accept), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the success screen holds up at 2x text',
+      (WidgetTester tester) async {
     await mountAt2x(
       tester,
       CaptureSuccessScreen(
-        outcome: CaptureOutcome.success(sampleContribution(), Jk02CaptureSession()),
+        outcome:
+            CaptureOutcome.success(sampleContribution(), Jk02CaptureSession()),
       ),
     );
 

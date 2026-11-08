@@ -7,6 +7,7 @@ import '../models/contribution.dart';
 import '../models/contribution_selection.dart';
 import '../services/contribution_export.dart';
 import '../services/contribution_uploader.dart';
+import '../widgets/app_surface.dart';
 
 /// Review-before-submit (plan §3.4): the exact payload, with per-field opt-out.
 ///
@@ -171,8 +172,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
               serialShared: effective.redaction.serialNumber == 'shared',
             ),
             const SizedBox(height: 16),
-            Card(
-              margin: EdgeInsets.zero,
+            AppSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               child: SwitchListTile(
                 value: _includeSerial,
                 onChanged: widget.rawSerial == null || widget.rawSerial!.isEmpty
@@ -191,8 +192,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     .toList(growable: false),
                 fullJson: fullJson,
                 included: _included,
-                onToggle: (id, value) =>
-                    setState(() => value ? _included.add(id) : _included.remove(id)),
+                onToggle: (id, value) => setState(
+                    () => value ? _included.add(id) : _included.remove(id)),
               ),
             if (omitted.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -216,8 +217,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (_receipt != null)
-              _SuccessCard(receipt: _receipt!),
+            if (_receipt != null) _SuccessCard(receipt: _receipt!),
             if (_failure != null) ...[
               _FailureCard(failure: _failure!),
               const SizedBox(height: 16),
@@ -327,8 +327,8 @@ class _SuccessCard extends StatelessWidget {
             const SizedBox(height: 2),
             SelectableText(
               SubmitStrings.successReceipt(receipt.id),
-              style: theme.textTheme.bodyLarge
-                  ?.copyWith(fontWeight: FontWeight.w700, fontFamily: 'monospace'),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700, fontFamily: 'monospace'),
             ),
           ],
         ),
@@ -383,7 +383,8 @@ class _FailureCard extends StatelessWidget {
 
 /// A neutral confirmation card (e.g. "file ready to share").
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.icon, required this.title, required this.body});
+  const _InfoCard(
+      {required this.icon, required this.title, required this.body});
 
   final IconData icon;
   final String title;
@@ -392,30 +393,29 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
+    return AppSurface(
       color: theme.colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: theme.colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(body, style: theme.textTheme.bodySmall),
-                ],
-              ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(body, style: theme.textTheme.bodySmall),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -451,40 +451,69 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    Widget row(String label, String value) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final scheme = theme.colorScheme;
+
+    return AppSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              SizedBox(
-                width: 130,
-                child: Text(label,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ),
               Expanded(
-                child: Text(value,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                child: Text(
+                  'What will be sent',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  '$sizeBytes bytes',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
               ),
             ],
           ),
-        );
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            row('Payload size', '$sizeBytes bytes'),
-            row('Fields included', '$included of $total'),
-            row('Telemetry samples', '$samples'),
-            row('Raw frames', _frameSummary),
-            row('Serial number', serialShared ? 'shared' : 'withheld'),
-          ],
-        ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: StatTile(
+                  value: '$samples',
+                  label: 'Samples',
+                  icon: Icons.timeline_rounded,
+                ),
+              ),
+              Expanded(
+                child: StatTile(
+                  value: '${rawFrames.length}',
+                  label: 'Frames',
+                  icon: Icons.layers_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 6),
+          DetailRow(label: 'Fields included', value: '$included of $total'),
+          DetailRow(label: 'Payload size', value: '$sizeBytes bytes'),
+          DetailRow(label: 'Raw frames', value: _frameSummary),
+          DetailRow(
+            label: 'Serial number',
+            value: serialShared ? 'shared' : 'withheld',
+          ),
+        ],
       ),
     );
   }
@@ -519,8 +548,8 @@ class _GroupSection extends StatelessWidget {
                 ?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
-        Card(
-          margin: EdgeInsets.zero,
+        AppSurface(
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             children: [
               for (final field in fields)
@@ -552,24 +581,21 @@ class _OmittedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
+    return AppSurface(
       color: theme.colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              ReviewStrings.omittedTitle,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            ReviewStrings.omittedTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 4),
-            for (final label in labels)
-              Text('•  $label', style: theme.textTheme.bodySmall),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          for (final label in labels)
+            Text('•  $label', style: theme.textTheme.bodySmall),
+        ],
       ),
     );
   }
