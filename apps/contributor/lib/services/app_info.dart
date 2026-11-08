@@ -9,11 +9,15 @@ abstract final class AppInfo {
   /// User-facing app name.
   static const String appName = 'JK BMS Contributor';
 
-  /// Build version, carried in a contribution's `app.version`. Kept in step
-  /// with pubspec's `version:` by hand — it is a single constant, and reading
-  /// it at runtime would add a plugin for one string. Must match
-  /// pubspec.yaml's `version:` (currently `1.0.1+2`).
-  static const String version = '1.0.1+2';
+  /// Build version, carried in a contribution's `app.version`.
+  ///
+  /// Kept in step with pubspec's `version:` **by hand**, and that is exactly how
+  /// it drifted: it read `1.0.1+2` from the 1.0.1 release through 1.0.2, 1.0.3
+  /// and 1.0.4, so every contribution in that period reported a version the app
+  /// was not, and "which build did this come from" was unanswerable from the
+  /// data. `test/services/app_version_test.dart` now fails if the two disagree,
+  /// which is cheaper than a plugin and catches the mistake where it is made.
+  static const String version = '1.0.5+6';
 
   /// One-line description shown on the home screen.
   static const String tagline =

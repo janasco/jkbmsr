@@ -37,39 +37,79 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppInfo.appName)),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const BrandMark(),
-              const SizedBox(height: 24),
-              Text(
-                AppInfo.appName,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        scheme.surfaceContainerHigh,
+                        scheme.surfaceContainerLow,
+                      ],
+                    ),
+                    border: Border.all(color: scheme.outlineVariant),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.shadow.withValues(alpha: 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const BrandMark(),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppInfo.tagline,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(height: 26),
+                Text(
+                  AppInfo.appName,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall,
                 ),
-              ),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                onPressed: () => _startCapture(context),
-                icon: const Icon(Icons.bluetooth_searching_rounded),
-                label: const Text('Start a capture'),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  AppInfo.tagline,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 34),
+                FilledButton.icon(
+                  onPressed: () => _startCapture(context),
+                  icon: const Icon(Icons.bluetooth_searching_rounded),
+                  label: const Text('Start a capture'),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline_rounded,
+                        size: 14, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Anonymous by design · no account, no identity',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

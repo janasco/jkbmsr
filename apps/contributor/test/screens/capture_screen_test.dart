@@ -8,6 +8,7 @@ import 'package:jkbmsr_contributor/models/contribution.dart';
 import 'package:jkbmsr_contributor/screens/capture_screen.dart';
 import 'package:jkbmsr_contributor/services/ble_transport.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
+import 'package:jkbmsr_contributor/widgets/rotating_glyph.dart';
 
 import '../support/fake_flutter_blue_plus.dart';
 import '../support/jk02_fixtures.dart';
@@ -72,11 +73,44 @@ class FakeCaptureController implements CaptureController {
   }
 }
 
+/// A capture that never finishes, so the in-progress screen can be inspected
+/// and advanced with the test clock.
+class _PendingCaptureController implements CaptureController {
+  _PendingCaptureController(this.completer);
+
+  final Completer<CaptureOutcome> completer;
+
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Stream<List<BleScanResult>> scan({Duration timeout = const Duration(seconds: 1)}) =>
+      Stream.value(const [_device]);
+
+  @override
+  Future<CaptureOutcome> capture(
+    BleScanResult device, {
+    Duration duration = CaptureService.defaultDuration,
+    Duration handshakeTimeout = CaptureService.defaultHandshakeTimeout,
+    bool includeSerial = false,
+    required AppProvenance app,
+    bool Function()? isCancelled,
+    void Function(CaptureProgress progress)? onProgress,
+  }) {
+    onProgress?.call(const CaptureProgress(
+      status: 'Capturing telemetry…',
+      fragmentCount: 5,
+      frameCount: 1,
+      sampleCount: 1,
+    ));
+    return completer.future;
+  }
+}
+
 void main() {
   setUp(installFakeFlutterBluePlus);
 
-  testWidgets('scan -> select -> summary shows what was captured',
-      (WidgetTester tester) async {
+  testWidgets('scan -> select -> the result is its own screen', (WidgetTester tester) async {
     final controller = FakeCaptureController();
     await tester.pumpWidget(MaterialApp(home: CaptureScreen(controller: controller)));
 
@@ -90,14 +124,88 @@ void main() {
     await tester.tap(find.text('JK_B2A24S15P'));
     await tester.pumpAndSettle();
 
-    // The summary lists the decoded identity and the anonymisation default.
-    expect(find.text('Captured'), findsOneWidget);
+    // A separate route, not a list appended under the spinner. It states what
+    // was captured and that nothing has been sent.
+    expect(find.text('Contribution ready'), findsOneWidget);
     expect(find.text('JK-B2A24S15P'), findsOneWidget);
     expect(find.text('withheld'), findsOneWidget);
     expect(find.textContaining('bytes'), findsWidgets);
+    expect(find.textContaining('Nothing has been sent yet'), findsOneWidget);
 
-    // The review/submit seam is present but leads nowhere yet.
+    // The review/submit seam is present.
     expect(find.text('Review & contribute'), findsOneWidget);
+
+    // And the screen underneath went back to idle, so leaving does not land on
+    // a dead progress bar.
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Scan for JK-BMS'), findsOneWidget);
+    expect(find.text('Contribution ready'), findsNothing);
+  });
+
+  testWidgets('Capture another pack returns to a fresh scan', (WidgetTester tester) async {
+    final controller = FakeCaptureController();
+    await tester.pumpWidget(MaterialApp(home: CaptureScreen(controller: controller)));
+
+    await tester.tap(find.text('Scan for JK-BMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JK_B2A24S15P'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Capture another pack'));
+    // The screen cancels the previous scan subscription before starting the
+    // next one; the widget-test clock does not drive that future (the same
+    // nudge the retry test below needs).
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    expect(controller.scanCalls, 2);
+    expect(find.text('JK_B2A24S15P'), findsOneWidget);
+  });
+
+  testWidgets('while capturing, the bar advances and the glyph changes',
+      (WidgetTester tester) async {
+    final completer = Completer<CaptureOutcome>();
+    final controller = _PendingCaptureController(completer);
+    await tester.pumpWidget(MaterialApp(
+      home: CaptureScreen(
+        controller: controller,
+        captureDuration: const Duration(seconds: 10),
+      ),
+    ));
+
+    await tester.tap(find.text('Scan for JK-BMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JK_B2A24S15P'));
+    await tester.pump();
+
+    expect(find.text('Capturing'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
+    expect(find.text('Samples'), findsOneWidget);
+    expect(find.text('Frames'), findsOneWidget);
+
+    IconData glyph() => tester
+        .widget<Icon>(find
+            .descendant(
+              of: find.byType(RotatingGlyph),
+              matching: find.byType(Icon),
+            )
+            .first)
+        .icon!;
+    final first = glyph();
+
+    // Five seconds into a ten-second window: the bar tracks it.
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('50%'), findsOneWidget);
+
+    // Let the glyph cross-fade finish, then require that it moved.
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(glyph(), isNot(first), reason: 'the orb should move while it works');
+
+    // Let it finish so no animation or future is left pending.
+    completer.complete(CaptureOutcome.failure('boom'));
+    await tester.pumpAndSettle();
+    expect(find.text('boom'), findsOneWidget);
   });
 
   testWidgets('a failed capture shows the error state', (WidgetTester tester) async {

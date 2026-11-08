@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'services/app_info.dart';
 import 'services/consent_controller.dart';
 import 'services/consent_store.dart';
+import 'theme/app_theme.dart';
 import 'widgets/app_update_prompt.dart';
 import 'widgets/consent_gate.dart';
 
@@ -53,10 +54,9 @@ class _ContributorAppState extends State<ContributorApp> {
       title: AppInfo.appName,
       debugShowCheckedModeBanner: false,
       navigatorKey: _navigatorKey,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppInfo.brandColor),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       home: ConsentGate(
         controller: widget.consent ?? ContributorApp._fallback,
         child: const HomeScreen(),

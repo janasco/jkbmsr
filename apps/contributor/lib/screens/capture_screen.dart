@@ -10,7 +10,10 @@ import '../services/ble_transport.dart';
 import '../services/capture_service.dart';
 import '../services/consent_controller.dart';
 import '../services/flutter_blue_plus_transport.dart';
-import 'review_screen.dart';
+import '../widgets/app_surface.dart';
+import '../theme/app_theme.dart';
+import '../widgets/rotating_glyph.dart';
+import 'capture_success_screen.dart';
 
 /// Default app/OS provenance for a contribution, read from the platform.
 AppProvenance buildAppProvenance() {
@@ -22,13 +25,18 @@ AppProvenance buildAppProvenance() {
   );
 }
 
-enum _Stage { idle, scanning, capturing, done, error }
+enum _Stage { idle, scanning, capturing, error }
 
-/// A minimal capture screen: scan → connect → capture → summary → review.
+/// Scan → capture → hand off to [CaptureSuccessScreen].
 ///
-/// Capture is consent-gated (a capture cannot start without it), and the
-/// summary's "Review & contribute" opens [ReviewScreen], where the user can
-/// submit anonymously or export the payload to a file.
+/// The three states are visually distinct on purpose. A capture is a thing that
+/// takes ~30 seconds and then produces an artefact, so the screen shows a live
+/// instrument while it runs (an orb whose glyph advances with the progress, a
+/// real progress bar, live sample and frame counts) and then gets out of the way
+/// — the result is its own screen, not a list appended under a spinner.
+///
+/// Capture is consent-gated: it cannot start without consent, even if this
+/// screen is reached another way.
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key, this.controller, this.captureDuration});
 
@@ -40,39 +48,46 @@ class CaptureScreen extends StatefulWidget {
   State<CaptureScreen> createState() => _CaptureScreenState();
 }
 
-class _CaptureScreenState extends State<CaptureScreen> {
-  late final CaptureController _controller =
-      widget.controller ?? CaptureService(transport: FlutterBluePlusTransport());
-  late final Duration _duration = widget.captureDuration ?? CaptureService.defaultDuration;
+class _CaptureScreenState extends State<CaptureScreen>
+    with SingleTickerProviderStateMixin {
+  late final CaptureController _controller = widget.controller ??
+      CaptureService(transport: FlutterBluePlusTransport());
+  late final Duration _duration =
+      widget.captureDuration ?? CaptureService.defaultDuration;
+
+  /// Drives the progress bar over the capture window. Deliberately an animation
+  /// rather than a `Timer`: it is smooth, it stops when told to, and a test can
+  /// advance it by pumping.
+  late final AnimationController _bar =
+      AnimationController(vsync: this, duration: _duration);
 
   _Stage _stage = _Stage.idle;
   String _status = '';
   String? _error;
 
   /// Set only for a scan that failed for a user-fixable reason (Bluetooth off,
-  /// a denied permission, Location Services off). Drives the icon on the error
-  /// view.
+  /// a denied permission, Location Services off). Drives the error view's copy.
   BleScanFailureKind? _errorKind;
 
   /// Set only for a *capture* that failed for a classified reason (Bluetooth
-  /// switched off mid-session, the pack out of range). Drives the same error
-  /// view's icon, alongside [_errorKind].
+  /// switched off mid-session, the pack out of range).
   BleCaptureFailureKind? _captureErrorKind;
   List<BleScanResult> _devices = const [];
   StreamSubscription<List<BleScanResult>>? _scanSubscription;
   bool _scanComplete = false;
   CaptureProgress? _progress;
-  CaptureOutcome? _outcome;
   bool _cancelled = false;
 
   @override
   void dispose() {
     _scanSubscription?.cancel();
+    _bar.dispose();
     super.dispose();
   }
 
   Future<void> _startScan() async {
     await _scanSubscription?.cancel();
+    if (!mounted) return;
     setState(() {
       _stage = _Stage.scanning;
       _status = 'Scanning for a JK-BMS…';
@@ -122,10 +137,12 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _stage = _Stage.capturing;
       _status = 'Connecting to ${device.name}…';
       _progress = null;
-      _outcome = null;
       _errorKind = null;
       _captureErrorKind = null;
     });
+    _bar
+      ..reset()
+      ..forward();
 
     final outcome = await _controller.capture(
       device,
@@ -142,34 +159,33 @@ class _CaptureScreenState extends State<CaptureScreen> {
     );
 
     if (!mounted) return;
-    setState(() {
-      _outcome = outcome;
-      if (outcome.success) {
-        _stage = _Stage.done;
-      } else {
+    _bar.stop();
+
+    if (!outcome.success) {
+      setState(() {
         _stage = _Stage.error;
         _error = outcome.error;
         _captureErrorKind = outcome.failureKind;
-      }
-    });
-  }
+      });
+      return;
+    }
 
-  /// Fills the Phase 3 seam: open the review screen with the real payload, the
-  /// device serial (for the opt-in toggle) and the consent to stamp. Submit and
-  /// export happen there (Phase 5).
-  void _onReviewPressed() {
-    final contribution = _outcome?.contribution;
-    if (contribution == null) return;
-    final consent = ConsentScope.maybeOf(context);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ReviewScreen(
-          contribution: contribution,
-          rawSerial: _outcome?.session?.deviceInfo?.serialNumber,
-          consent: consent?.record,
-        ),
+    // Back to idle underneath: returning from the success screen must not land
+    // on a frozen instrument reading 97%.
+    setState(() {
+      _stage = _Stage.idle;
+      _status = '';
+      _progress = null;
+    });
+
+    final again = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => CaptureSuccessScreen(outcome: outcome),
       ),
     );
+    if (again == true && mounted) {
+      await _startScan();
+    }
   }
 
   /// True when there is no gate in scope, or the gate has granted consent.
@@ -200,7 +216,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.shield_outlined, size: 56, color: theme.colorScheme.primary),
+            Icon(Icons.shield_outlined,
+                size: 56, color: theme.colorScheme.primary),
             const SizedBox(height: 16),
             Text(
               'Contributing is switched off.',
@@ -228,8 +245,6 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return _buildScanning(context);
       case _Stage.capturing:
         return _buildCapturing(context);
-      case _Stage.done:
-        return _buildSummary(context);
       case _Stage.error:
         return _buildError(context);
     }
@@ -237,187 +252,559 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Widget _buildIdle(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bluetooth_searching_rounded, size: 64, color: theme.colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Capture a JK-BMS session',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This reads your battery\'s device information and telemetry and '
-              'builds an anonymous contribution. It never writes to the BMS.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _startScan,
-              icon: const Icon(Icons.search_rounded),
-              label: const Text('Scan for JK-BMS'),
-            ),
-          ],
+    final scheme = theme.colorScheme;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      children: [
+        AppSurface(
+          border: false,
+          padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              scheme.primary.withValues(alpha: 0.20),
+              scheme.tertiary.withValues(alpha: 0.06),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  Icons.battery_charging_full_rounded,
+                  size: 28,
+                  color: scheme.primary,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text('Capture your JK-BMS', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'Read one telemetry session and turn it into an anonymous '
+                'contribution. The app only listens — it never writes to your '
+                'battery.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 20),
+        AppSurface(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Column(
+            children: [
+              const AssuranceRow(
+                icon: Icons.visibility_off_outlined,
+                title: 'Read-only',
+                detail: 'Nothing is ever written to the BMS.',
+              ),
+              const Divider(),
+              const AssuranceRow(
+                icon: Icons.person_off_outlined,
+                title: 'No account, no identity',
+                detail:
+                    'No sign-in, no device ID and no IP address are stored.',
+              ),
+              const Divider(),
+              AssuranceRow(
+                icon: Icons.timer_outlined,
+                // Derived, not typed: the claim cannot drift from the capture
+                // this build actually performs.
+                title:
+                    'About ${CaptureService.defaultDuration.inSeconds} seconds',
+                detail: 'Keep the pack powered and within a few metres.',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        FilledButton.icon(
+          onPressed: _startScan,
+          icon: const Icon(Icons.bluetooth_searching_rounded),
+          label: const Text('Scan for JK-BMS'),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Bluetooth must be on. Nothing leaves this phone until you press '
+          'Contribute. · v${AppInfo.version}',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildScanning(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Column(
       children: [
-        if (!_scanComplete)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: LinearProgressIndicator(),
-          ),
-        const SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(_status, textAlign: TextAlign.center),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _devices.isEmpty
-              ? const SizedBox.shrink()
-              : ListView.builder(
-                  itemCount: _devices.length,
-                  itemBuilder: (context, i) {
-                    final d = _devices[i];
-                    return ListTile(
-                      leading: const Icon(Icons.battery_charging_full_rounded),
-                      title: Text(d.name.isEmpty ? '(unnamed device)' : d.name),
-                      subtitle: Text('${d.rssi} dBm · ${d.id}'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => _capture(d),
-                    );
-                  },
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: scheme.primary.withValues(alpha: 0.08),
                 ),
+                child: _scanComplete
+                    ? Icon(Icons.bluetooth_searching_rounded,
+                        size: 30, color: scheme.primary)
+                    : SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: scheme.primary,
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _scanComplete ? 'Scan complete' : 'Looking for your battery',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _scanComplete && _devices.isEmpty
+                    ? 'No JK-BMS answered. Make sure the pack is powered and '
+                        'within a few metres.'
+                    : 'Make sure the pack is powered and Bluetooth is on.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+            itemCount: _devices.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) => _DeviceCard(
+              device: _devices[i],
+              onTap: () => _capture(_devices[i]),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
+          child: TextButton(
+            onPressed: _startScan,
+            child: const Text('Scan again'),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildCapturing(BuildContext context) {
-    final p = _progress;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 24),
-          Text(_status, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          Text(
-            p == null
-                ? ''
-                : 'Frames: ${p.frameCount}  ·  Samples: ${p.sampleCount}',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: () => setState(() => _cancelled = true),
-            child: const Text('Stop early'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummary(BuildContext context) {
-    final outcome = _outcome!;
-    final c = outcome.contribution!;
     final theme = Theme.of(context);
-    final bms = c.bms;
+    final scheme = theme.colorScheme;
+    final progress = _progress;
 
-    Widget row(String label, String value) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 140,
-                child: Text(label, style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ),
-              Expanded(
-                child: Text(value, style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        );
+    return AnimatedBuilder(
+      animation: _bar,
+      builder: (context, _) {
+        // Hold just short of full until the outcome actually arrives: the
+        // logbook read and disconnect happen after the capture window, and a bar
+        // sitting at 100% while work continues is a lie.
+        final value = _bar.value.clamp(0.0, 0.97);
+        final finishing = _bar.value >= 0.97;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
+        return Column(
           children: [
-            Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
-            Text('Captured', style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700)),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                  child: ConstrainedBox(
+                    // Fills the viewport so the instrument sits in the middle of
+                    // the screen instead of hugging the top with a dead half
+                    // below it, while still scrolling when text is large.
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight > 40
+                          ? constraints.maxHeight - 40
+                          : 0,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _CaptureOrb(progress: _bar.value),
+                        const SizedBox(height: 28),
+                        Text(
+                          _status,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Keep this screen open and stay near the pack.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        _CaptureBar(value: value, finishing: finishing),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MiniStat(
+                                icon: Icons.timeline_rounded,
+                                value: '${progress?.sampleCount ?? 0}',
+                                label: 'Samples',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _MiniStat(
+                                icon: Icons.layers_rounded,
+                                value: '${progress?.frameCount ?? 0}',
+                                label: 'Frames',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: TextButton(
+                onPressed: () => setState(() => _cancelled = true),
+                child: const Text('Stop early'),
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 16),
-        row('Model', bms.modelName.isEmpty ? 'Unknown' : bms.modelName),
-        row('Hardware', bms.hardwareVersion.isEmpty ? '—' : bms.hardwareVersion),
-        row('Firmware', bms.softwareVersion.isEmpty ? '—' : bms.softwareVersion),
-        row('Layout', bms.layout),
-        row('Cells reported', '${bms.cellCountReported ?? c.samples.last.cellVoltagesV.length}'),
-        row('Samples', '${c.samples.length}'),
-        row('Raw frames', '${c.rawFrames.length}'),
-        row('Payload size', '${c.encodedBytes()} bytes'),
-        row('Serial number', c.redaction.serialNumber == 'shared' ? 'shared' : 'withheld'),
-        const SizedBox(height: 24),
-        // Opens the review screen (Phase 4); submit/export is the Phase 5 seam.
-        FilledButton(
-          onPressed: _onReviewPressed,
-          child: const Text('Review & contribute'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: _startScan,
-          child: const Text('Capture again'),
-        ),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildError(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final bluetoothOff = _errorKind == BleScanFailureKind.bluetoothOff ||
+        _captureErrorKind == BleCaptureFailureKind.bluetoothOff;
+
+    final String hint;
+    if (bluetoothOff) {
+      hint = 'Turn Bluetooth on, then try again.';
+    } else if (_errorKind == BleScanFailureKind.permissionDenied) {
+      hint = 'Allow the Bluetooth permission, then try again.';
+    } else if (_captureErrorKind == BleCaptureFailureKind.outOfRange) {
+      hint = 'Move closer to the pack and keep it powered.';
+    } else {
+      hint = 'Nothing was recorded. Trying again is safe.';
+    }
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              _errorKind == BleScanFailureKind.bluetoothOff ||
-                      _captureErrorKind == BleCaptureFailureKind.bluetoothOff
-                  ? Icons.bluetooth_disabled_rounded
-                  : Icons.error_outline_rounded,
-              size: 56,
-              color: theme.colorScheme.error,
+            Container(
+              width: 88,
+              height: 88,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.error.withValues(alpha: 0.10),
+              ),
+              child: Icon(
+                bluetoothOff
+                    ? Icons.bluetooth_disabled_rounded
+                    : Icons.error_outline_rounded,
+                size: 40,
+                color: scheme.error,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               _error ?? 'Something went wrong.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            Text(
+              hint,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 26),
             FilledButton(onPressed: _startScan, child: const Text('Try again')),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: const Text('Back'),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The device row on the scan list.
+class _DeviceCard extends StatelessWidget {
+  const _DeviceCard({required this.device, required this.onTap});
+
+  final BleScanResult device;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return AppSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              Icons.battery_charging_full_rounded,
+              size: 22,
+              color: scheme.primary,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  device.name.isEmpty ? '(unnamed device)' : device.name,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${device.rssi} dBm · ${device.id}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: scheme.outline),
+        ],
+      ),
+    );
+  }
+}
+
+/// The orb: three concentric rings with the changing glyph at the centre.
+class _CaptureOrb extends StatelessWidget {
+  const _CaptureOrb({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 188,
+      height: 188,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 188,
+            height: 188,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: scheme.primary.withValues(alpha: 0.05),
+            ),
+          ),
+          Container(
+            width: 146,
+            height: 146,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: scheme.primary.withValues(alpha: 0.08),
+            ),
+          ),
+          Container(
+            width: 108,
+            height: 108,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.accent[0].withValues(alpha: 0.28),
+                  AppTheme.accent[1].withValues(alpha: 0.20),
+                ],
+              ),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.28)),
+            ),
+            child: Center(
+              child: RotatingGlyph(progress: progress, size: 52),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The determinate progress bar, with its own label and percentage.
+class _CaptureBar extends StatelessWidget {
+  const _CaptureBar({required this.value, required this.finishing});
+
+  /// 0 to 1, already clamped short of full while work remains.
+  final double value;
+  final bool finishing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final percent = (value * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                finishing ? 'Finishing up…' : 'Capturing',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$percent%',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: scheme.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: SizedBox(
+            height: 12,
+            child: LayoutBuilder(
+              builder: (context, constraints) => Stack(
+                children: [
+                  Positioned.fill(
+                    child: ColoredBox(color: scheme.surfaceContainerHighest),
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: constraints.maxWidth * value,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: AppTheme.accent,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One live counter under the bar.
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return AppSurface(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

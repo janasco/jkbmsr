@@ -60,10 +60,13 @@ List<List<int>> chunk(List<int> data, [int size = 20]) {
 
 /// A small, valid contribution built from the captured fixtures, for UI tests.
 Contribution sampleContribution() {
-  final deviceInfo = BmsProtocolHelper.parseJk02DeviceInfoFrame(bytesFromHex(devInfo24sHex));
-  final status = BmsProtocolHelper.parseJk02CellInfoFrame(bytesFromHex(cellInfo24sHex))!;
+  final deviceInfo =
+      BmsProtocolHelper.parseJk02DeviceInfoFrame(bytesFromHex(devInfo24sHex));
+  final status =
+      BmsProtocolHelper.parseJk02CellInfoFrame(bytesFromHex(cellInfo24sHex))!;
   return Contribution.fromCapture(
-    app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+    app: const AppProvenance(
+        version: '0.1.0+1', platform: 'android', osVersion: '34'),
     remoteId: 'AA:BB:CC:11:22:33',
     advertisedName: 'JK_B2A24S15P',
     rssi: -63,
@@ -71,6 +74,14 @@ Contribution sampleContribution() {
     deviceInfo: deviceInfo,
     is32s: false,
     samples: [TelemetrySample.fromStatus(status, tOffsetMs: 0)],
+    // A real capture always records the raw frames it decoded from; without
+    // them the sample showed "0 frames", which no real contribution ever has.
+    rawFrames: [
+      RawFrame(
+          dir: 'rx', tOffsetMs: 0, hex: devInfo24sHex, frameType: 'deviceInfo'),
+      RawFrame(
+          dir: 'rx', tOffsetMs: 40, hex: cellInfo24sHex, frameType: 'cellInfo'),
+    ],
     contributionId: 'c_01926f6a-1c00-7000-8000-000000000001',
     capturedAt: DateTime.utc(2026, 10, 14, 9, 20),
   );
