@@ -217,6 +217,16 @@ void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     await _loadFonts();
+    // Start from an empty directory. A renamed or dropped shot otherwise leaves
+    // its predecessor behind, and a stale PNG is indistinguishable from a fresh
+    // one once the folder is copied into the store listing — which is exactly how
+    // a five-shot set became a nine-file mess.
+    final out = Directory(_outDir);
+    if (out.existsSync()) {
+      for (final entity in out.listSync()) {
+        if (entity is File && entity.path.endsWith('.png')) entity.deleteSync();
+      }
+    }
   });
 
   testWidgets('01 consent — the blocking first-run screen', (tester) async {
