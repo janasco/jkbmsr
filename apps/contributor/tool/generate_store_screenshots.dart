@@ -126,16 +126,16 @@ Future<GlobalKey> _mount(WidgetTester tester, Widget home,
 Future<void> _shoot(WidgetTester tester, GlobalKey key, String name) async {
   final boundary =
       key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-  final dir = Directory(_outDir)..createSync(recursive: true);
+  final file = File('$_outDir/$name.png');
+  file.parent.createSync(recursive: true);
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: _dpr);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
-    File('${dir.path}/$name.png').writeAsBytesSync(data!.buffer.asUint8List());
+    file.writeAsBytesSync(data!.buffer.asUint8List());
   });
   // A zero-byte or non-square file would be a silent failure; assert instead.
-  final written = File('${dir.path}/$name.png');
-  expect(written.lengthSync(), greaterThan(10000), reason: '$name looks empty');
+  expect(file.lengthSync(), greaterThan(10000), reason: '$name looks empty');
 }
 
 /// The minimum `CaptureController` the capture screen needs, mirroring the fake
@@ -217,6 +217,10 @@ class _PendingCaptureController implements CaptureController {
   }
 }
 
+/// The numbers are the Play listing order, not the order these tests run in:
+/// the funnel opens with what the app does (ready → capturing → result →
+/// review), then the shell, and the consent gate last as the trust shot. A
+/// consent screen first is honest but reads like an obstacle in a thumbnail.
 void main() {
   setUp(installFakeFlutterBluePlus);
 
@@ -235,27 +239,27 @@ void main() {
     }
   });
 
-  testWidgets('01 consent — the blocking first-run screen', (tester) async {
+  testWidgets('07 consent — the blocking first-run screen', (tester) async {
     final key = await _mount(
       tester,
       ConsentScreen(
           controller: ConsentController(store: InMemoryConsentStore())),
     );
-    await _shoot(tester, key, '01-consent');
+    await _shoot(tester, key, '07-consent');
   });
 
-  testWidgets('02 home', (tester) async {
+  testWidgets('06 home', (tester) async {
     final key = await _mount(tester, const HomeScreen());
-    await _shoot(tester, key, '02-home');
+    await _shoot(tester, key, '06-home');
   });
 
-  testWidgets('03 capture — the idle screen', (tester) async {
+  testWidgets('01 capture — ready', (tester) async {
     final key = await _mount(
         tester, CaptureScreen(controller: _FakeCaptureController()));
-    await _shoot(tester, key, '03-capture-idle');
+    await _shoot(tester, key, '01-capture-ready');
   });
 
-  testWidgets('04 capture — in progress, a third of the way in',
+  testWidgets('02 capture — in progress, a third of the way in',
       (tester) async {
     final key = await _mount(
       tester,
@@ -272,10 +276,10 @@ void main() {
     // advanced a few glyphs.
     await tester.pump(const Duration(seconds: 10));
     await tester.pump(const Duration(milliseconds: 500));
-    await _shoot(tester, key, '04-capture-running');
+    await _shoot(tester, key, '02-capturing');
   });
 
-  testWidgets('05 capture — the result, on its own screen', (tester) async {
+  testWidgets('03 capture — the result, on its own screen', (tester) async {
     final key = await _mount(
       tester,
       CaptureSuccessScreen(
@@ -283,7 +287,7 @@ void main() {
             CaptureOutcome.success(sampleContribution(), Jk02CaptureSession()),
       ),
     );
-    await _shoot(tester, key, '05-capture-success');
+    await _shoot(tester, key, '03-result');
   });
 
   // Dark mode is a real theme (`themeMode: ThemeMode.system`), so it is
@@ -295,7 +299,7 @@ void main() {
       CaptureScreen(controller: _FakeCaptureController()),
       theme: AppTheme.dark(),
     );
-    await _shoot(tester, key, '08-dark-capture');
+    await _shoot(tester, key, 'verify/08-dark-capture');
   });
 
   testWidgets('09 result — dark mode', (tester) async {
@@ -307,10 +311,10 @@ void main() {
       ),
       theme: AppTheme.dark(),
     );
-    await _shoot(tester, key, '09-dark-result');
+    await _shoot(tester, key, 'verify/09-dark-result');
   });
 
-  testWidgets('06 review — the payload, field by field', (tester) async {
+  testWidgets('04 review — the payload, field by field', (tester) async {
     final key = await _mount(
       tester,
       ReviewScreen(
@@ -321,10 +325,10 @@ void main() {
             scope: 'telemetry+frames'),
       ),
     );
-    await _shoot(tester, key, '06-review');
+    await _shoot(tester, key, '04-review');
   });
 
-  testWidgets('07 review — scrolled to the per-field controls', (tester) async {
+  testWidgets('05 review — scrolled to the per-field controls', (tester) async {
     final key = await _mount(
       tester,
       ReviewScreen(
@@ -337,6 +341,6 @@ void main() {
     );
     await tester.drag(find.byType(ListView).first, const Offset(0, -600));
     await tester.pumpAndSettle();
-    await _shoot(tester, key, '07-review-fields');
+    await _shoot(tester, key, '05-review-fields');
   });
 }

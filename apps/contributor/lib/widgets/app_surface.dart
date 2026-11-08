@@ -99,21 +99,50 @@ class StatTile extends StatelessWidget {
 }
 
 /// `label            value` with the value allowed to wrap.
+///
+/// A value too long for its column wraps at whatever word happens to fit, which
+/// on a right-aligned row reads as a typo — `2 (deviceInfo x1, cellInfo / x1)`.
+/// Set [stacked] for those: the label goes above and the value gets the full
+/// width, which is the shape a receipt uses for a long line.
 class DetailRow extends StatelessWidget {
   const DetailRow({
     super.key,
     required this.label,
     required this.value,
     this.emphasis = false,
+    this.stacked = false,
   });
 
   final String label;
   final String value;
   final bool emphasis;
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final valueStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: emphasis ? FontWeight.w700 : FontWeight.w600,
+      color: emphasis ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+    );
+
+    if (stacked) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: labelStyle),
+            const SizedBox(height: 3),
+            Text(value, style: valueStyle),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
@@ -121,22 +150,10 @@ class DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 116,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            child: Text(label, style: labelStyle),
           ),
           Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: emphasis ? FontWeight.w700 : FontWeight.w600,
-                color: emphasis ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-              ),
-            ),
+            child: Text(value, textAlign: TextAlign.right, style: valueStyle),
           ),
         ],
       ),

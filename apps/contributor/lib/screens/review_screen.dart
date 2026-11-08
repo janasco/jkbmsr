@@ -508,7 +508,11 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 6),
           DetailRow(label: 'Fields included', value: '$included of $total'),
           DetailRow(label: 'Payload size', value: '$sizeBytes bytes'),
-          DetailRow(label: 'Raw frames', value: _frameSummary),
+          DetailRow(
+            label: 'Raw frames',
+            value: _frameSummary,
+            stacked: true,
+          ),
           DetailRow(
             label: 'Serial number',
             value: serialShared ? 'shared' : 'withheld',
