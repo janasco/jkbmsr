@@ -15,40 +15,72 @@ import 'ble_transport.dart';
 /// dropped); a frame is emitted only once 300 bytes have accumulated *and* the
 /// trailing check-sum validates. This is the same reassembly rule `apps/ble`
 /// applies, factored out so it is unit-testable without a radio.
+/// Reassembles JK02 frames from BLE notifications.
+///
+/// Reassembly is over the BYTE STREAM, not over notification boundaries. Two
+/// things happen in the field that the old fragment-boundary version could not
+/// survive:
+///
+///  * a notification may begin mid-frame — after a dropped packet, or because a
+///    larger MTU splits a frame at a non-multiple of the frame size; and
+///  * a notification may carry more than one frame.
+///
+/// Both matter directly: the logbook (0x05) is a single 300-byte response
+/// requested in the middle of the cell-info stream, so it commonly shares a
+/// notification with the tail of a cell-info frame. The old code resynced only
+/// when a *fragment* began with the magic, kept at most one frame's worth of
+/// bytes and returned one frame per notification, so that logbook frame was
+/// discarded even though the device had sent it.
 class Jk02FrameAccumulator {
   static const int frameSize = 300;
+  static const List<int> _magic = [0x55, 0xAA, 0xEB, 0x90];
 
   final List<int> _buffer = [];
 
   void reset() => _buffer.clear();
 
-  /// Feeds one fragment; returns a complete, CRC-valid frame or null.
-  List<int>? add(List<int> fragment) {
-    if (fragment.length >= 4 &&
-        fragment[0] == 0x55 &&
-        fragment[1] == 0xAA &&
-        fragment[2] == 0xEB &&
-        fragment[3] == 0x90) {
-      _buffer.clear();
-    }
+  /// Feeds one notification; returns every complete, CRC-valid frame it
+  /// completed — usually zero or one, but never fewer than are actually there.
+  List<List<int>> add(List<int> fragment) {
     _buffer.addAll(fragment);
-
-    // Only ever hold at most one frame's worth; a stream that never syncs on
-    // the magic must not grow without bound.
-    if (_buffer.length > frameSize) {
-      final frame = _buffer.sublist(0, frameSize);
-      _buffer.removeRange(0, frameSize);
-      if (BmsProtocolHelper.isCompleteJk02Frame(frame)) return frame;
-      return null;
+    final frames = <List<int>>[];
+    while (true) {
+      final start = _magicIndex;
+      if (start < 0) {
+        // No frame start anywhere. Only the last three bytes can be the
+        // beginning of a magic, so everything before them is unusable and must
+        // not be allowed to accumulate.
+        if (_buffer.length > _magic.length - 1) {
+          _buffer.removeRange(0, _buffer.length - (_magic.length - 1));
+        }
+        break;
+      }
+      if (start > 0) _buffer.removeRange(0, start);
+      if (_buffer.length < frameSize) break;
+      final candidate = _buffer.sublist(0, frameSize);
+      if (BmsProtocolHelper.isCompleteJk02Frame(candidate)) {
+        frames.add(candidate);
+        _buffer.removeRange(0, frameSize);
+        continue;
+      }
+      // A magic that did not begin a valid frame. Step one byte and look again
+      // rather than discarding a whole window, which could throw away a real
+      // frame that started inside it.
+      _buffer.removeRange(0, 1);
     }
+    return frames;
+  }
 
-    if (_buffer.length == frameSize &&
-        BmsProtocolHelper.isCompleteJk02Frame(_buffer)) {
-      final frame = List<int>.of(_buffer);
-      _buffer.clear();
-      return frame;
+  int get _magicIndex {
+    for (var i = 0; i + _magic.length <= _buffer.length; i++) {
+      if (_buffer[i] == _magic[0] &&
+          _buffer[i + 1] == _magic[1] &&
+          _buffer[i + 2] == _magic[2] &&
+          _buffer[i + 3] == _magic[3]) {
+        return i;
+      }
     }
-    return null;
+    return -1;
   }
 }
 
@@ -126,8 +158,12 @@ class Jk02CaptureSession {
   /// Feeds a notification fragment.
   void addFragment(List<int> fragment) {
     fragmentCount++;
-    final frame = _accumulator.add(fragment);
-    if (frame == null) return;
+    for (final frame in _accumulator.add(fragment)) {
+      _ingestFrame(frame);
+    }
+  }
+
+  void _ingestFrame(List<int> frame) {
     frameCount++;
 
     final offsetMs = elapsedMs;
@@ -241,6 +277,15 @@ class CaptureService implements CaptureController {
   /// The default capture window offered by the UI.
   static const Duration defaultDuration = Duration(seconds: 30);
 
+  /// How long to wait for the logbook (0x05) after requesting it.
+  ///
+  /// The device answers 0xA1 with a full 300-byte frame in the middle of the
+  /// telemetry stream, so it cannot be assumed to arrive within a poll tick. The
+  /// capture used to wait a fixed 50 ms and disconnect, which is why no
+  /// contribution has ever carried a logbook entry even though the request was
+  /// being sent and the devices do answer it.
+  static const Duration defaultLogbookTimeout = Duration(seconds: 5);
+
   static const Duration _pollInterval = Duration(milliseconds: 50);
 
   @override
@@ -263,6 +308,7 @@ class CaptureService implements CaptureController {
     BleScanResult device, {
     Duration duration = defaultDuration,
     Duration handshakeTimeout = defaultHandshakeTimeout,
+    Duration logbookTimeout = defaultLogbookTimeout,
     bool includeSerial = false,
     required AppProvenance app,
     bool Function()? isCancelled,
@@ -310,14 +356,35 @@ class CaptureService implements CaptureController {
         return CaptureOutcome.failure(CaptureStrings.noCellInfo);
       }
 
+      // The telemetry series is exactly what fell inside the capture window.
+      // Freeze the count before the logbook wait: frames that arrive while we
+      // are waiting for 0x05 are real and stay in `rawFrames`, but they are not
+      // part of the window the payload declares.
+      final windowedSamples = session.statuses.length;
+
       // Best-effort logbook read; a device that ignores it changes nothing.
+      // Wait for the FRAME, not for a fixed delay — the answer is a 300-byte
+      // frame competing with the telemetry stream.
       try {
+        onProgress?.call(_progress(session, 'Reading the logbook…'));
         await ble.write(BmsProtocolHelper.buildJk02LogbookRequest());
-        await Future<void>.delayed(_pollInterval);
-      } catch (_) {}
+        final logbookDeadline = DateTime.now().add(logbookTimeout);
+        while (session.logbookEntries.isEmpty && DateTime.now().isBefore(logbookDeadline)) {
+          if (isCancelled?.call() ?? false) break;
+          await Future<void>.delayed(_pollInterval);
+        }
+        if (session.logbookEntries.isEmpty) {
+          // Best-effort, but never silent: "the device ignored it" and "we
+          // never asked" look identical in a payload that carries no logbook,
+          // and only the log can tell them apart afterwards.
+          _log('no logbook frame within ${logbookTimeout.inMilliseconds}ms');
+        }
+      } catch (e) {
+        _log('logbook request failed: $e');
+      }
 
       final samples = <TelemetrySample>[];
-      for (var i = 0; i < session.statuses.length; i++) {
+      for (var i = 0; i < windowedSamples; i++) {
         samples.add(TelemetrySample.fromStatus(
           session.statuses[i],
           tOffsetMs: session.statusOffsetsMs[i],

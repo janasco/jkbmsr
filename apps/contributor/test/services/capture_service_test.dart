@@ -15,7 +15,7 @@ const _jkService = '0000ffe0-0000-1000-8000-00805f9b34fb';
 /// frames, split into ~20-byte notifications exactly as real hardware sends
 /// them. No radio, no plugin.
 class FakeBleTransport implements BleTransport {
-  FakeBleTransport({BleScanResult? device})
+  FakeBleTransport({BleScanResult? device, this.logbookDelay = Duration.zero})
       : device = device ??
             const BleScanResult(
               id: 'AA:BB:CC:11:22:33',
@@ -25,6 +25,13 @@ class FakeBleTransport implements BleTransport {
             );
 
   final BleScanResult device;
+
+  /// How long after the 0xA1 request the fake device answers with 0x05.
+  /// Real hardware answers behind the telemetry stream, not inside the write
+  /// call — a fake that answers synchronously is why a 50 ms wait passed tests
+  /// and failed on every real pack.
+  final Duration logbookDelay;
+
   FakeBleSession? lastSession;
 
   @override
@@ -36,13 +43,16 @@ class FakeBleTransport implements BleTransport {
 
   @override
   Future<BleSession> connect(String deviceId) async {
-    final session = FakeBleSession();
+    final session = FakeBleSession(logbookDelay: logbookDelay);
     lastSession = session;
     return session;
   }
 }
 
 class FakeBleSession implements BleSession {
+  FakeBleSession({this.logbookDelay = Duration.zero});
+
+  final Duration logbookDelay;
   final StreamController<List<int>> _controller = StreamController<List<int>>.broadcast();
   bool disconnected = false;
 
@@ -69,7 +79,14 @@ class FakeBleSession implements BleSession {
         _emit(cellInfo24sHex);
         break;
       case 0xA1:
-        _emit(logbookHex);
+        if (logbookDelay == Duration.zero) {
+          _emit(logbookHex);
+        } else {
+          Future<void>.delayed(logbookDelay, () {
+            // The capture may have finished and disconnected by then.
+            if (!_controller.isClosed) _emit(logbookHex);
+          });
+        }
         break;
     }
   }
@@ -89,41 +106,67 @@ class FakeBleSession implements BleSession {
 
 void main() {
   group('Jk02FrameAccumulator', () {
-    test('reassembles a 300-byte frame from 20-byte fragments', () {
+    /// Drains every frame a sequence of fragments completes.
+    List<List<int>> drain(List<List<int>> fragments) {
       final accumulator = Jk02FrameAccumulator();
-      final chunks = chunk(bytesFromHex(devInfo24sHex));
-
-      List<int>? frame;
-      for (final c in chunks) {
-        frame = accumulator.add(c);
+      final frames = <List<int>>[];
+      for (final fragment in fragments) {
+        frames.addAll(accumulator.add(fragment));
       }
-      expect(frame, isNotNull);
-      expect(frame!.length, 300);
-      expect(frame[4], 0x03);
+      return frames;
+    }
+
+    test('reassembles a 300-byte frame from 20-byte fragments', () {
+      final frames = drain(chunk(bytesFromHex(devInfo24sHex)));
+
+      expect(frames, hasLength(1));
+      expect(frames.single.length, 300);
+      expect(frames.single[4], 0x03);
     });
 
     test('a corrupted CRC is rejected, never returned as a frame', () {
-      final accumulator = Jk02FrameAccumulator();
       final bytes = bytesFromHex(devInfo24sHex);
       bytes[299] ^= 0xFF;
-      List<int>? frame;
-      for (final c in chunk(bytes)) {
-        frame = accumulator.add(c);
-      }
-      expect(frame, isNull);
+
+      expect(drain(chunk(bytes)), isEmpty);
     });
 
-    test('a new magic fragment resyncs and drops the partial frame', () {
-      final accumulator = Jk02FrameAccumulator();
-      // A truncated leading frame, then a clean one.
-      accumulator.add(bytesFromHex(cellInfo24sHex).sublist(0, 50));
+    test('a truncated leading frame is discarded once the next magic arrives', () {
+      // A partial frame first, then a clean one — and exactly one frame comes
+      // out, not a window stitched across the boundary.
+      final frames = drain([
+        ...chunk(bytesFromHex(cellInfo24sHex).sublist(0, 50)),
+        ...chunk(bytesFromHex(devInfo24sHex)),
+      ]);
+
+      expect(frames, hasLength(1));
+      expect(frames.single[4], 0x03);
+    });
+
+    test('resyncs when a notification begins mid-frame', () {
+      // A dropped notification leaves the stream 37 bytes into a frame, so the
+      // following frame's magic does not land on a notification boundary. The old
+      // accumulator only resynced when a *fragment* began with the magic, so it
+      // stayed misaligned and discarded the frame that followed.
       final bytes = bytesFromHex(devInfo24sHex);
-      List<int>? frame;
-      for (final c in chunk(bytes)) {
-        frame = accumulator.add(c);
-      }
-      expect(frame, isNotNull);
-      expect(frame![4], 0x03);
+
+      final frames = drain(chunk([...bytes.sublist(37), ...bytes]));
+
+      expect(frames, hasLength(1));
+      expect(frames.single[4], 0x03);
+    });
+
+    test('returns BOTH frames when one notification carries two', () {
+      // The case that lost the logbook: the 0x05 response shares a notification
+      // with the tail of a cell-info frame. The old version returned one frame
+      // per notification and kept at most a frame's worth of bytes.
+      final accumulator = Jk02FrameAccumulator();
+      final frames = accumulator.add([
+        ...bytesFromHex(cellInfo24sHex),
+        ...bytesFromHex(logbookHex),
+      ]);
+
+      expect(frames.map((f) => f[4]).toList(), [0x02, 0x05]);
     });
   });
 
@@ -198,6 +241,55 @@ void main() {
       expect(c.isWithinSizeCap(), isTrue);
 
       expect(transport.lastSession!.disconnected, isTrue);
+    });
+
+    test('waits for the logbook frame instead of a fixed 50 ms', () async {
+      // Real hardware answers 0xA1 with a 300-byte frame that arrives after the
+      // write returns, behind the telemetry stream. The old code waited one poll
+      // tick (50 ms) and disconnected, which is why no contribution had ever
+      // carried a logbook entry.
+      final transport = FakeBleTransport(logbookDelay: const Duration(milliseconds: 400));
+      final service = CaptureService(transport: transport);
+
+      final outcome = await service.capture(
+        transport.device,
+        duration: const Duration(milliseconds: 80),
+        handshakeTimeout: const Duration(milliseconds: 500),
+        app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+      );
+
+      expect(outcome.success, isTrue, reason: outcome.error);
+      expect(outcome.contribution!.logbook, isNotNull);
+      expect(outcome.contribution!.logbook!.entries.length, 4);
+      expect(
+        outcome.contribution!.rawFrames.map((f) => f.frameType),
+        contains('logbook'),
+      );
+    });
+
+    test('a device that ignores the logbook request does not hang the capture', () async {
+      // Best-effort means bounded: no 0x05 ever arrives, the capture still
+      // succeeds and simply carries no logbook.
+      final transport = FakeBleTransport(logbookDelay: const Duration(minutes: 5));
+      final logs = <String>[];
+      final service = CaptureService(transport: transport, log: logs.add);
+      final watch = Stopwatch()..start();
+
+      final outcome = await service.capture(
+        transport.device,
+        duration: const Duration(milliseconds: 80),
+        handshakeTimeout: const Duration(milliseconds: 500),
+        logbookTimeout: const Duration(milliseconds: 200),
+        app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+      );
+      watch.stop();
+
+      expect(outcome.success, isTrue, reason: outcome.error);
+      expect(outcome.contribution!.logbook, isNull);
+      expect(watch.elapsed, lessThan(const Duration(seconds: 3)));
+      // The absence is recorded, so a later capture can tell "the device
+      // ignored it" from "we never asked".
+      expect(logs.join('\n'), contains('no logbook frame within 200ms'));
     });
 
     test('reports failure when the BMS never answers device-info', () async {
