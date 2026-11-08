@@ -36,6 +36,12 @@ import urllib.request
 
 # 8 MiB, and a multiple of the 256 KiB minimum the resumable protocol requires.
 CHUNK_SIZE = 8 * 1024 * 1024
+
+# A resumable upload survives a dropped connection, but only if the code asks the
+# session what it holds and continues. This bound stops an endless retry against
+# a link that is genuinely down; past it the edit is left uncommitted (nothing is
+# published) and the caller reports it.
+MAX_CHUNK_RETRIES = 6
 API_ROOT = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications"
 UPLOAD_ROOT = "https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications"
 TOKEN_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
@@ -170,11 +176,42 @@ def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
         raise PlayApiError("upload session response had no Location header")
 
     offset = 0
+    transport_failures = 0
     with open(aab_path, "rb") as fh:
         while offset < total:
+            fh.seek(offset)
             chunk = fh.read(CHUNK_SIZE)
             end = offset + len(chunk) - 1
-            status, body = _put_chunk(session_uri, chunk, offset, end, total)
+            try:
+                status, body = _put_chunk(session_uri, chunk, offset, end, total)
+            except OSError as err:
+                # A dropped connection or a timed-out handshake. The session is
+                # RESUMABLE, so the right move is to ask it what it actually
+                # holds and continue from there. Resending the same range either
+                # duplicates committed bytes or leaves a hole, and neither is
+                # visible from the response. Aborting here made the chunking
+                # pointless: this host's link drops large uploads often enough
+                # that a single blip killed a 52 MB bundle twice.
+                transport_failures += 1
+                if transport_failures > MAX_CHUNK_RETRIES:
+                    raise PlayApiError(
+                        f"bundle upload failed after {transport_failures} transport errors: {err}"
+                    )
+                print(
+                    f"  transport error at byte {offset} ({err}); re-querying the session",
+                    flush=True,
+                )
+                offset = _session_offset(session_uri, total)
+                if offset >= total:
+                    # The whole bundle landed and the final response was lost.
+                    status, body = _put_chunk(session_uri, b"", None, None, total)
+                    if status in (200, 201):
+                        return int(body["versionCode"])
+                    raise PlayApiError(
+                        f"bundle upload finalisation failed: {status} {body!r}"
+                    )
+                continue
+            transport_failures = 0
             if status in (200, 201):
                 return int(body["versionCode"])
             if status != 308:
@@ -187,6 +224,49 @@ def upload_bundle(package: str, edit_id: str, token: str, aab_path: str) -> int:
         if status in (200, 201):
             return int(body["versionCode"])
         raise PlayApiError(f"bundle upload finalisation failed: {status} {body!r}")
+
+
+def _session_offset(session_uri: str, total: int) -> int:
+    """How many bytes of the bundle a resumable session has actually committed.
+
+    Sent as an empty `bytes */<total>` range: the API answers 308 with a
+    `Range: bytes=0-N` header describing what it holds, or 200/201 once the
+    bundle is complete. Only used after a transport error, where both "resend
+    the chunk" and "assume it landed" are wrong.
+
+    Retried on its own because the failure that needs it is a flaky connection,
+    which is exactly what would make a single query fail too.
+    """
+    last: OSError | None = None
+    for attempt in range(3):
+        try:
+            return _session_offset_once(session_uri, total)
+        except OSError as err:
+            last = err
+            time.sleep(1 + attempt * 2)
+    raise PlayApiError(f"could not query the upload session: {last}")
+
+
+def _session_offset_once(session_uri: str, total: int) -> int:
+    req = urllib.request.Request(session_uri, data=b"", method="PUT", headers={
+        "Content-Type": "application/octet-stream",
+        "Content-Length": "0",
+        "Content-Range": f"bytes */{total}",
+        "User-Agent": USER_AGENT,
+    })
+    try:
+        with _OPENER.open(req, timeout=120) as resp:
+            return total
+    except urllib.error.HTTPError as err:
+        if err.code != 308:
+            raise PlayApiError(
+                f"could not query the upload session: {err.code} {err.read()!r}"
+            )
+        rng = err.headers.get("Range") if err.headers else None
+        if not rng:
+            return 0
+        # "bytes=0-1048575" means bytes 0..1048575 are committed.
+        return int(rng.rsplit("-", 1)[-1]) + 1
 
 
 def _put_chunk(session_uri, chunk, start, end, total):

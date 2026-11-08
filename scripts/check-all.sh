@@ -17,6 +17,7 @@
 #                      and hardware-target validators — see firmware/scripts/run-checks.sh
 #   docs               npm run docs:build
 #   releases           python3 scripts/validate_ota_metadata.py
+#                      python3 apps/pro/scripts/test_play_api_upload.py
 #
 # Usage:
 #   scripts/check-all.sh                 # dry run: print every command, run nothing
@@ -283,11 +284,20 @@ releases_suite() {
     record SKIP "validate_ota_metadata.py not found"
     return 0
   fi
-  if ( cd "$releases_dir" && python3 scripts/validate_ota_metadata.py ) >"$log" 2>&1; then
-    record PASS "$(tail -1 "$log")"
-  else
+  if ! ( cd "$releases_dir" && python3 scripts/validate_ota_metadata.py ) >"$log" 2>&1; then
     record FAIL "validate_ota_metadata.py failed (see $log)"
+    return 0
   fi
+  # The Play uploader is how an app release actually reaches users, and its
+  # resume path is the part that breaks: two real uploads of Contributor 1.0.4
+  # died when the connection dropped mid-chunk, and the code only resumed across
+  # a 308. The test drives the same path against a loopback server that drops a
+  # chunk AFTER committing it, which cannot be provoked against Google on demand.
+  if ! python3 "$REPO_ROOT/apps/pro/scripts/test_play_api_upload.py" >>"$log" 2>&1; then
+    record FAIL "test_play_api_upload.py failed (see $log)"
+    return 0
+  fi
+  record PASS "ota metadata ok; play uploader resumes after a dropped chunk"
 }
 
 firmware_suite() {
@@ -356,6 +366,7 @@ if [ "$RUN" -eq 0 ]; then
                              reason rather than failing.
    ..    docs                npm ci (only if node_modules is missing) && npm run docs:build
    ..    releases            python3 scripts/validate_ota_metadata.py
+   ..                          + apps/pro/scripts/test_play_api_upload.py
 PLAN
   say ""
   info "this is the default mode: nothing above was executed, nothing was written."
