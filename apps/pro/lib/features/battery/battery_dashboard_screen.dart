@@ -27,6 +27,7 @@ import '../../widgets/shared/design_system/dashboard_templates/at_a_glance_strip
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
 import 'widgets/bms_link_banner.dart';
+import 'widgets/dashboard_activity_status.dart';
 import 'widgets/offline_alert_controls.dart';
 import 'widgets/temperature_tiles.dart';
 
@@ -39,6 +40,13 @@ import 'widgets/temperature_tiles.dart';
 const _templatesNeedingHistory = {'gauge-sparkline', 'icon-tiles', 'terminal-readout', 'default'};
 
 const _kMinPollInterval = Duration(seconds: 5);
+
+// The requests the first-load path actually waits on. A dashboard opened with
+// a device id goes straight to the detail call; one opened without an id first
+// has to pick a gateway from the account's list. Keeping these as separate
+// labels is the difference between naming what is happening and inventing a
+// sequence of fake stages.
+enum _DashboardLoadPhase { findingGateway, readingTelemetry }
 
 class BatteryDashboardScreen extends StatefulWidget {
   final String? deviceId;
@@ -53,6 +61,12 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
   final APIClient _apiClient = APIClient();
   String _timeRange = '24h';
   bool _isLoading = true;
+  // Which first-load request is in flight; null once the dashboard is loaded.
+  _DashboardLoadPhase? _loadPhase;
+  // Refetches that must not replace the content already on screen (a
+  // pull-to-refresh, a silent poll, a time-range change). A count rather than a
+  // flag so overlapping requests cannot clear each other's state.
+  int _refreshInFlight = 0;
   Device? _device;
   Telemetry? _telemetry;
   String? _error;
@@ -138,11 +152,34 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
     );
   }
 
+  // Mirrors the lookup the loader performs: an absent or empty target means
+  // the account's gateway list has to be fetched before anything else.
+  String? get _pendingDeviceId {
+    final id = widget.deviceId ?? _resolvedDeviceId;
+    return (id == null || id.isEmpty) ? null : id;
+  }
+
+  // A refresh is only named while there is content to keep visible; a silent
+  // fetch with no loaded dashboard has nothing to be quiet about.
+  bool get _isRefreshing => _refreshInFlight > 0 && _device != null;
+
   Future<void> _loadDashboardData({bool silent = false, bool refreshHistory = true}) async {
-    if (!silent) {
+    // A first load has nothing on screen to preserve, so it gets the full
+    // silhouette plus the name of the request it is waiting on. Everything
+    // else keeps the dashboard visible and only reports that it is refreshing.
+    final isFirstLoad = !silent && _device == null;
+    if (isFirstLoad) {
       setState(() {
         _isLoading = true;
+        _loadPhase = _pendingDeviceId == null
+            ? _DashboardLoadPhase.findingGateway
+            : _DashboardLoadPhase.readingTelemetry;
         _error = null;
+      });
+    } else {
+      setState(() {
+        if (!silent) _error = null;
+        _refreshInFlight++;
       });
     }
 
@@ -158,6 +195,7 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
           if (!silent) {
             setState(() {
               _isLoading = false;
+              _loadPhase = null;
             });
           }
           return;
@@ -165,12 +203,21 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
       }
       _resolvedDeviceId = targetId;
 
+      // The list request has resolved, so the only thing still outstanding is
+      // the one request that carries both the device row and its telemetry.
+      if (isFirstLoad && _loadPhase == _DashboardLoadPhase.findingGateway && mounted) {
+        setState(() {
+          _loadPhase = _DashboardLoadPhase.readingTelemetry;
+        });
+      }
+
       final details = await _apiClient.getDeviceDetails(targetId);
       if (!mounted) return;
       setState(() {
         _device = details['device'] as Device;
         _telemetry = details['telemetry'] as Telemetry;
         _isLoading = false;
+        _loadPhase = null;
       });
 
       unawaited(_schedulePolling(targetId));
@@ -226,8 +273,18 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
       setState(() {
         _error = friendlyErrorMessage(e);
         _isLoading = false;
+        _loadPhase = null;
       });
       JKBMSRToast.show(context, _error ?? 'Failed to load battery details', isError: true);
+    } finally {
+      // Every non-first-load path took a token above, including the silent
+      // one that returns early from the catch. The screen may have been
+      // disposed while the request was in flight.
+      if (!isFirstLoad && mounted) {
+        setState(() {
+          if (_refreshInFlight > 0) _refreshInFlight--;
+        });
+      }
     }
   }
 
@@ -488,6 +545,17 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
             ),
             const SizedBox(height: JKBMSRTokens.space12),
             if (_isLoading) ...[
+              // Name the request the screen is actually waiting on. Only one
+              // request carries the telemetry; the gateway list is a separate
+              // call that happens only when the route arrived without a
+              // device id, so these are two real phases rather than a
+              // decorative sequence.
+              DashboardActivityStatus(
+                label: _loadPhase == _DashboardLoadPhase.findingGateway
+                    ? 'Finding your gateway…'
+                    : 'Reading telemetry…',
+              ),
+              const SizedBox(height: JKBMSRTokens.space16),
               // Device name + status pill, matching the loaded header row.
               Row(
                 children: const [
@@ -554,6 +622,16 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                   ),
                 ],
               ),
+              // A refresh runs over content that is already correct, so it is
+              // named quietly here rather than replacing the dashboard with
+              // the skeleton. The readings and countdown stay where they were.
+              if (_isRefreshing) ...[
+                const SizedBox(height: JKBMSRTokens.space8),
+                const DashboardActivityStatus(
+                  label: 'Refreshing…',
+                  compact: true,
+                ),
+              ],
               const SizedBox(height: JKBMSRTokens.space16),
 
               // Live countdown to the gateway's next expected check-in. The

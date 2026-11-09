@@ -18,6 +18,7 @@
 // overflow is still detected.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_pro/features/battery/widgets/dashboard_activity_status.dart';
 import 'package:jkbmsr_pro/models/telemetry.dart';
 import 'package:jkbmsr_pro/models/telemetry_history_point.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/battery_indicator.dart';
@@ -132,6 +133,24 @@ void main() {
         animationsEnabled: false,
       )));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Dashboard activity status does not overflow', (tester) async {
+      _phoneViewport(tester);
+      await tester.pumpWidget(_wrapScaled(const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DashboardActivityStatus(label: 'Finding your gateway…'),
+          SizedBox(height: 16),
+          DashboardActivityStatus(label: 'Reading telemetry…'),
+          SizedBox(height: 16),
+          DashboardActivityStatus(label: 'Refreshing…', compact: true),
+        ],
+      )));
+      // The indicator's ring animates indefinitely, so this pumps a bounded
+      // frame instead of waiting for the tree to settle.
+      await tester.pump();
       expect(tester.takeException(), isNull);
     });
   });

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
@@ -5,8 +7,12 @@ import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
 import '../../models/alert.dart';
+import '../../models/device.dart';
+import '../../models/telemetry.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
+import 'pack_check.dart';
+import 'pack_check_card.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({Key? key}) : super(key: key);
@@ -39,6 +45,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
   List<Alert> _historyAlerts = [];
   bool _historyHasMore = false;
 
+  // The pack check is additive chrome at the top of the Active tab. Its own
+  // fetch is kept separate from the alert fetch so a slow telemetry call can
+  // never delay or replace the alarm list.
+  bool _packCheckLoading = true;
+  PackCheckReport? _packCheckReport;
+
   // History deletion (permanent — distinct from resolve). `_deletingAlertId`
   // disables that row's button while in flight; `_deletingAllHistory` covers
   // the bulk action.
@@ -49,6 +61,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   void initState() {
     super.initState();
     _loadActiveAlerts();
+    unawaited(_loadPackCheck());
   }
 
   @override
@@ -76,6 +89,94 @@ class _AlertsScreenState extends State<AlertsScreen> {
       });
       JKBMSRToast.show(context, _error ?? 'Failed to load alerts', isError: true);
     }
+  }
+
+  // Reads each gateway's latest telemetry and reduces it to the card's plain
+  // findings. A per-gateway failure is isolated: the other gateways still get
+  // checked, and the card says the readings could not be loaded rather than
+  // claiming a healthy pack.
+  Future<void> _loadPackCheck() async {
+    if (!_packCheckLoading) {
+      setState(() => _packCheckLoading = true);
+    }
+    try {
+      final devices = await _apiClient.getDevices();
+      final inputs = <PackCheckInput>[];
+      var failed = 0;
+
+      for (final device in devices) {
+        try {
+          final details = await _apiClient.getDeviceDetails(device.id);
+          final telemetry = details['telemetry'] as Telemetry?;
+          if (telemetry == null) {
+            failed++;
+            continue;
+          }
+          inputs.add(_packCheckInputFor(device, telemetry));
+        } catch (_) {
+          failed++;
+        }
+      }
+
+      PackCheckReport report;
+      if (inputs.isEmpty && devices.isNotEmpty) {
+        report = PackCheckReport.noData(
+          failed == devices.length
+              ? (devices.length == 1
+                  ? 'The latest readings could not be loaded from this gateway.'
+                  : 'The latest readings could not be loaded from these gateways.')
+              : 'The latest readings did not include enough values to check.',
+        );
+      } else {
+        report = evaluatePackCheck(
+          inputs,
+          coverageNote: failed == 0
+              ? null
+              : '$failed of ${devices.length} gateways could not be read.',
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _packCheckReport = report;
+        _packCheckLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _packCheckReport = const PackCheckReport.noData(
+          'The latest readings could not be loaded.',
+        );
+        _packCheckLoading = false;
+      });
+    }
+  }
+
+  PackCheckInput _packCheckInputFor(Device device, Telemetry telemetry) {
+    // Same no-data signal the dashboard uses: the API sends voltage/SOC as 0
+    // when no telemetry row exists, and a real connected pack never sits at
+    // exactly 0 V.
+    final hasTelemetry = telemetry.voltage > 0.5 || telemetry.soc > 0;
+    final link = telemetry.linkDiagnostics;
+
+    return PackCheckInput(
+      deviceName: device.name,
+      hasTelemetry: hasTelemetry,
+      cellVoltages: hasTelemetry
+          ? [for (final cell in telemetry.cells) cell.voltage]
+          : const [],
+      temperature1C: telemetry.temperature1,
+      temperature2C: telemetry.temperature2,
+      socPercent: hasTelemetry ? telemetry.soc : null,
+      currentAmps: hasTelemetry ? telemetry.current : null,
+      fullCapacityAh:
+          telemetry.bms.fullCapacityAh > 0 ? telemetry.bms.fullCapacityAh : null,
+      isCharging: telemetry.bms.charging,
+      isDischarging: telemetry.bms.discharging,
+      bmsLinkUp: link.bmsLinkUp,
+      secondsSinceLastTelemetry: device.secondsSinceLastTelemetry,
+      expectedIntervalSeconds: device.expectedIntervalSeconds,
+    );
   }
 
   Future<void> _loadHistory({bool refresh = false}) async {
@@ -696,7 +797,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
             selectedIndex: _selectedTab,
             onTabSelected: _onTabSelected,
           ),
-          if (_selectedTab == 0 && !_isLoading && _error == null) _buildSummaryHeader(),
           Expanded(
             child: _selectedTab == 0 ? _buildActiveTab(context) : _buildHistoryTab(context),
           ),
@@ -713,156 +813,199 @@ class _AlertsScreenState extends State<AlertsScreen> {
       ..sort((a, b) =>
           a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase()));
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16, vertical: JKBMSRTokens.space8),
-          child: Column(
-            children: [
-              // Search input
-              TextField(
-                controller: _searchController,
-                onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: InputDecoration(
-                  hintText: 'Search alerts by message or gateway...',
-                  prefixIcon: Icon(Icons.search, color: context.colors.textMuted),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, color: context.colors.textMuted),
-                          tooltip: 'Clear search',
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  isDense: true,
-                ),
+    // The pack card and the search/filter row live in the same scroll view as
+    // the alert rows. At large OS text scales the three together are taller
+    // than a phone, so keeping them as a fixed header would push the alert
+    // list off-screen; scrolling them keeps every control reachable without
+    // hiding anything.
+    return RefreshIndicator(
+      onRefresh: () async {
+        JKBMSRHaptics.mediumImpact();
+        await Future.wait<void>([
+          _loadActiveAlerts(),
+          _loadPackCheck(),
+        ]);
+      },
+      color: context.colors.accent,
+      backgroundColor: context.colors.panel,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: PackCheckCard(
+              report: _packCheckReport,
+              isLoading: _packCheckLoading,
+            ),
+          ),
+          if (!_isLoading && _error == null)
+            SliverToBoxAdapter(child: _buildSummaryHeader()),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: JKBMSRTokens.space16,
+                vertical: JKBMSRTokens.space8,
               ),
-              const SizedBox(height: JKBMSRTokens.space8),
-              // Filter bar
-              Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: JKBMSRSegmentedControl<String>(
-                      options: const {
-                        'all': 'All',
-                        'critical': 'Critical',
-                        'warning': 'Warning',
-                      },
-                      selectedValue: _severityFilter,
-                      onSelected: (val) => setState(() => _severityFilter = val),
+                  // Search input
+                  TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Search alerts by message or gateway...',
+                      prefixIcon:
+                          Icon(Icons.search, color: context.colors.textMuted),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(Icons.clear,
+                                  color: context.colors.textMuted),
+                              tooltip: 'Clear search',
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      isDense: true,
                     ),
                   ),
-                  if (_selectedDate != null) ...[
-                    const SizedBox(width: JKBMSRTokens.space8),
-                    IconButton(
-                      onPressed: () => setState(() => _selectedDate = null),
-                      icon: Icon(Icons.calendar_today, color: context.colors.accent),
-                      tooltip: 'Clear date filter',
-                    ),
-                  ],
+                  const SizedBox(height: JKBMSRTokens.space8),
+                  // Filter bar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: JKBMSRSegmentedControl<String>(
+                          options: const {
+                            'all': 'All',
+                            'critical': 'Critical',
+                            'warning': 'Warning',
+                          },
+                          selectedValue: _severityFilter,
+                          onSelected: (val) =>
+                              setState(() => _severityFilter = val),
+                        ),
+                      ),
+                      if (_selectedDate != null) ...[
+                        const SizedBox(width: JKBMSRTokens.space8),
+                        IconButton(
+                          onPressed: () =>
+                              setState(() => _selectedDate = null),
+                          icon: Icon(Icons.calendar_today,
+                              color: context.colors.accent),
+                          tooltip: 'Clear date filter',
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: _isLoading
-              ? ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16),
-                  itemCount: 3,
-                  itemBuilder: (context, index) => const Padding(
+          if (_isLoading)
+            SliverPadding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => const Padding(
                     padding: EdgeInsets.only(bottom: JKBMSRTokens.space12),
                     child: _AlertCardSkeleton(),
                   ),
-                )
-              : _error != null && _activeAlerts.isEmpty
-                  ? JKBMSREmptyState(
-                      icon: Icons.error_outline,
-                      title: 'Could not load alerts',
-                      description: _error!,
-                      action: OutlinedButton(
-                        onPressed: _loadActiveAlerts,
-                        child: const Text('Try Again'),
-                      ),
-                    )
-                  : filteredAlerts.isEmpty
-                      ? const JKBMSREmptyState(
-                          icon: Icons.notifications_off_outlined,
-                          title: 'No active alarms',
-                          description: 'All battery systems are operating within normal parameters.',
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            JKBMSRHaptics.mediumImpact();
-                            await _loadActiveAlerts();
-                          },
-                          color: context.colors.accent,
-                          backgroundColor: context.colors.panel,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16),
-                            itemCount: displayAlerts.length,
-                            itemBuilder: (context, index) {
-                              final alert = displayAlerts[index];
-                              final showHeader = index == 0 ||
-                                  displayAlerts[index - 1].deviceName != alert.deviceName;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (showHeader)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4, bottom: 6),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.dns_outlined,
-                                              size: 14, color: context.colors.textMuted),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              alert.deviceName,
-                                              style: JKBMSRTypography.label.copyWith(
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                          if (alert.deviceId.isNotEmpty)
-                                            TextButton(
-                                              onPressed: _clearingAll
-                                                  ? null
-                                                  : () => _confirmClearGateway(
-                                                      alert.deviceId, alert.deviceName),
-                                              child: const Text('Clear'),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (_selectionMode)
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        Checkbox(
-                                          value: _selected.contains(alert.id),
-                                          onChanged: (_) => _toggleSelected(alert.id),
-                                        ),
-                                        Expanded(
-                                          child: GestureDetector(
-                                            onTap: () => _toggleSelected(alert.id),
-                                            child: AbsorbPointer(
-                                              child: _buildAlertCard(context, alert),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  else
-                                    _buildAlertCard(context, alert),
-                                ],
-                              );
-                            },
+                  childCount: 3,
+                ),
+              ),
+            )
+          else if (_error != null && _activeAlerts.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: JKBMSREmptyState(
+                icon: Icons.error_outline,
+                title: 'Could not load alerts',
+                description: _error!,
+                action: OutlinedButton(
+                  onPressed: _loadActiveAlerts,
+                  child: const Text('Try Again'),
+                ),
+              ),
+            )
+          else if (filteredAlerts.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: JKBMSREmptyState(
+                icon: Icons.notifications_off_outlined,
+                title: 'No active alarms',
+                description:
+                    'All battery systems are operating within normal parameters.',
+              ),
+            )
+          else
+            SliverPadding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final alert = displayAlerts[index];
+                    final showHeader = index == 0 ||
+                        displayAlerts[index - 1].deviceName != alert.deviceName;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (showHeader)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.dns_outlined,
+                                    size: 14, color: context.colors.textMuted),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    alert.deviceName,
+                                    style: JKBMSRTypography.label
+                                        .copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                if (alert.deviceId.isNotEmpty)
+                                  TextButton(
+                                    onPressed: _clearingAll
+                                        ? null
+                                        : () => _confirmClearGateway(
+                                            alert.deviceId, alert.deviceName),
+                                    child: const Text('Clear'),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-        ),
-      ],
+                        if (_selectionMode)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Checkbox(
+                                value: _selected.contains(alert.id),
+                                onChanged: (_) => _toggleSelected(alert.id),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _toggleSelected(alert.id),
+                                  child: AbsorbPointer(
+                                    child: _buildAlertCard(context, alert),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          _buildAlertCard(context, alert),
+                      ],
+                    );
+                  },
+                  childCount: displayAlerts.length,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
