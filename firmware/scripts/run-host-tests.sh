@@ -51,7 +51,7 @@ SUITES=(
   # Frame reassembly over the byte stream (header-only). A real
   # JK-PB1A16S15P prefixes every frame with "AT\r\nAT\r\n", which the
   # old notification-boundary logic rejected as a checksum error.
-  "test_jk02_frame_assembler"
+  "test_jk02_frame_assembler:src/bms/Jk02Decoder.cpp"
   # Not decoder-only: this one covers the provisioning stack. The WiFi/WebServer/
   # DNSServer/Preferences/esp_random calls it links against are all inert shims
   # in test/host/, which is why it runs natively at all. ResetTrigger.cpp is
