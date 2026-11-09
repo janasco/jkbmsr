@@ -65,7 +65,7 @@ void JkBmsBleClient::stop() {
   status_.connected = false;
   status_.state = "disabled";
   deviceInfoReceived_ = false;
-  assemblyLength_ = 0;
+  assembler_.reset();
   // A fresh begin() must start from the fast path, not inherit a previous
   // outage's widened retry cadence.
   reconnectBackoff_.reset();
@@ -114,7 +114,7 @@ void JkBmsBleClient::connectIfDue() {
     return;
   }
   deviceInfoReceived_ = false;
-  assemblyLength_ = 0;
+  assembler_.reset();
 
   if (targetAddress_.length() == 0 && !discoverTarget()) {
     status_.state = "not_found";
@@ -265,19 +265,25 @@ void JkBmsBleClient::handleNotification(const uint8_t* data, size_t length) {
   if (data == nullptr || length == 0) {
     return;
   }
-  if (assemblyLength_ + length > kAssemblyBufferSize) {
-    assemblyLength_ = 0;
-  }
-  // A new frame preamble restarts assembly.
-  if (length >= 4 && data[0] == 0x55 && data[1] == 0xAA && data[2] == 0xEB && data[3] == 0x90) {
-    assemblyLength_ = 0;
-  }
-  memcpy(assemblyBuffer_ + assemblyLength_, data, length);
-  assemblyLength_ += length;
 
-  if (assemblyLength_ >= kJk02FrameSize) {
-    processFrame(assemblyBuffer_, kJk02FrameSize);
-    assemblyLength_ = 0;
+  // Reassembly is over the byte stream. peekFrame() discards any bytes before the
+  // magic and only then hands out a full frame, so a device that prefixes its
+  // frames — a real JK-PB1A16S15P (hw 15A / sw 15.30) sends "AT\r\nAT\r\n"
+  // first — no longer has every frame rejected as a header/checksum mismatch and
+  // thrown away. The old logic only resynced when a NOTIFICATION began with the
+  // magic, then took a fixed 300-byte window from offset 0.
+  assembler_.feed(data, length);
+  while (const uint8_t* frame = assembler_.peekFrame()) {
+    if (jk02FrameValid(frame, Jk02FrameAssembler::kFrameSize)) {
+      processFrame(frame, Jk02FrameAssembler::kFrameSize);
+      assembler_.consumeFrame();
+    } else {
+      // A frame that started correctly and failed the checksum: counted and
+      // logged by processFrame, then resynced a byte at a time rather than
+      // discarding whatever follows it.
+      processFrame(frame, Jk02FrameAssembler::kFrameSize);
+      assembler_.skipByte();
+    }
   }
 }
 

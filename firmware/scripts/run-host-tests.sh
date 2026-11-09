@@ -48,6 +48,10 @@ FLAGS=(-std=c++17 -g -O0 -fsanitize=address,undefined -fno-omit-frame-pointer -W
 # (test_daly_d2_decoder, test_ks_bms_decoder).
 SUITES=(
   "test_jk02_decoder:src/bms/Jk02Decoder.cpp"
+  # Frame reassembly over the byte stream (header-only). A real
+  # JK-PB1A16S15P prefixes every frame with "AT\r\nAT\r\n", which the
+  # old notification-boundary logic rejected as a checksum error.
+  "test_jk02_frame_assembler"
   # Not decoder-only: this one covers the provisioning stack. The WiFi/WebServer/
   # DNSServer/Preferences/esp_random calls it links against are all inert shims
   # in test/host/, which is why it runs natively at all. ResetTrigger.cpp is

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "bms/Jk02FrameAssembler.h"
 
 #include "BatteryTelemetry.h"
 #include "bms/BmsBleClient.h"
@@ -52,7 +53,6 @@ class JkBmsBleClient : public BmsBleClient {
   static constexpr uint32_t kStreamRequestBaseDelayMs = 5000;
   static constexpr uint32_t kStreamRequestMaxDelayMs = 120000;
   static constexpr uint32_t kSampleFreshMs = 65000;
-  static constexpr size_t kAssemblyBufferSize = 320;
 
   void connectIfDue();
   // Records an unanswered connect attempt and schedules the next one after the
@@ -81,8 +81,9 @@ class JkBmsBleClient : public BmsBleClient {
                                           kStreamRequestMaxDelayMs};
   bool deviceInfoReceived_ = false;
   Jk02DeviceInfo deviceInfo_;
-  uint8_t assemblyBuffer_[kAssemblyBufferSize] = {};
-  size_t assemblyLength_ = 0;
+  // Reassembles frames over the byte stream, not over notification boundaries:
+  // a real JK-PB1A16S15P prefixes its frames with "AT\r\nAT\r\n".
+  Jk02FrameAssembler assembler_;
   BatteryTelemetry latest_;
   BmsBleStatus status_;
   Jk02RawCaptureGate rawCaptureGate_;
