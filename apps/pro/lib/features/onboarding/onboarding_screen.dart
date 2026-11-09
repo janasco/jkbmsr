@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../utils/haptics.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
 import '../../widgets/shared/design_system/typography.dart';
-import '../../utils/haptics.dart';
 
-/// First-launch onboarding screen that introduces new users to JKBMSR.
-/// Shows a series of feature highlights with a swipeable page view,
-/// then a "Get Started" button that marks onboarding as complete.
+/// First-launch onboarding.
+///
+/// Redesigned around the five things this app actually asks of a new owner, one
+/// per step, each with a **name** — the previous version was five anonymous dots
+/// over a lone icon, so nothing told you where you were or what was left.
+///
+/// What changed and why:
+///  * every step carries a label ("MONITOR", "FLEET", …) and a "STEP 2 OF 5"
+///    counter, so the flow has a shape you can see;
+///  * a composed hero panel replaces the small icon in a circle — the app has no
+///    illustration assets and should not get any, so the composition is built from
+///    the design system (gradient, ring, watermark glyph);
+///  * the copy leads with the benefit and then says what it is, instead of
+///    restating the feature name;
+///  * the dots became a segmented progress bar, which reads as progress and
+///    survives a 2x text scale without changing size.
+///
+/// Behaviour is unchanged: Skip anywhere, Next through the steps, and Get started
+/// on the last one marks it complete and goes to /login.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
 
@@ -32,32 +49,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<_OnboardingPage> _pages = const [
-    _OnboardingPage(
-      icon: Icons.bolt,
-      title: 'Welcome to JK BMS Remote',
-      subtitle: 'JK Battery Management System Remote',
-      description: 'Monitor your battery systems in real-time from anywhere. Track voltage, temperature, and health across all your gateways.',
+  /// One idea per step, in the order an owner meets them. The label is the thing
+  /// the counter names; the title is the benefit; the body says how.
+  static const List<_OnboardingStep> _steps = [
+    _OnboardingStep(
+      icon: Icons.bolt_rounded,
+      label: 'Monitor',
+      title: 'Your pack, from anywhere',
+      description:
+          'Live voltage, current, temperature and state of charge — from every '
+          'gateway you own, on one screen.',
     ),
-    _OnboardingPage(
-      icon: Icons.devices_other,
-      title: 'Your Gateway Fleet',
-      description: 'Add and manage multiple battery gateways. Each device shows live telemetry, status, and alerts at a glance.',
+    _OnboardingStep(
+      icon: Icons.devices_other_rounded,
+      label: 'Fleet',
+      title: 'Every gateway in one place',
+      description:
+          'Add packs as you build them. Each one shows its own telemetry, status '
+          'and alerts, so one weak pack cannot hide behind the others.',
     ),
-    _OnboardingPage(
+    _OnboardingStep(
       icon: Icons.notifications_active_outlined,
-      title: 'Smart Alerts',
-      description: 'Get instant notifications for critical events like over-voltage, high temperature, or offline status. Never miss an important alert.',
+      label: 'Alerts',
+      title: 'Told before it matters',
+      description:
+          'Over-voltage, high temperature, a gateway that stopped reporting — you '
+          'get the alert instead of the surprise.',
     ),
-    _OnboardingPage(
-      icon: Icons.cloud_outlined,
-      title: 'Cloud History',
-      description: 'Access up to 365 days of telemetry history. Export data as CSV and spot trends with interactive charts.',
+    _OnboardingStep(
+      icon: Icons.show_chart_rounded,
+      label: 'History',
+      title: 'A year, not a snapshot',
+      description:
+          'Up to 365 days of telemetry with charts and CSV export, so a slow drift '
+          'is something you can see rather than something you remember.',
     ),
-    _OnboardingPage(
+    _OnboardingStep(
       icon: Icons.shield_outlined,
-      title: 'Secure & Private',
-      description: 'Your data is encrypted and protected. Enable biometric unlock for quick, secure access to your battery systems.',
+      label: 'Privacy',
+      title: 'Yours, and locked',
+      description:
+          'Biometric unlock keeps the app closed to everyone else, and you can '
+          'export or delete your history from your account at any time.',
     ),
   ];
 
@@ -80,141 +113,88 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  void _next() {
+    if (_currentPage < _steps.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _completeOnboarding();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isLast = _currentPage == _steps.length - 1;
+
     return Scaffold(
-      backgroundColor: context.colors.canvas,
+      backgroundColor: colors.canvas,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(JKBMSRTokens.space16),
-                child: TextButton(
-                  onPressed: _completeOnboarding,
-                  child: Text(
-                    'Skip',
-                    style: JKBMSRTypography.body.copyWith(color: context.colors.textMuted),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                JKBMSRTokens.space24,
+                JKBMSRTokens.space8,
+                JKBMSRTokens.space12,
+                0,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.bolt_rounded, size: 20, color: colors.accent),
+                  const SizedBox(width: JKBMSRTokens.space8),
+                  Text(
+                    'JK BMS Remote',
+                    style: JKBMSRTypography.bodySecondary.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _completeOnboarding,
+                    child: Text(
+                      'Skip',
+                      style: JKBMSRTypography.bodySecondary.copyWith(
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            // Page view
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: _pages.length,
+                itemCount: _steps.length,
                 onPageChanged: _onPageChanged,
-                itemBuilder: (context, index) {
-                  final page = _pages[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Icon
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: context.colors.accent.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: context.colors.accent.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Icon(
-                            page.icon,
-                            size: 48,
-                            color: context.colors.accent,
-                          ),
-                        ),
-                        const SizedBox(height: JKBMSRTokens.space32),
-
-                        // Title
-                        if (page.title != null)
-                          Text(
-                            page.title!,
-                            style: JKBMSRTypography.pageHeading.copyWith(
-                              color: context.colors.textPrimary,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        if (page.subtitle != null) ...[
-                          const SizedBox(height: JKBMSRTokens.space8),
-                          Text(
-                            page.subtitle!,
-                            style: JKBMSRTypography.body.copyWith(
-                              color: context.colors.accent,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        const SizedBox(height: JKBMSRTokens.space16),
-
-                        // Description
-                        Text(
-                          page.description,
-                          style: JKBMSRTypography.bodySecondary.copyWith(
-                            color: context.colors.textSecondary,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                itemBuilder: (context, index) => _StepView(
+                  step: _steps[index],
+                  index: index,
+                  total: _steps.length,
+                ),
               ),
             ),
-
-            // Page indicators + button
             Padding(
-              padding: const EdgeInsets.all(JKBMSRTokens.space32),
+              padding: const EdgeInsets.fromLTRB(
+                JKBMSRTokens.space24,
+                0,
+                JKBMSRTokens.space24,
+                JKBMSRTokens.space24,
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Page indicators
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _pages.length,
-                      (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentPage == index ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _currentPage == index
-                              ? context.colors.accent
-                              : context.colors.line,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: JKBMSRTokens.space32),
-
-                  // Get Started button (on last page) or Next button
+                  _ProgressSegments(
+                      current: _currentPage, total: _steps.length),
+                  const SizedBox(height: JKBMSRTokens.space24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_currentPage < _pages.length - 1) {
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        } else {
-                          _completeOnboarding();
-                        }
-                      },
-                      child: Text(
-                        _currentPage < _pages.length - 1 ? 'Next' : 'Get Started',
-                      ),
+                      onPressed: _next,
+                      child: Text(isLast ? 'Get started' : 'Next'),
                     ),
                   ),
                 ],
@@ -227,16 +207,175 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingPage {
+/// One step: the composed hero, then the counter, the benefit, and how it works.
+///
+/// A ListView rather than a centred Column so that a 2x text scale scrolls
+/// instead of overflowing — the same rule the rest of this app follows.
+class _StepView extends StatelessWidget {
+  const _StepView(
+      {required this.step, required this.index, required this.total});
+
+  final _OnboardingStep step;
+  final int index;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    // Centred when it fits, scrolls when it does not (large text). A ListView
+    // pinned the block to the top and left a dead quarter-screen below it.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          JKBMSRTokens.space24,
+          JKBMSRTokens.space16,
+          JKBMSRTokens.space24,
+          JKBMSRTokens.space24,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight:
+                constraints.maxHeight > 48 ? constraints.maxHeight - 40 : 0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _StepHero(icon: step.icon),
+              const SizedBox(height: JKBMSRTokens.space32),
+              Text(
+                'STEP ${index + 1} OF $total  ·  ${step.label.toUpperCase()}',
+                style: JKBMSRTypography.bodySecondary.copyWith(
+                  color: colors.accent,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: JKBMSRTokens.space12),
+              Text(
+                step.title,
+                style: JKBMSRTypography.pageHeading
+                    .copyWith(color: colors.textPrimary),
+              ),
+              const SizedBox(height: JKBMSRTokens.space12),
+              Text(
+                step.description,
+                style: JKBMSRTypography.body.copyWith(
+                  color: colors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The hero. No illustration assets — the app has none and should not gain any —
+/// so the composition is the design system: a soft gradient panel, a ring, an
+/// oversized watermark glyph and the step's icon in front of it.
+class _StepHero extends StatelessWidget {
+  const _StepHero({required this.icon});
+
   final IconData icon;
-  final String? title;
-  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(JKBMSRTokens.radius16),
+      child: Container(
+        // Full width: inside a start-aligned Column the panel would otherwise
+        // shrink to its children (a 104 px circle and a watermark glyph).
+        width: double.infinity,
+        height: 232,
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.line),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colors.accent.withValues(alpha: 0.14),
+              colors.signal.withValues(alpha: 0.05),
+            ],
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Watermark, large and faint: gives the panel depth without a picture.
+            Transform.translate(
+              offset: const Offset(78, 44),
+              child: Icon(icon,
+                  size: 132, color: colors.accent.withValues(alpha: 0.07)),
+            ),
+            Container(
+              width: 104,
+              height: 104,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.panel,
+                border:
+                    Border.all(color: colors.accent.withValues(alpha: 0.35)),
+              ),
+              child: Icon(icon, size: 46, color: colors.accent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Segmented progress: one segment per step, so the flow's length is visible.
+class _ProgressSegments extends StatelessWidget {
+  const _ProgressSegments({required this.current, required this.total});
+
+  final int current;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return Semantics(
+      label: 'Step ${current + 1} of $total',
+      child: Row(
+        children: [
+          for (var i = 0; i < total; i++) ...[
+            if (i > 0) const SizedBox(width: JKBMSRTokens.space8),
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOut,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: i <= current ? colors.accent : colors.line,
+                  borderRadius: BorderRadius.circular(JKBMSRTokens.radius2),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingStep {
+  final IconData icon;
+  final String label;
+  final String title;
   final String description;
 
-  const _OnboardingPage({
+  const _OnboardingStep({
     required this.icon,
-    this.title,
-    this.subtitle,
+    required this.label,
+    required this.title,
     required this.description,
   });
 }
