@@ -135,6 +135,15 @@ void main() {
       (tester) async {
     await pumpAlerts(tester, textScale: 2.0);
     expect(tester.takeException(), isNull);
+    // At 2x with the real typeface the Pack check card pushes the summary below
+    // the fold, and the scroll view builds lazily - so scroll it into view before
+    // measuring rather than asserting about a widget that was never built.
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('alerts-summary-active')),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expectSummaryPillGaps(tester);
     await tester.pump(const Duration(seconds: 6)); // drain toast timers
   });

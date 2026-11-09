@@ -69,6 +69,34 @@ Future<void> _loadFonts() async {
 
   await load('Roboto', ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']);
   await load('MaterialIcons', ['MaterialIcons-Regular.otf']);
+
+  // The app's own typefaces, from the bundle (they are declared in pubspec assets).
+  // Registering them here rather than relying on google_fonts' asset lookup: in a
+  // widget test that lookup does not resolve, so the mono numerals rendered as
+  // empty boxes while everything else silently fell back to Roboto.
+  Future<void> loadBundled(String family, List<String> faces) async {
+    final loader = FontLoader(family);
+    var any = false;
+    for (final face in faces) {
+      final file = File('assets/fonts/$face');
+      if (!file.existsSync()) continue;
+      loader.addFont(Future.value(ByteData.sublistView(Uint8List.fromList(file.readAsBytesSync()))));
+      any = true;
+    }
+    if (any) await loader.load();
+  }
+
+  await loadBundled('IBMPlexSans', [
+    'IBMPlexSans-Regular.ttf',
+    'IBMPlexSans-Medium.ttf',
+    'IBMPlexSans-SemiBold.ttf',
+    'IBMPlexSans-Bold.ttf',
+  ]);
+  await loadBundled('IBMPlexMono', [
+    'IBMPlexMono-Regular.ttf',
+    'IBMPlexMono-Medium.ttf',
+    'IBMPlexMono-Bold.ttf',
+  ]);
 }
 
 // ─── the stubbed API ─────────────────────────────────────────────────────────
@@ -107,15 +135,27 @@ Map<String, dynamic> _telemetry() => {
       'cells': [
         for (var i = 0; i < 16; i++) {'cell': i + 1, 'voltage': 3.327 + (i % 5) * 0.002},
       ],
+      // Keys must match BmsExtras.fromJson exactly: the first version of this
+      // fixture guessed them, and the hero card rendered "0.0 of 0 Ah" - a
+      // placeholder that would have shipped in a store screenshot.
       'bms': {
-        'balanceCurrent': 0.02,
-        'cellCount': 16,
-        'chargeMos': true,
-        'dischargeMos': true,
+        'mosfetTemperature': 24.1,
+        'minCellVoltage': 3.327,
+        'maxCellVoltage': 3.335,
+        'avgCellVoltage': 3.331,
+        'deltaCellVoltage': 0.008,
+        'minVoltageCell': 1,
+        'maxVoltageCell': 5,
+        'cycleCount': 42,
+        'cycleCapacityAh': 4212.0,
+        'fullCapacityAh': 100.0,
+        'remainingCapacityAh': 84.2,
+        'stateOfHealth': 99.4,
+        'balancingCurrent': 0.02,
         'balancing': true,
-        'cycles': 42,
-        'remainingCapacity': 84.2,
-        'nominalCapacity': 100.0,
+        'charging': false,
+        'discharging': true,
+        'errorsBitmask': 0,
       },
       'diagnostics': {},
     };

@@ -145,14 +145,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   Icon(Icons.bolt_rounded, size: 20, color: colors.accent),
                   const SizedBox(width: JKBMSRTokens.space8),
-                  Text(
-                    'JK BMS Remote',
-                    style: JKBMSRTypography.bodySecondary.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
+                  // Expanded, not a Spacer: at 2x text the wordmark plus Skip
+                  // exceeds 360dp with the real (bundled) typeface, and a Spacer
+                  // cannot shrink its siblings.
+                  Expanded(
+                    child: Text(
+                      'JK BMS Remote',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: JKBMSRTypography.bodySecondary.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   TextButton(
                     onPressed: _completeOnboarding,
                     child: Text(

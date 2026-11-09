@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Typography definitions for JKBMSR (Unified Design System v1.0).
 ///
@@ -13,8 +12,14 @@ class JKBMSRTypography {
   JKBMSRTypography._();
 
   // --- Font Families ---
-  static TextStyle get baseSans => GoogleFonts.ibmPlexSans();
-  static TextStyle get baseMono => GoogleFonts.ibmPlexMono();
+  // The families are declared in pubspec `fonts:` and bundled, so these are
+  // plain TextStyles: no runtime fetch, no network, and the same face in a widget
+  // test as on a device.
+  static const TextStyle _sans = TextStyle(fontFamily: 'IBMPlexSans');
+  static const TextStyle _mono = TextStyle(fontFamily: 'IBMPlexMono');
+
+  static TextStyle get baseSans => _sans;
+  static TextStyle get baseMono => _mono;
 
   /// Page heading: one per screen.
   static TextStyle get pageHeading => baseSans.copyWith(
