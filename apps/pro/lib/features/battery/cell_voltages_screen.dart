@@ -8,6 +8,8 @@ import '../../widgets/shared/design_system/cell_voltage_grid.dart';
 import '../../services/api_client.dart';
 import '../../models/telemetry.dart';
 import '../../utils/error_messages.dart';
+import 'cell_insight.dart';
+import 'widgets/cell_insight_panel.dart';
 
 const _kMinPollInterval = Duration(seconds: 5);
 
@@ -136,6 +138,17 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
 
   @override
   Widget build(BuildContext context) {
+    final insight = _cells.isEmpty
+        ? null
+        : describeCells(
+            [
+              for (final cell in _cells)
+                CellReading(cell: cell.cell, voltage: cell.voltage),
+            ],
+            balancing: _balancing,
+            balancingCurrentAmps: _balancingCurrent,
+          );
+
     return Scaffold(
       backgroundColor: context.colors.canvas,
       body: RefreshIndicator(
@@ -227,6 +240,12 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
               )
             ] else ...[
               Text('Individual Cell Voltages', style: JKBMSRTypography.cardHeading),
+              // Above the grid, not below it: with 16 cells the grid is taller than
+              // the screen, so an explanation after it is one nobody scrolls to.
+              if (insight != null) ...[
+                const SizedBox(height: JKBMSRTokens.space12),
+                CellInsightPanel(insight: insight),
+              ],
               const SizedBox(height: JKBMSRTokens.space12),
               JKBMSRCellVoltageGrid(
                 cells: _cells,

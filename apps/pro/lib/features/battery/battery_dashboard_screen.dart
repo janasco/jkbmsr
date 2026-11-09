@@ -26,9 +26,11 @@ import '../../widgets/shared/design_system/dashboard_templates/mosaic_grid_templ
 import '../../widgets/shared/design_system/dashboard_templates/at_a_glance_strip_template.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
+import 'pack_status.dart';
 import 'widgets/bms_link_banner.dart';
 import 'widgets/dashboard_activity_status.dart';
 import 'widgets/offline_alert_controls.dart';
+import 'widgets/pack_status_card.dart';
 import 'widgets/temperature_tiles.dart';
 
 // All 8 of jkbmsr-web's dashboard templates are now ported, plus the
@@ -524,6 +526,8 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
   Widget build(BuildContext context) {
     final devName = _device?.name ?? 'Main Solar Bank';
     final linkDown = _telemetry?.linkDiagnostics.isDown ?? false;
+    final packStatus =
+        _device == null ? null : buildPackStatus(packStatusInputFor(_device!, _telemetry));
 
     return Scaffold(
       backgroundColor: context.colors.canvas,
@@ -633,6 +637,19 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                 ),
               ],
               const SizedBox(height: JKBMSRTokens.space16),
+
+              // Setup checklist and one health sentence — only while something
+              // is still outstanding. A permanent card would push the state of
+              // charge below the fold for every owner who has nothing to fix;
+              // what this is for is what is left to do. The pack-check detail
+              // itself lives on the Alerts screen.
+              if (packStatus != null && packStatus.hasPending) ...[
+                PackStatusCard(
+                  summary: packStatus,
+                  onViewDetails: () => context.go('/alerts'),
+                ),
+                const SizedBox(height: JKBMSRTokens.space16),
+              ],
 
               // Live countdown to the gateway's next expected check-in. The
               // forward-facing half of the same cadence as the "Last update"

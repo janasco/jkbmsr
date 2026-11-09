@@ -157,7 +157,14 @@ Map<String, dynamic> _telemetry() => {
         'discharging': true,
         'errorsBitmask': 0,
       },
-      'diagnostics': {},
+      // A healthy, fully set-up gateway: the Pack status card renders only when
+      // something is outstanding, so this keeps the dashboard's hero (state of
+      // charge) as the first thing in the shot instead of a checklist.
+      'diagnostics': {
+        'bmsLinkUp': true,
+        'bytesReceived': 184320,
+        'ble': {'state': 'connected', 'lastError': '', 'rssi': -61},
+      },
     };
 
 List<Map<String, dynamic>> _history() {
