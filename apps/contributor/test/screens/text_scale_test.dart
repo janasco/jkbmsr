@@ -1,12 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:jkbmsr_contributor/l10n/strings.dart';
 import 'package:jkbmsr_contributor/screens/capture_screen.dart';
 import 'package:jkbmsr_contributor/screens/capture_success_screen.dart';
 import 'package:jkbmsr_contributor/screens/consent_screen.dart';
+import 'package:jkbmsr_contributor/screens/home_screen.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
 import 'package:jkbmsr_contributor/services/consent_controller.dart';
 import 'package:jkbmsr_contributor/services/consent_store.dart';
+import 'package:jkbmsr_contributor/services/coverage_service.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
 import '../support/fake_flutter_blue_plus.dart';
@@ -72,6 +78,30 @@ void main() {
     // The primary action is pinned below the content, so it must be reachable
     // without scrolling even when the text is large.
     expect(find.text('Review & contribute'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the home screen holds up at 2x text',
+      (WidgetTester tester) async {
+    await mountAt2x(
+      tester,
+      HomeScreen(
+        coverageService: CoverageService(
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode({'contributions': 12, 'models': 9}),
+              200,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.text('12 packs contributed · 9 models so far'),
+      findsOneWidget,
+    );
+    expect(find.text('Start a capture'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

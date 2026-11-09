@@ -70,6 +70,21 @@ abstract final class ConsentStrings {
       'The app still works. You can turn contributing on any time from Home.';
 }
 
+/// Copy for the home screen's corpus line.
+///
+/// The counts come from the aggregate-only summary endpoint; there is no
+/// fallback figure, so a failed fetch removes the line instead of showing an
+/// old or invented number.
+abstract final class CoverageStrings {
+  /// "12 packs contributed · 9 models so far", with the singular forms used
+  /// where they apply.
+  static String line({required int packs, required int models}) {
+    final packWord = packs == 1 ? 'pack' : 'packs';
+    final modelWord = models == 1 ? 'model' : 'models';
+    return '$packs $packWord contributed · $models $modelWord so far';
+  }
+}
+
 /// Copy for the scan flow.
 ///
 /// A scan can fail for reasons the user can fix (Bluetooth off, a permission

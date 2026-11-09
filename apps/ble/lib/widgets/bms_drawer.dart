@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../screens/logbook_screen.dart';
 import '../screens/settings_screen.dart';
 import 'motion_kit.dart';
+
+/// Handles an external link and reports whether something opened it.
+typedef ExternalUriLauncher = Future<bool> Function(Uri uri);
+
+const String contributorPlayListingUrl =
+    'https://play.google.com/store/apps/details?id=com.jkbmsr.contributor';
+
+/// Opens the URL with whatever external application claims it, so the Play
+/// Store app handles a listing link instead of a WebView inside the app.
+Future<bool> launchExternalApplication(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
 
 class BmsDrawer extends StatelessWidget {
   final VoidCallback onNavigateToDevices;
   final VoidCallback onOpenSoftwareUpdate;
   final VoidCallback onOpenSupport;
   final VoidCallback onOpenAbout;
+  final ExternalUriLauncher launchExternal;
 
   const BmsDrawer({
     super.key,
@@ -15,6 +28,7 @@ class BmsDrawer extends StatelessWidget {
     required this.onOpenSoftwareUpdate,
     required this.onOpenSupport,
     required this.onOpenAbout,
+    this.launchExternal = launchExternalApplication,
   });
 
   @override
@@ -173,6 +187,19 @@ class BmsDrawer extends StatelessWidget {
                     delayIndex: 5,
                     child: _buildMenuItem(
                     context: context,
+                    icon: Icons.volunteer_activism_rounded,
+                    iconColor: const Color(0xFF14B8A6),
+                    label: 'Help us support your BMS',
+                    subtitle:
+                        'Donate an anonymous capture with JK BMS Contributor',
+                    onTap: () => _openContributor(context),
+                  ),
+                  ),
+                  const SizedBox(height: 4),
+                  TileEntrance(
+                    delayIndex: 6,
+                    child: _buildMenuItem(
+                    context: context,
                     icon: Icons.info_outline_rounded,
                     iconColor: const Color(0xFFF59E0B),
                     label: 'About JK BMS Bluetooth',
@@ -208,15 +235,42 @@ class BmsDrawer extends StatelessWidget {
     );
   }
 
+  Future<void> _openContributor(BuildContext context) async {
+    // Resolve the messenger before the drawer closes; the drawer's own context
+    // is gone by the time the launch reports back.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    Navigator.pop(context);
+
+    var opened = false;
+    try {
+      opened = await launchExternal(Uri.parse(contributorPlayListingUrl));
+    } catch (_) {
+      opened = false;
+    }
+    if (opened || messenger == null) return;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not open Google Play. Find JK BMS Contributor at '
+          '$contributorPlayListingUrl',
+        ),
+        duration: const Duration(seconds: 8),
+      ),
+    );
+  }
+
   Widget _buildMenuItem({
     required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -232,6 +286,12 @@ class BmsDrawer extends StatelessWidget {
         label,
         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary),
       ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle,
+              style: TextStyle(fontSize: 11, height: 1.3, color: textSecondary),
+            ),
       onTap: onTap,
     );
   }

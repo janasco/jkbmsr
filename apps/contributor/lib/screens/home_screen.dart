@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../services/app_info.dart';
 import '../services/consent_controller.dart';
+import '../services/coverage_service.dart';
+import '../widgets/app_surface.dart';
 import '../widgets/brand_mark.dart';
 import 'capture_screen.dart';
 import 'consent_screen.dart';
@@ -11,8 +14,43 @@ import 'consent_screen.dart';
 /// The app opens here. Capture is gated on consent: while the gate is covering
 /// the shell it cannot be reached at all, and after a decline this button
 /// re-opens the consent screen instead of starting a scan.
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key, this.coverageService});
+
+  /// Injected for tests; defaults to the real summary endpoint. The fetch is
+  /// strictly cosmetic, so nothing on this screen waits for it.
+  final CoverageService? coverageService;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final CoverageService _coverageService;
+  late final bool _ownsCoverageService;
+  CorpusCoverage? _coverage;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsCoverageService = widget.coverageService == null;
+    _coverageService = widget.coverageService ?? CoverageService();
+    // After the first frame, never during it: the capture flow must be ready
+    // before a network request is even attempted.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCoverage());
+  }
+
+  Future<void> _loadCoverage() async {
+    final coverage = await _coverageService.fetch();
+    if (!mounted || coverage == null) return;
+    setState(() => _coverage = coverage);
+  }
+
+  @override
+  void dispose() {
+    if (_ownsCoverageService) _coverageService.close();
+    super.dispose();
+  }
 
   void _startCapture(BuildContext context) {
     final consent = ConsentScope.maybeOf(context);
@@ -85,6 +123,39 @@ class HomeScreen extends StatelessWidget {
                     height: 1.45,
                   ),
                 ),
+                if (_coverage != null) ...[
+                  const SizedBox(height: 18),
+                  AppSurface(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    radius: 18,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.battery_charging_full_rounded,
+                          size: 16,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            CoverageStrings.line(
+                              packs: _coverage!.contributions,
+                              models: _coverage!.models,
+                            ),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 34),
                 FilledButton.icon(
                   onPressed: () => _startCapture(context),

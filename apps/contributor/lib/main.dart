@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'services/app_info.dart';
 import 'services/consent_controller.dart';
 import 'services/consent_store.dart';
+import 'services/coverage_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_update_prompt.dart';
 import 'widgets/consent_gate.dart';
@@ -19,12 +20,16 @@ Future<void> main() async {
 
 /// Root widget for JK BMS Contributor.
 class ContributorApp extends StatefulWidget {
-  const ContributorApp({super.key, this.consent});
+  const ContributorApp({super.key, this.consent, this.coverageService});
 
   /// Injected by `main` with the persisted store. Left null for a widget test
   /// that only wants the shell: the fallback keeps everything local and never
   /// touches a platform plugin.
   final ConsentController? consent;
+
+  /// Injected by a test so the home screen's cosmetic fetch never reaches the
+  /// network.
+  final CoverageService? coverageService;
 
   static final ConsentController _fallback =
       ConsentController(store: InMemoryConsentStore());
@@ -59,7 +64,7 @@ class _ContributorAppState extends State<ContributorApp> {
       themeMode: ThemeMode.system,
       home: ConsentGate(
         controller: widget.consent ?? ContributorApp._fallback,
-        child: const HomeScreen(),
+        child: HomeScreen(coverageService: widget.coverageService),
       ),
     );
   }

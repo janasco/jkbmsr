@@ -76,10 +76,22 @@ const List<_SettingsGroup> _settingsGroups = [
   _SettingsGroup('Support', ['about']),
 ];
 
+/// Opens a URL outside the app. Injected so widget tests can assert the exact
+/// URI and exercise the failure path without a platform channel.
+typedef ExternalLinkLauncher = Future<bool> Function(Uri uri);
+
+Future<bool> _launchExternal(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
 class SettingsScreen extends StatefulWidget {
   final String? deviceId;
+  final ExternalLinkLauncher externalLinkLauncher;
 
-  const SettingsScreen({Key? key, this.deviceId}) : super(key: key);
+  const SettingsScreen({
+    Key? key,
+    this.deviceId,
+    this.externalLinkLauncher = _launchExternal,
+  }) : super(key: key);
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -324,6 +336,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     if (!launched && mounted) {
       JKBMSRToast.show(context, 'Could not open $url', isError: true);
+    }
+  }
+
+  // The Contributor app is where owners donate anonymous BMS captures — the
+  // data that extends decoder coverage to more pack models. It ships as its own
+  // Play listing, so this opens the store app rather than an in-app browser.
+  static const String contributorAppUrl =
+      'https://play.google.com/store/apps/details?id=com.jkbmsr.contributor';
+
+  Future<void> _openContributorApp() async {
+    var launched = false;
+    try {
+      launched = await widget.externalLinkLauncher(Uri.parse(contributorAppUrl));
+    } catch (_) {
+      // A launcher that throws is still a failed launch — fall through to the
+      // message below rather than letting it escape as an unhandled error.
+      launched = false;
+    }
+    if (!launched && mounted) {
+      JKBMSRToast.show(
+        context,
+        'Could not open the Play Store. Find "JK BMS Contributor" at $contributorAppUrl',
+        isError: true,
+      );
     }
   }
 
@@ -1503,6 +1539,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _settingsRow(_settingsCategories.firstWhere((c) => c.key == key)),
                   const SizedBox(height: JKBMSRTokens.space8),
                 ],
+              // The Contributor app is a direct action, not a drill-in, so it
+              // sits alongside About rather than becoming its own category.
+              if (group.title == 'Support') ...[
+                _contributorEntry(),
+                const SizedBox(height: JKBMSRTokens.space8),
+              ],
               const SizedBox(height: JKBMSRTokens.space8),
             ],
           const SizedBox(height: JKBMSRTokens.space8),
@@ -1531,6 +1573,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               Icon(Icons.chevron_right, size: 20, color: context.colors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Direct-action row in the Support group: icon, title and the one-line
+  // reason an owner would install a second app.
+  Widget _contributorEntry() {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: _openContributorApp,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: JKBMSRTokens.space16, vertical: JKBMSRTokens.space16),
+          child: Row(
+            children: [
+              Icon(Icons.volunteer_activism_outlined,
+                  size: 22, color: context.colors.accent),
+              const SizedBox(width: JKBMSRTokens.space16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'JK BMS Contributor',
+                      style: JKBMSRTypography.body.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: JKBMSRTokens.space4),
+                    Text(
+                      'Optional. Share anonymous readings from your pack so we can support more BMS models.',
+                      style: JKBMSRTypography.bodySecondary,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: JKBMSRTokens.space8),
+              Icon(Icons.open_in_new, size: 18, color: context.colors.textMuted),
             ],
           ),
         ),
