@@ -7,6 +7,7 @@
 // controls rather than stopping at the first one.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/main.dart';
 import 'package:jkbmsr_ble/services/entitlement_service.dart';
 import 'package:jkbmsr_ble/widgets/bms_drawer.dart';
@@ -14,7 +15,7 @@ import 'package:jkbmsr_ble/widgets/bottom_nav_bar.dart';
 import 'package:jkbmsr_ble/widgets/supporter_section.dart';
 
 import '../support/entitlement_test_harness.dart';
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 import '../support/fake_in_app_purchase.dart';
 import 'a11y_support.dart';
 
@@ -32,7 +33,13 @@ void _setSize(WidgetTester tester, Size size) {
 }
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
+  // The scan window is a real timer; a test that taps SCAN must cancel it or
+  // the framework fails the next test on a pending timer.
+  tearDown(() {
+    BleBmsService().debugResetScanningState();
+    BleBmsService().debugResetConnectionState();
+  });
 
   group('primary navigation', () {
     testWidgets('bottom nav bar exposes >=48dp targets', (tester) async {

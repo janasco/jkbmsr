@@ -1,30 +1,32 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 import '../models/bms_models.dart';
 import '../models/bms_parameter.dart';
 import '../protocols/bms_protocol.dart';
 import 'app_database.dart';
 import 'ble_adapter.dart';
+import 'bluetooth_on.dart';
 import 'detection_engine.dart';
 import 'logbook_store.dart';
 
-/// Maps the current plugin's adapter state onto the app's own vocabulary.
+/// Maps the BLE package's adapter state onto the app's own vocabulary.
 ///
-/// This is the only place the plugin's enum is named outside the radio code, so
-/// swapping the BLE package is a change here rather than across the UI.
-BleAdapterState mapFlutterBluePlusAdapterState(BluetoothAdapterState state) {
+/// This is the only place the package's enum is named, so a future change of
+/// package is a change here rather than across the UI.
+BleAdapterState mapAdapterState(AvailabilityState state) {
   switch (state) {
-    case BluetoothAdapterState.on:
+    case AvailabilityState.poweredOn:
       return BleAdapterState.on;
-    case BluetoothAdapterState.off:
+    case AvailabilityState.poweredOff:
       return BleAdapterState.off;
-    case BluetoothAdapterState.unauthorized:
+    case AvailabilityState.unauthorized:
       return BleAdapterState.unauthorized;
-    case BluetoothAdapterState.unavailable:
+    case AvailabilityState.unsupported:
       return BleAdapterState.unsupported;
-    default:
+    case AvailabilityState.unknown:
+    case AvailabilityState.resetting:
       return BleAdapterState.unknown;
   }
 }
@@ -32,9 +34,7 @@ BleAdapterState mapFlutterBluePlusAdapterState(BluetoothAdapterState state) {
 class BleBmsService {
   static final BleBmsService _instance = BleBmsService._internal();
   factory BleBmsService() => _instance;
-  BleBmsService._internal() {
-    _ensureScanMirror();
-  }
+  BleBmsService._internal();
 
   final _db = AppDatabase();
   static const String _lastDeviceIdKey = 'jkbmsr_last_device_id';
@@ -43,9 +43,9 @@ class BleBmsService {
   /// Bluetooth is disabled. Mapped through [BleAdapterState] so no screen has to
   /// know which BLE package produced it.
   Stream<BleAdapterState> get adapterStateStream =>
-      FlutterBluePlus.adapterState.map(mapFlutterBluePlusAdapterState);
+      UniversalBle.availabilityStream.map(mapAdapterState);
 
-  /// Live scan lifecycle, mirrored from FlutterBluePlus.
+  /// Live scan lifecycle.
   ///
   /// [startBleScan] returns as soon as the scan has *started* — the 12s window
   /// then runs on a timer inside the plugin — so a screen that only awaited
@@ -53,22 +53,20 @@ class BleBmsService {
   /// true for the whole window, which is what the Devices tab animates on.
   final _scanStateController = StreamController<bool>.broadcast();
   Stream<bool> get scanStateStream => _scanStateController.stream;
-  StreamSubscription<bool>? _scanMirrorSub;
   bool _scanning = false;
   bool? _debugIsScanning;
   bool get isScanning => _debugIsScanning ?? _scanning;
 
-  /// Mirrors the plugin's scan state into [scanStateStream]. Subscribes once;
-  /// the service is a process-wide singleton, so it lives for the app session.
-  void _ensureScanMirror() {
-    _scanMirrorSub ??= FlutterBluePlus.isScanning.listen((value) {
-      // A test override wins, so a debug-driven state is not clobbered by the
-      // plugin's real (idle) state.
-      if (_debugIsScanning != null) return;
-      if (_scanning == value) return;
-      _scanning = value;
-      _scanStateController.add(value);
-    });
+  /// Records the scan state and pushes it to [scanStateStream].
+  ///
+  /// universal_ble has no "the scan window ended" event of its own; the window
+  /// is ours (a timer), so the state is ours too. That is simpler than mirroring
+  /// a plugin stream and it cannot disagree with the stop we issue.
+  void _setScanning(bool value) {
+    if (_debugIsScanning != null) return; // a test override wins
+    if (_scanning == value) return;
+    _scanning = value;
+    _scanStateController.add(value);
   }
 
   final _statusController = StreamController<BmsStatus>.broadcast();
@@ -103,8 +101,12 @@ class BleBmsService {
   final List<String> _rawLogs = [];
   List<String> get rawLogs => List.unmodifiable(_rawLogs);
 
-  BluetoothDevice? _connectedDevice;
-  BluetoothDevice? get connectedDevice => _connectedDevice;
+  String? _connectedDeviceId;
+
+  /// Id of the connected device, or null. The UI only ever needed the id (the
+  /// name and RSSI are tracked separately), so the plugin object no longer
+  /// leaves this file.
+  String? get connectedDeviceId => _connectedDeviceId;
 
   // ---- Test-only connection overrides ----
   // Widget tests have no BLE stack, so they can never reach the state where a
@@ -155,18 +157,25 @@ class BleBmsService {
   /// Test-only: clears any [debugSetScanningState] override.
   @visibleForTesting
   void debugResetScanningState() {
+    // The scan window is a real timer now (universal_ble's startScan has none),
+    // so a test that started a scan and reset the state would otherwise leave a
+    // pending timer and fail at teardown.
+    _scanTimer?.cancel();
+    _scanTimer = null;
     _debugIsScanning = null;
-    _scanning = FlutterBluePlus.isScanningNow;
+    _scanning = false;
   }
 
-  bool get isConnected => _debugIsConnected ?? (_connectedDevice != null);
+  bool get isConnected => _debugIsConnected ?? (_connectedDeviceId != null);
 
   BmsBrand _connectedBrand = BmsBrand.unknown;
   BmsBrand get connectedBrand => _debugConnectedBrand ?? _connectedBrand;
 
-  BluetoothCharacteristic? _writeCharacteristic;
+  String? _writeServiceUuid;
+  String? _writeCharacteristicUuid;
   bool _writeWithoutResponse = false;
-  BluetoothCharacteristic? _notifyCharacteristic;
+  String? _notifyServiceUuid;
+  String? _notifyCharacteristicUuid;
 
   // Real hardware routinely exposes several GATT services beyond the BMS's
   // own one — Device Information, Battery, a vendor's TI-stack service,
@@ -189,6 +198,23 @@ class BleBmsService {
     BmsBrand.lolan: (BmsProtocolHelper.lolanServiceUuid, BmsProtocolHelper.lolanNotifyCharUuid, BmsProtocolHelper.lolanControlCharUuid),
   };
   StreamSubscription? _scanSubscription;
+  Timer? _scanTimer;
+  /// How long a scan window stays open. Overridable in tests so a widget test
+  /// can let the window close (and the timer disappear) inside one pump, rather
+  /// than leaving a 12 s timer in the fake-async zone.
+  @visibleForTesting
+  Duration debugScanWindow = const Duration(seconds: 12);
+
+  /// Test-only: when false, the scan path updates the UI state and touches no
+  /// radio. Widget tests run on the Dart VM where the package has no
+  /// implementation, so the old empty fake platform proved nothing about
+  /// scanning either; keeping the package's futures and their zone out of the
+  /// test is both honest and what stopped these files hanging. The radio path is
+  /// covered by hardware, not by a widget test.
+  @visibleForTesting
+  bool debugRadioEnabled = true;
+  final Map<String, String> _deviceNames = {};
+  List<BleService> _services = const [];
   StreamSubscription? _notifySubscription;
   Timer? _pollTimer;
 
@@ -294,45 +320,51 @@ class BleBmsService {
   Future<void> startBleScan() async {
     try {
       _addLog("Starting BLE scan for Bluetooth BMS hardware...");
-      if (await FlutterBluePlus.isSupported == false) {
+      if (!await _isBleSupported()) {
         _addLog("Bluetooth Low Energy is not supported on this device.");
         return;
       }
 
       final discoveredMap = <String, BleDeviceInfo>{};
 
+      if (!debugRadioEnabled) {
+        _setScanning(true);
+        _scanTimer = Timer(debugScanWindow, stopBleScan);
+        return;
+      }
+
       _scanSubscription?.cancel();
-      _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        for (var r in results) {
-          final name = r.device.platformName.isNotEmpty ? r.device.platformName : r.advertisementData.advName;
-          final brand = BmsProtocolHelper.detectBrandFromName(name);
-          final looksLikeBms = brand == BmsBrand.unknown &&
-              BmsProtocolHelper.looksLikeBmsService(r.advertisementData.serviceUuids.map((u) => u.str128));
+      _scanTimer?.cancel();
+      _scanSubscription = UniversalBle.scanStream.listen((device) {
+        final name = (device.name?.isNotEmpty ?? false) ? device.name! : (device.rawName ?? '');
+        final serviceUuids = device.services.map((u) => u.toLowerCase()).toSet();
+        final brand = BmsProtocolHelper.detectBrandFromName(name);
+        final looksLikeBms = brand == BmsBrand.unknown &&
+            BmsProtocolHelper.looksLikeBmsService(serviceUuids);
 
-          if (!discoveredMap.containsKey(r.device.remoteId.str)) {
-            _addLog("Found nearby BLE device: '${name.isEmpty ? '(no name)' : name}' (${r.device.remoteId.str}, ${r.rssi} dBm)");
-          }
-
-          // Only list devices that either match a known BMS name pattern
-          // or advertise a known BMS GATT service UUID — unrelated nearby
-          // BLE devices (headphones, phones, etc.) are filtered out. This
-          // is deliberately looser than a name-only filter (which hid real
-          // hardware with blank/renamed advertised names) but still keeps
-          // the picker free of clutter.
-          if (brand == BmsBrand.unknown && !looksLikeBms) continue;
-
-          discoveredMap[r.device.remoteId.str] = BleDeviceInfo(
-            id: r.device.remoteId.str,
-            name: name.isNotEmpty ? name : 'Unnamed device (${r.device.remoteId.str.substring(0, 5)})',
-            rssi: r.rssi,
-            brand: brand,
-            isConnectable: r.advertisementData.connectable,
-            looksLikeBms: looksLikeBms,
-            serviceUuids: r.advertisementData.serviceUuids
-                .map((u) => u.str128.toLowerCase())
-                .toSet(),
-          );
+        if (!discoveredMap.containsKey(device.deviceId)) {
+          _addLog("Found nearby BLE device: '${name.isEmpty ? '(no name)' : name}' "
+              "(${device.deviceId}, ${device.rssi ?? 0} dBm)");
         }
+
+        // Only list devices that either match a known BMS name pattern
+        // or advertise a known BMS GATT service UUID — unrelated nearby
+        // BLE devices (headphones, phones, etc.) are filtered out. This
+        // is deliberately looser than a name-only filter (which hid real
+        // hardware with blank/renamed advertised names) but still keeps
+        // the picker free of clutter.
+        if (brand == BmsBrand.unknown && !looksLikeBms) return;
+
+        if (name.isNotEmpty) _deviceNames[device.deviceId] = name;
+        discoveredMap[device.deviceId] = BleDeviceInfo(
+          id: device.deviceId,
+          name: name.isNotEmpty ? name : 'Unnamed device (${device.deviceId.substring(0, 5)})',
+          rssi: device.rssi ?? 0,
+          brand: brand,
+          isConnectable: device.connectable ?? true,
+          looksLikeBms: looksLikeBms,
+          serviceUuids: serviceUuids,
+        );
         final sorted = discoveredMap.values.toList()
           ..sort((a, b) {
             int priority(BleDeviceInfo d) => d.brand != BmsBrand.unknown ? 2 : (d.looksLikeBms ? 1 : 0);
@@ -347,10 +379,64 @@ class BleBmsService {
         _devicesController.add(sorted);
       });
 
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 12));
+      // Mark the window open before touching the radio, and do not await the
+      // start: it goes through the package's command queue, and a queue that is
+      // busy (or a platform that never calls back) must not hold the scanning
+      // state hostage. The window is ours, so the state is ours. A failure to
+      // start is logged and ends the window instead of leaving a spinner.
+      _setScanning(true);
+      unawaited(UniversalBle.startScan().catchError((Object error) {
+        _addLog("BLE scan start failed: $error");
+        _setScanning(false);
+      }));
+      // The window is ours: universal_ble's startScan runs until it is stopped,
+      // so a timer both ends the scan and settles the stream the Devices tab
+      // animates on. They cannot disagree because this is the only stop path.
+      _scanTimer = Timer(debugScanWindow, stopBleScan);
       _addLog("BLE scan active across 2.4GHz spectrum.");
     } catch (e) {
       _addLog("BLE Scan error: $e");
+      _setScanning(false);
+    }
+  }
+
+  /// Ends the scan window and settles the scanning state.
+  ///
+  /// The radio call is fire-and-forget on purpose: `stopScan` goes through the
+  /// package's command queue, and awaiting it made leaving the screen wait on a
+  /// queue that can be busy with a start that has not returned yet. The state is
+  /// what the UI and the tests depend on, so it settles immediately, and a
+  /// failure to stop the radio is logged rather than blocking.
+  Future<void> stopBleScan() async {
+    _scanTimer?.cancel();
+    _scanTimer = null;
+    if (debugRadioEnabled) {
+      unawaited(UniversalBle.stopScan().catchError((Object error) {
+        _addLog("BLE scan stop failed: $error");
+      }));
+    }
+    await _scanSubscription?.cancel();
+    _scanSubscription = null;
+    _setScanning(false);
+  }
+
+  /// Asks the platform to switch Bluetooth on, keeping the package out of the
+  /// UI. Returns null when the adapter came on, or why it did not.
+  Future<BluetoothOnFailure?> requestBluetoothOn() async {
+    try {
+      final enabled = await UniversalBle.enableBluetooth();
+      return classifyBluetoothOnOutcome(enabled: enabled);
+    } catch (e) {
+      _addLog("Bluetooth enable request failed: $e");
+      return classifyBluetoothOnOutcome(enabled: false, error: e);
+    }
+  }
+
+  Future<bool> _isBleSupported() async {
+    try {
+      return await UniversalBle.getBluetoothAvailabilityState() != AvailabilityState.unsupported;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -358,17 +444,18 @@ class BleBmsService {
     try {
       _addLog("Connecting to Bluetooth device: $deviceId...");
 
-      final device = BluetoothDevice.fromId(deviceId);
-      await device.connect(timeout: const Duration(seconds: 12));
-      _connectedDevice = device;
-      _connectedBrand = BmsProtocolHelper.detectBrandFromName(device.platformName);
-      _addLog("Connected to ${device.platformName}!");
+      await UniversalBle.connect(deviceId, timeout: const Duration(seconds: 12));
+      _connectedDeviceId = deviceId;
+      final deviceName = _deviceNames[deviceId] ?? '';
+      _connectedBrand = BmsProtocolHelper.detectBrandFromName(deviceName);
+      _addLog("Connected to ${deviceName.isEmpty ? deviceId : deviceName}!");
 
-      final services = await device.discoverServices();
+      final services = await UniversalBle.discoverServices(deviceId);
+      _services = services;
       _addLog("Discovered ${services.length} GATT services on hardware");
 
-      final serviceUuids = services.map((s) => s.uuid.str128).toSet();
-      final candidates = DetectionEngine.candidatesFor(name: device.platformName, serviceUuids: serviceUuids);
+      final serviceUuids = services.map((s) => s.uuid.toLowerCase()).toSet();
+      final candidates = DetectionEngine.candidatesFor(name: deviceName, serviceUuids: serviceUuids);
 
       // A name match is authoritative — real BMS hardware reliably carries
       // its brand in the advertised name, so it short-circuits everything.
@@ -411,7 +498,7 @@ class BleBmsService {
       // before sending its first command.
       try {
         await Future.delayed(const Duration(milliseconds: 100));
-        await device.requestMtu(517);
+        await UniversalBle.requestMtu(deviceId, 517);
         await Future.delayed(const Duration(milliseconds: 150));
       } catch (_) {}
 
@@ -440,14 +527,16 @@ class BleBmsService {
   /// Binds the notify + write characteristics for [brand] from the already-
   /// discovered [services]. Re-runnable per probe candidate (a shared-service
   /// family lists sub-brands that might use a different characteristic).
-  Future<bool> _bindGattForBrand(BmsBrand brand, List<BluetoothService> services) async {
-    _notifyCharacteristic = null;
-    _writeCharacteristic = null;
+  Future<bool> _bindGattForBrand(BmsBrand brand, List<BleService> services) async {
+    _notifyCharacteristicUuid = null;
+    _notifyServiceUuid = null;
+    _writeCharacteristicUuid = null;
+    _writeServiceUuid = null;
     final gatt = _brandGatt[brand];
     final targetServiceUuid = gatt?.$1;
     var scanServices = services;
     if (targetServiceUuid != null) {
-      final matches = services.where((s) => s.uuid.str128.toLowerCase() == targetServiceUuid).toList();
+      final matches = services.where((s) => s.uuid.toLowerCase() == targetServiceUuid).toList();
       if (matches.isNotEmpty) {
         scanServices = matches;
       } else {
@@ -455,23 +544,33 @@ class BleBmsService {
       }
     }
 
-    BluetoothCharacteristic? fallbackNotify;
-    BluetoothCharacteristic? fallbackWrite;
+    String? fallbackNotifyChar;
+    String? fallbackNotifyService;
+    String? fallbackWriteChar;
+    String? fallbackWriteService;
     for (var s in scanServices) {
       for (var c in s.characteristics) {
-        final uuid = c.uuid.str128.toLowerCase();
-        if (c.properties.notify || c.properties.indicate) {
+        final uuid = c.uuid.toLowerCase();
+        final canNotify = c.properties.contains(CharacteristicProperty.notify) ||
+            c.properties.contains(CharacteristicProperty.indicate);
+        final canWrite = c.properties.contains(CharacteristicProperty.write) ||
+            c.properties.contains(CharacteristicProperty.writeWithoutResponse);
+        if (canNotify) {
           if (gatt?.$2 == uuid) {
-            _notifyCharacteristic = c;
+            _notifyCharacteristicUuid = uuid;
+            _notifyServiceUuid = s.uuid.toLowerCase();
           } else {
-            fallbackNotify ??= c;
+            fallbackNotifyChar ??= uuid;
+            fallbackNotifyService ??= s.uuid.toLowerCase();
           }
         }
-        if (c.properties.write || c.properties.writeWithoutResponse) {
+        if (canWrite) {
           if (gatt?.$3 == uuid) {
-            _writeCharacteristic = c;
+            _writeCharacteristicUuid = uuid;
+            _writeServiceUuid = s.uuid.toLowerCase();
           } else {
-            fallbackWrite ??= c;
+            fallbackWriteChar ??= uuid;
+            fallbackWriteService ??= s.uuid.toLowerCase();
           }
         }
       }
@@ -480,18 +579,25 @@ class BleBmsService {
     // first notify/write characteristic found in the target service if
     // this specific piece of hardware doesn't expose it under the UUID
     // this app expects.
-    _notifyCharacteristic ??= fallbackNotify;
-    _writeCharacteristic ??= fallbackWrite;
+    _notifyCharacteristicUuid ??= fallbackNotifyChar;
+    _notifyServiceUuid ??= fallbackNotifyService;
+    _writeCharacteristicUuid ??= fallbackWriteChar;
+    _writeServiceUuid ??= fallbackWriteService;
 
-    if (_notifyCharacteristic != null) {
-      await _notifyCharacteristic!.setNotifyValue(true);
+    final notifyService = _notifyServiceUuid;
+    final notifyCharacteristic = _notifyCharacteristicUuid;
+    if (notifyService != null && notifyCharacteristic != null) {
+      await UniversalBle.subscribeNotifications(
+          _connectedDeviceId!, notifyService, notifyCharacteristic);
       _notifySubscription?.cancel();
-      _notifySubscription = _notifyCharacteristic!.onValueReceived.listen(_handleIncomingBleData);
-      _addLog("Subscribed to telemetry notifications: ${_notifyCharacteristic!.uuid}");
+      _notifySubscription = UniversalBle.characteristicValueStream(
+              _connectedDeviceId!, notifyCharacteristic)
+          .listen(_handleIncomingBleData);
+      _addLog("Subscribed to telemetry notifications: $notifyCharacteristic");
     } else {
       _addLog("Warning: no notify characteristic found, so live telemetry can't be received.");
     }
-    if (_writeCharacteristic != null) {
+    if (_writeCharacteristicUuid != null) {
       // The official JK-BMS app always writes with WRITE_TYPE_NO_RESPONSE
       // regardless of what the characteristic's GATT properties
       // advertise (confirmed by decompiling it) — real UART-passthrough
@@ -499,12 +605,11 @@ class BleBmsService {
       // correctly, and _writeCommand() will flip modes and retry if
       // this guess ever turns out wrong for a given device.
       _writeWithoutResponse = true;
-      _addLog(
-          "Found command write characteristic: ${_writeCharacteristic!.uuid} (advertises writeWithoutResponse: ${_writeCharacteristic!.properties.writeWithoutResponse})");
+      _addLog("Found command write characteristic: $_writeCharacteristicUuid");
     } else {
       _addLog("Warning: no write characteristic found, so commands can't be sent to hardware.");
     }
-    return _notifyCharacteristic != null && _writeCharacteristic != null;
+    return _notifyCharacteristicUuid != null && _writeCharacteristicUuid != null;
   }
 
   /// Clears all per-connection state reused across brand/probe changes.
@@ -545,8 +650,8 @@ class BleBmsService {
   /// hardware that may not be Daly at all. Returning [BmsBrand.unknown]
   /// surfaces "unsupported" instead of fabricating a match. 0xFF00 is likewise
   /// shared five ways and was never guessed.
-  BmsBrand _detectBrandFromServices(List<BluetoothService> services) {
-    final uuids = services.map((s) => s.uuid.str128.toLowerCase()).toSet();
+  BmsBrand _detectBrandFromServices(List<BleService> services) {
+    final uuids = services.map((s) => s.uuid.toLowerCase()).toSet();
     if (uuids.contains(BmsProtocolHelper.jkBmsServiceUuid)) return BmsBrand.jkbms;
     return BmsBrand.unknown;
   }
@@ -563,42 +668,50 @@ class BleBmsService {
     if (lastId == null) return;
 
     try {
-      if (await FlutterBluePlus.isSupported == false) return;
-      if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) return;
+      if (!await _isBleSupported()) return;
+      if (await UniversalBle.getBluetoothAvailabilityState() != AvailabilityState.poweredOn) return;
     } catch (_) {
       return;
     }
 
     final completer = Completer<void>();
-    StreamSubscription? sub;
-    sub = FlutterBluePlus.scanResults.listen((results) async {
-      final match = results.any((r) => r.device.remoteId.str == lastId);
-      if (match && !completer.isCompleted) {
-        completer.complete();
-        await sub?.cancel();
-        try {
-          await FlutterBluePlus.stopScan();
-        } catch (_) {}
-        await connectDevice(lastId);
-      }
+    StreamSubscription<BleDevice>? sub;
+    sub = UniversalBle.scanStream.listen((device) async {
+      if (device.deviceId != lastId || completer.isCompleted) return;
+      completer.complete();
+      await sub?.cancel();
+      try {
+        await UniversalBle.stopScan();
+      } catch (_) {}
+      await connectDevice(lastId);
     });
 
     try {
       _addLog("Looking for last-connected device $lastId...");
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
+      await UniversalBle.startScan();
     } catch (_) {}
 
+    // The window is ours, as in startBleScan: stop in both directions, so a
+    // found device does not leave the radio scanning behind it.
     await Future.any([
       completer.future,
-      Future.delayed(const Duration(seconds: 9)),
+      Future.delayed(const Duration(seconds: 8)),
     ]);
     await sub.cancel();
+    try {
+      await UniversalBle.stopScan();
+    } catch (_) {}
   }
 
   Future<bool> _writeCommand(List<int> cmd) async {
-    if (_writeCharacteristic == null) return false;
+    final deviceId = _connectedDeviceId;
+    final service = _writeServiceUuid;
+    final characteristic = _writeCharacteristicUuid;
+    if (deviceId == null || service == null || characteristic == null) return false;
+    final value = Uint8List.fromList(cmd);
     try {
-      await _writeCharacteristic!.write(cmd, withoutResponse: _writeWithoutResponse);
+      await UniversalBle.write(deviceId, service, characteristic, value,
+          withoutResponse: _writeWithoutResponse);
       return true;
     } catch (e) {
       // The GATT "write without response" property bit isn't a reliable
@@ -608,7 +721,8 @@ class BleBmsService {
       // and retry once rather than leaving this brand permanently silent.
       final flipped = !_writeWithoutResponse;
       try {
-        await _writeCharacteristic!.write(cmd, withoutResponse: flipped);
+        await UniversalBle.write(deviceId, service, characteristic, value,
+            withoutResponse: flipped);
         _writeWithoutResponse = flipped;
         _addLog("BLE write succeeded after switching to withoutResponse=$flipped.");
         return true;
@@ -767,7 +881,7 @@ class BleBmsService {
   /// returns per read. Fire-and-forget: a storage failure must never disturb the
   /// live BLE session, and the store already swallows IO errors.
   void _persistLogbook(Jk02Logbook logbook) {
-    final id = _connectedDevice?.remoteId.str;
+    final id = _connectedDeviceId;
     if (id == null || id.isEmpty) return;
     unawaited(LogbookStore.instance.mergeLogbook(id, logbook));
   }
@@ -809,7 +923,7 @@ class BleBmsService {
   /// using the parameter's verified write register + encode factors. The
   /// frame bytes mirror the syssi/esphome-*-bms write path byte-for-byte.
   Future<bool> writeParameter(BmsParameter parameter, double value) {
-    if (_writeCharacteristic == null) return Future.value(false);
+    if (_writeCharacteristicUuid == null) return Future.value(false);
     switch (_connectedBrand) {
       case BmsBrand.jkbms:
         final register = parameter.jkWriteRegisterFor(_jkIs32s);
@@ -996,10 +1110,12 @@ class BleBmsService {
     final candidate = _probeCandidates![_probeIndex];
     // Re-bind GATT per candidate in case this family exposes different
     // characteristic UUIDs per sub-brand.
-    final services = _connectedDevice?.servicesList;
-    if (services != null) {
+    // The services discovered at connect time are kept: re-binding per probe
+    // candidate must not re-discover, which on real hardware costs seconds and
+    // can time out mid-probe.
+    if (_services.isNotEmpty) {
       _connectedBrand = candidate.brand;
-      _bindGattForBrand(candidate.brand, services);
+      _bindGattForBrand(candidate.brand, _services);
     }
     _addLog("Probe ${_probeIndex + 1}/${_probeCandidates!.length}: ${candidate.brand.name.toUpperCase()} "
         "(${candidate.reason}): sending its request and listening ${_probeTimeout.inMilliseconds}ms.");
@@ -1318,7 +1434,7 @@ class BleBmsService {
   /// current desired state so it isn't clobbered.
   Future<bool> toggleSwitch(String switchType, bool enable, String pin, {bool? peerMosEnabled}) async {
     _addLog("Sending switch toggle: $switchType -> ${enable ? 'ON' : 'OFF'} (PIN verified)");
-    if (_writeCharacteristic == null) {
+    if (_writeCharacteristicUuid == null) {
       _addLog("Error: No write characteristic available. Ensure BMS is connected.");
       return false;
     }
@@ -1425,7 +1541,13 @@ class BleBmsService {
     }
 
     try {
-      await _writeCharacteristic!.write(cmd, withoutResponse: _writeWithoutResponse);
+      final deviceId = _connectedDeviceId;
+      final service = _writeServiceUuid;
+      final characteristic = _writeCharacteristicUuid;
+      if (deviceId == null || service == null || characteristic == null) return false;
+      await UniversalBle.write(deviceId, service, characteristic,
+          Uint8List.fromList(cmd),
+          withoutResponse: _writeWithoutResponse);
       _addLog("Switch command packet written to hardware.");
       Future.delayed(const Duration(milliseconds: 300), _requestLiveFrame);
       return true;
@@ -1442,15 +1564,25 @@ class BleBmsService {
     _jkStreamWatchdog?.cancel();
     _probeCandidates = null;
     _notifySubscription?.cancel();
-    try {
-      await _notifyCharacteristic?.setNotifyValue(false);
-    } catch (_) {}
-    _notifyCharacteristic = null;
-    _writeCharacteristic = null;
-    try {
-      await _connectedDevice?.disconnect();
-    } catch (_) {}
-    _connectedDevice = null;
+    final deviceId = _connectedDeviceId;
+    final notifyService = _notifyServiceUuid;
+    final notifyCharacteristic = _notifyCharacteristicUuid;
+    if (deviceId != null && notifyService != null && notifyCharacteristic != null) {
+      try {
+        await UniversalBle.unsubscribe(deviceId, notifyService, notifyCharacteristic);
+      } catch (_) {}
+    }
+    _notifyServiceUuid = null;
+    _notifyCharacteristicUuid = null;
+    _writeServiceUuid = null;
+    _writeCharacteristicUuid = null;
+    if (deviceId != null) {
+      try {
+        await UniversalBle.disconnect(deviceId);
+      } catch (_) {}
+    }
+    _connectedDeviceId = null;
+    _services = const [];
     _connectedBrand = BmsBrand.unknown;
     _hasLiveData = false;
     _currentSettings = BmsSettingsSnapshot.empty(BmsBrand.unknown);

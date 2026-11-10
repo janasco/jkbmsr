@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/ble_adapter.dart';
 import 'services/ble_service.dart';
@@ -168,26 +167,20 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   /// Ask the platform to enable Bluetooth, and say something when it will not.
   ///
   /// `FlutterBluePlus.turnOn()` opens the system dialog on Android, but on
-  /// Android 13+ it can be refused outright (the companion-device policy path)
-  /// and throw, and it throws `userRejected` when the user dismisses the
-  /// dialog. This used to be a bare `catch (_) {}`, so tapping TURN ON could do
-  /// nothing at all and say nothing — a button that reads as broken. A decline
-  /// stays silent because it is the user's choice; anything else explains the
-  /// next step, and the raw cause is kept in the log.
+  /// Android 13+ can refuse it outright (the companion-device policy path).
+  /// This used to be a bare `catch (_) {}`, so tapping TURN ON could do nothing
+  /// and say nothing — a button that reads as broken. A decline stays silent
+  /// because it is the user's choice; anything else explains the next step, and
+  /// the raw cause is kept in the service log.
   Future<void> _requestBluetoothOn() async {
-    try {
-      await FlutterBluePlus.turnOn();
-    } catch (error) {
-      final failure = classifyBluetoothOnFailure(error);
-      debugPrint('FlutterBluePlus.turnOn: ${failure.name}: $error');
-      if (failure == BluetoothOnFailure.declined || !mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(bluetoothOnUnavailableMessage),
-          duration: Duration(seconds: 6),
-        ),
-      );
-    }
+    final failure = await _bleService.requestBluetoothOn();
+    if (failure == null || failure == BluetoothOnFailure.declined || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(bluetoothOnUnavailableMessage),
+        duration: Duration(seconds: 6),
+      ),
+    );
   }
 
   @override
@@ -245,7 +238,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isConnected = _bleService.isConnected;
-    final BluetoothDevice? device = _bleService.connectedDevice;
+    final String? deviceId = _bleService.connectedDeviceId;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // First-run welcome gate: never hide the main UI entirely (auto-reconnect
@@ -253,7 +246,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     if (!_welcomeChecked || _showWelcome) {
       return Stack(
         children: [
-          _buildMainScaffold(isConnected: isConnected, device: device, isDark: isDark),
+          _buildMainScaffold(isConnected: isConnected, deviceId: deviceId, isDark: isDark),
           if (_showWelcome)
             WelcomeScreen(
               onStartScanning: () {
@@ -268,12 +261,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         ],
       );
     }
-    return _buildMainScaffold(isConnected: isConnected, device: device, isDark: isDark);
+    return _buildMainScaffold(isConnected: isConnected, deviceId: deviceId, isDark: isDark);
   }
 
   Widget _buildMainScaffold({
     required bool isConnected,
-    required BluetoothDevice? device,
+    required String? deviceId,
     required bool isDark,
   }) {
     return Scaffold(
@@ -350,8 +343,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                                 ),
                               ),
                               Text(
-                                isConnected && device != null
-                                    ? device.remoteId.str
+                                isConnected && deviceId != null
+                                    ? deviceId
                                     : 'DISCONNECTED',
                                 style: const TextStyle(
                                   fontSize: 11.0,

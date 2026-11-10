@@ -60,7 +60,7 @@ class _LogbookScreenState extends State<LogbookScreen> {
 
   Future<void> _resolveDevice() async {
     var id = widget.deviceIdOverride;
-    id ??= _ble.connectedDevice?.remoteId.str;
+    id ??= _ble.connectedDeviceId;
     if (id == null || id.isEmpty) {
       try {
         id = await _ble.getLastDeviceId();

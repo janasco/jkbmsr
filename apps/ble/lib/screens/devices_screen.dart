@@ -24,6 +24,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
     _triggerScan();
   }
 
+  @override
+  void dispose() {
+    // Leaving the tab ends the window it opened. The scan used to be bounded by
+    // the plugin's own timeout; it is ours now, so it is ours to stop too — a
+    // radio left scanning after the screen is gone is a battery cost nobody can
+    // see.
+    unawaited(_bleService.stopBleScan());
+    super.dispose();
+  }
+
   /// Starts a scan — or restarts one that is already running. Deliberately not
   /// guarded on the current scan state: tapping while a scan is live is a
   /// manual reload, and it is safe because FlutterBluePlus stops the in-flight
@@ -47,7 +57,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Widget _buildScannedBody(BuildContext context, bool isScanning) {
-    final connectedDev = _bleService.connectedDevice;
+    final connectedDevId = _bleService.connectedDeviceId;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF131A20) : const Color(0xFFFFFFFF);
     final iconBg = isDark ? const Color(0xFF1E2830) : const Color(0xFFF1F5F9);
@@ -249,7 +259,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 itemCount: devices.length,
                 itemBuilder: (context, idx) {
                   final dev = devices[idx];
-                  final isConn = connectedDev != null && connectedDev.remoteId.str == dev.id;
+                  final isConn = connectedDevId != null && connectedDevId == dev.id;
                   final candidates =
                       DetectionEngine.candidatesFor(name: dev.name, serviceUuids: dev.serviceUuids);
                   final top = candidates.isEmpty ? null : candidates.first;

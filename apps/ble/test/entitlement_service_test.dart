@@ -3,7 +3,7 @@
 // There is no Android emulator on this box, so the whole table is driven
 // through a scripted `InAppPurchasePlatform` double plus an injected installer
 // store — the same no-op-platform trick the existing tests use for
-// flutter_blue_plus (see test/support/fake_flutter_blue_plus.dart).
+// the BLE package (see test/support/fake_universal_ble.dart).
 //
 //   build        | owns remove_ads_lifetime | ad-free
 //   -------------|--------------------------|--------

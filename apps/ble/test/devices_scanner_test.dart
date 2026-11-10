@@ -12,7 +12,7 @@ import 'package:jkbmsr_ble/screens/devices_screen.dart';
 import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/motion_kit.dart';
 
-import 'support/fake_flutter_blue_plus.dart';
+import 'support/fake_universal_ble.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
       theme: ThemeData.dark(),
@@ -21,9 +21,12 @@ Widget _wrap(Widget child) => MaterialApp(
 
 void main() {
   setUp(() {
-    installFakeFlutterBluePlus();
+    installFakeUniversalBle();
     BleBmsService().debugResetScanningState();
     BleBmsService().debugResetConnectionState();
+    // Close the window inside a pump. The product window is 12 s; leaving that
+    // timer in the fake-async zone is what made this file hang.
+    BleBmsService().debugScanWindow = const Duration(milliseconds: 50);
   });
   tearDown(() {
     BleBmsService().debugResetScanningState();
@@ -39,6 +42,8 @@ void main() {
     await tester.pumpWidget(_wrap(DevicesScreen(onConnected: () {})));
     await tester.pump(const Duration(milliseconds: 300));
 
+    // The mount opens a window; the test window is 50 ms so one pump later it
+    // has closed. That is the idle state, which is what this test is about.
     expect(find.text('SCAN FOR DEVICES'), findsOneWidget);
     expect(find.text('SCAN AGAIN'), findsNothing);
     expect(find.byType(ScanRadar), findsNothing);
@@ -116,6 +121,7 @@ void main() {
 
     await tester.pumpWidget(_wrap(DevicesScreen(onConnected: () {})));
     await tester.pump(const Duration(milliseconds: 300));
+
     expect(find.text('SCAN FOR DEVICES'), findsOneWidget);
 
     BleBmsService().debugSetScanningState(true);

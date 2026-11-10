@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_ble/screens/logbook_screen.dart';
 import 'package:jkbmsr_ble/services/logbook_store.dart';
 
-import 'support/fake_flutter_blue_plus.dart';
+import 'support/fake_universal_ble.dart';
 
 Widget _wrap(Widget child) => MaterialApp(theme: ThemeData.dark(), home: child);
 
@@ -14,7 +14,7 @@ LogbookRecord _rec(int seconds, int code) =>
     LogbookRecord(seconds: seconds, code: code, firstSeen: DateTime.utc(2026, 1, 1));
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   testWidgets('renders stored events newest-first and only loads one page',
       (tester) async {

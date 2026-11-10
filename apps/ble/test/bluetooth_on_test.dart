@@ -1,54 +1,36 @@
-import 'package:flutter/services.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_ble/services/bluetooth_on.dart';
 
+// Turning Bluetooth on from the app.
+//
+// The old package reported a dismissed dialog as a `userRejected` error code;
+// universal_ble answers with a bool, so the distinction now comes from the bool
+// itself. These tests pin the consequence: someone who taps "no" must not be
+// told to go into their phone settings, and a request that threw must never be
+// treated as a decline.
+
 void main() {
-  group('classifyBluetoothOnFailure', () {
+  group('classifyBluetoothOnOutcome', () {
+    test('the adapter came on: nothing to report', () {
+      expect(classifyBluetoothOnOutcome(enabled: true), isNull);
+    });
+
     test('a dismissed system dialog is a decline, not a fault', () {
-      final error = FlutterBluePlusException(
-        ErrorPlatform.fbp,
-        'turnOn',
-        FbpErrorCode.userRejected.index,
-        'user rejected',
-      );
-      expect(classifyBluetoothOnFailure(error), BluetoothOnFailure.declined);
+      expect(classifyBluetoothOnOutcome(enabled: false), BluetoothOnFailure.declined);
     });
 
-    test('a timeout is a failure the user needs a next step for', () {
-      final error = FlutterBluePlusException(
-        ErrorPlatform.fbp,
-        'turnOn',
-        FbpErrorCode.timeout.index,
-        'turnOn timed out',
-      );
-      expect(classifyBluetoothOnFailure(error), BluetoothOnFailure.unavailable);
-    });
-
-    test('an adapter-is-off refusal is unavailable, not a decline', () {
-      final error = FlutterBluePlusException(
-        ErrorPlatform.fbp,
-        'turnOn',
-        FbpErrorCode.adapterIsOff.index,
-        'adapter is off',
-      );
-      expect(classifyBluetoothOnFailure(error), BluetoothOnFailure.unavailable);
-    });
-
-    test('a platform-channel error is unavailable', () {
-      // The Android 13+ companion-device policy path surfaces as a platform
-      // error rather than a FlutterBluePlusException.
+    test('a thrown error is a failure the user needs a next step for', () {
       expect(
-        classifyBluetoothOnFailure(
-          PlatformException(code: 'turnOn', message: 'not permitted'),
-        ),
+        classifyBluetoothOnOutcome(enabled: false, error: StateError('refused intent')),
         BluetoothOnFailure.unavailable,
       );
     });
 
-    test('an unclassified error is unavailable, never silently ignored', () {
+    test('an error is unavailable even if the call claimed success', () {
+      // Defensive: a plugin that throws after answering must not be read as
+      // success, and must not be read as a decline either.
       expect(
-        classifyBluetoothOnFailure(StateError('boom')),
+        classifyBluetoothOnOutcome(enabled: true, error: StateError('late failure')),
         BluetoothOnFailure.unavailable,
       );
     });

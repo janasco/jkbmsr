@@ -24,7 +24,7 @@ import 'package:jkbmsr_ble/screens/settings_screen.dart';
 import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/auth_pin_dialog.dart';
 
-import 'support/fake_flutter_blue_plus.dart';
+import 'support/fake_universal_ble.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -59,7 +59,7 @@ Future<void> _submitPin(WidgetTester tester, String pin) async {
 
 void main() {
   setUp(() {
-    installFakeFlutterBluePlus();
+    installFakeUniversalBle();
     BleBmsService().debugResetConnectionState();
   });
   tearDown(() => BleBmsService().debugResetConnectionState());

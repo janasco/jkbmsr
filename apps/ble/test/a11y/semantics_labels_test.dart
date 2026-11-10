@@ -10,9 +10,10 @@
 // borrow a label from.
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/main.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 
 class _Unlabeled {
   const _Unlabeled(this.size);
@@ -61,7 +62,13 @@ List<_Unlabeled> _unlabeledTappables(WidgetTester tester) {
 }
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
+  // The scan window is a real timer; a test that taps SCAN must cancel it or
+  // the framework fails the next test on a pending timer.
+  tearDown(() {
+    BleBmsService().debugResetScanningState();
+    BleBmsService().debugResetConnectionState();
+  });
 
   testWidgets('every tappable control on every tab announces a label',
       (tester) async {

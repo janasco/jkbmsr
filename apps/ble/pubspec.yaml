@@ -11,7 +11,6 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^2.0.0
-  flutter_blue_plus: ^1.36.8   # MIT line: 2.x requires a paid commercial licence
   fl_chart: ^1.3.1
   google_fonts: ^8.0.0
   share_plus: ^13.3.1
@@ -30,16 +29,15 @@ dependencies:
   sqflite: ^2.4.1
   path: ^1.9.0
   google_mobile_ads: ^9.1.0
-  flutter_blue_plus_platform_interface: ^7.0.0
+  universal_ble: ^3.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  # Test-only: lets widget tests install a no-op FlutterBluePlusPlatform so the
-  # full app can be mounted on the Dart VM (flutter_blue_plus itself throws
-  # UnsupportedError there). Already a transitive dependency of
-  # flutter_blue_plus; pinned here so the test can import it directly.
+  # Test-only: lets widget tests install a no-op UniversalBlePlatform so the
+  # full app can be mounted on the Dart VM. Already a transitive dependency of
+  # universal_ble; pinned here so the test can import it directly.
   # Test-only, same reason: in_app_purchase re-exports only the billing *types*,
   # not the platform interface, so a test double for the Supporter entitlement
   # has to swap InAppPurchasePlatform.instance. Already a transitive dependency
