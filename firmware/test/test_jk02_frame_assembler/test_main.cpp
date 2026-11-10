@@ -39,6 +39,59 @@ void feedInChunks(Jk02FrameAssembler& assembler, const uint8_t* data, size_t len
 
 }  // namespace
 
+void test_ignores_the_echoed_command_between_two_frames() {
+  // Shape captured from a real JK-PB1A16S15P (hw 11A / sw 11.55) on 2026-11-10:
+  // frame, then the gateway's own 0xC8 read command echoed back with the magic
+  // REVERSED (AA 55 90 EB), then the next frame. The reversed magic is what makes
+  // this safe to resync through: it cannot be read as a frame start, so the
+  // scanner walks past it and finds the real header after.
+  uint8_t first[kFrame];
+  uint8_t second[kFrame];
+  makeFrame(first, 0x03, 0x11);
+  makeFrame(second, 0x02, 0x22);
+
+  uint8_t stream[2 * kFrame + 24];
+  size_t at = 0;
+  memcpy(stream + at, first, kFrame);
+  at += kFrame;
+  stream[at++] = 0x50;                       // trailing byte of the frame above
+  stream[at++] = 0xAA;                       // echoed command, magic reversed
+  stream[at++] = 0x55;
+  stream[at++] = 0x90;
+  stream[at++] = 0xEB;
+  stream[at++] = 0xC8;
+  stream[at++] = 0x01;
+  stream[at++] = 0x01;
+  for (int i = 0; i < 12; i++) stream[at++] = 0x00;
+  stream[at++] = 0x44;
+  memcpy(stream + at, second, kFrame);
+  at += kFrame;
+
+  Jk02FrameAssembler assembler;
+  feedInChunks(assembler, stream, at, 20);
+
+  const uint8_t* assembled = assembler.peekFrame();
+  TEST_ASSERT_NOT_NULL(assembled);
+  TEST_ASSERT_EQUAL_HEX8(0x03, assembled[4]);
+  TEST_ASSERT_EQUAL_MEMORY(first, assembled, kFrame);
+  assembler.consumeFrame();
+
+  const uint8_t* next = assembler.peekFrame();
+  TEST_ASSERT_NOT_NULL(next);
+  TEST_ASSERT_EQUAL_HEX8(0x02, next[4]);
+  TEST_ASSERT_EQUAL_MEMORY(second, next, kFrame);
+}
+
+void test_a_reversed_magic_alone_never_starts_a_frame() {
+  // The echo starts AA 55 90 EB. A scanner that looked for the header without
+  // the 0x55-first ordering would treat it as a frame and then fail the checksum
+  // on whatever followed, which is exactly the noise the field log was full of.
+  static const uint8_t kEchoOnly[8] = {0xAA, 0x55, 0x90, 0xEB, 0xC8, 0x01, 0x01, 0x00};
+  Jk02FrameAssembler assembler;
+  assembler.feed(kEchoOnly, sizeof(kEchoOnly));
+  TEST_ASSERT_NULL(assembler.peekFrame());
+}
+
 void test_reassembles_a_clean_frame_from_20_byte_fragments() {
   uint8_t frame[kFrame];
   makeFrame(frame, 0x02, 0xA5);
@@ -225,6 +278,8 @@ void test_echoed_command_and_at_prefix_still_yield_the_frame() {
 void setup() {
   delay(2000);
   UNITY_BEGIN();
+  RUN_TEST(test_ignores_the_echoed_command_between_two_frames);
+  RUN_TEST(test_a_reversed_magic_alone_never_starts_a_frame);
   RUN_TEST(test_reassembles_a_clean_frame_from_20_byte_fragments);
   RUN_TEST(test_resyncs_a_frame_prefixed_with_at_commands);
   RUN_TEST(test_returns_two_frames_from_one_feed);
