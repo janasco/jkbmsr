@@ -9,6 +9,8 @@ import '../../services/api_client.dart';
 import '../../models/telemetry.dart';
 import '../../utils/error_messages.dart';
 import 'cell_insight.dart';
+import 'cell_detail.dart';
+import 'widgets/cell_detail_sheet.dart';
 import 'widgets/cell_insight_panel.dart';
 
 const _kMinPollInterval = Duration(seconds: 5);
@@ -138,13 +140,14 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
 
   @override
   Widget build(BuildContext context) {
+    final readings = [
+      for (final cell in _cells)
+        CellReading(cell: cell.cell, voltage: cell.voltage),
+    ];
     final insight = _cells.isEmpty
         ? null
         : describeCells(
-            [
-              for (final cell in _cells)
-                CellReading(cell: cell.cell, voltage: cell.voltage),
-            ],
+            readings,
             balancing: _balancing,
             balancingCurrentAmps: _balancingCurrent,
           );
@@ -254,6 +257,20 @@ class _CellVoltagesScreenState extends State<CellVoltagesScreen> with WidgetsBin
                 animationsEnabled: _batteryAnimationsEnabled,
                 balancing: _balancing,
                 balancingCurrent: _balancingCurrent,
+                onCellTap: (cell) {
+                  final index = _cells.indexWhere(
+                    (candidate) => identical(candidate, cell),
+                  );
+                  if (index < 0) return;
+                  final detail = describeCell(
+                    readings,
+                    index: index,
+                    balancing: _balancing,
+                    balancingCurrentAmps: _balancingCurrent,
+                  );
+                  if (detail == null) return;
+                  unawaited(showCellDetailSheet(context, detail));
+                },
               ),
             ],
           ],

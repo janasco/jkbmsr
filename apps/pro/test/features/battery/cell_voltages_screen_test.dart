@@ -146,4 +146,31 @@ void main() {
 
     await _disposeScreen(tester);
   });
+
+  testWidgets('tapping a cell row opens that cell in the detail sheet',
+      (tester) async {
+    await _pumpScreen(tester, cells: const [
+      {'cell': 1, 'voltage': 3.297},
+      {'cell': 2, 'voltage': 3.292},
+      {'cell': 3, 'voltage': 3.297},
+      {'cell': 4, 'voltage': 3.297},
+      {'cell': 5, 'voltage': 3.305},
+    ]);
+
+    await tester.tap(find.text('3.292 V'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cell 2'), findsOneWidget);
+    expect(find.text('Weakest cell in the pack'), findsOneWidget);
+    expect(find.text('6 mV below average'), findsOneWidget);
+    expect(find.text('13 mV · Balanced'), findsOneWidget);
+    expect(find.text('0.05 A'), findsOneWidget);
+    expect(find.text('No per-cell history'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('Weakest cell in the pack'), findsNothing);
+
+    await _disposeScreen(tester);
+  });
 }

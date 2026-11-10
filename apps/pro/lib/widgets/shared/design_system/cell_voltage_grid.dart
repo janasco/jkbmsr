@@ -20,6 +20,10 @@ class JKBMSRCellVoltageGrid extends StatelessWidget {
   final bool balancing;
   final double balancingCurrent;
 
+  /// Called with the cell whose row was tapped. Null leaves every row a plain
+  /// presentation row, so surfaces that only display the pack are unchanged.
+  final void Function(CellVoltage cell)? onCellTap;
+
   const JKBMSRCellVoltageGrid({
     Key? key,
     required this.cells,
@@ -28,6 +32,7 @@ class JKBMSRCellVoltageGrid extends StatelessWidget {
     this.animationsEnabled = true,
     this.balancing = false,
     this.balancingCurrent = 0.0,
+    this.onCellTap,
   }) : super(key: key);
 
   /// Qualitative balance label mirroring the web CellVoltageTable: "Very
@@ -154,6 +159,7 @@ class JKBMSRCellVoltageGrid extends StatelessWidget {
                 fraction: fraction(cell.voltage),
                 isMin: cells.length > 1 && cell.voltage == minVolt,
                 isMax: cells.length > 1 && cell.voltage == maxVolt,
+                onTap: onCellTap == null ? null : () => onCellTap!(cell),
               ),
           ],
         ),
@@ -227,6 +233,7 @@ class _CellBarRow extends StatelessWidget {
   final double fraction;
   final bool isMin;
   final bool isMax;
+  final VoidCallback? onTap;
 
   const _CellBarRow({
     required this.cellNumber,
@@ -234,7 +241,20 @@ class _CellBarRow extends StatelessWidget {
     required this.fraction,
     required this.isMin,
     required this.isMax,
+    this.onTap,
   });
+
+  /// One announcement for the whole row instead of a separate one for the
+  /// label, the value and the tag.
+  String get _semanticLabel {
+    final parts = <String>[
+      'Cell $cellNumber',
+      '${voltage.toStringAsFixed(3)} volts',
+      if (isMin) 'weakest cell',
+      if (isMax) 'strongest cell',
+    ];
+    return parts.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +268,7 @@ class _CellBarRow extends StatelessWidget {
         : isMin
             ? context.colors.warning
             : context.colors.textMuted;
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space4),
       child: Row(
         children: [
@@ -322,6 +342,28 @@ class _CellBarRow extends StatelessWidget {
                 : const SizedBox.shrink(),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+
+    // A 48 dp target that does not redraw the row: the bar, its label and its
+    // value keep their size and only gain clearance above and below.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48.0),
+      child: Semantics(
+        button: true,
+        label: _semanticLabel,
+        onTap: onTap,
+        excludeSemantics: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+            child: Center(child: row),
+          ),
+        ),
       ),
     );
   }

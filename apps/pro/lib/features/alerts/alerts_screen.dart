@@ -7,10 +7,14 @@ import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
 import '../../models/alert.dart';
+import '../../models/ble_history_event.dart';
 import '../../models/device.dart';
+import '../../models/ota_event.dart';
 import '../../models/telemetry.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/haptics.dart';
+import 'event_log.dart';
+import 'event_log_timeline.dart';
 import 'pack_check.dart';
 import 'pack_check_card.dart';
 
@@ -25,7 +29,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   final APIClient _apiClient = APIClient();
   static const int _pageSize = 20;
 
-  int _selectedTab = 0; // 0 = Active, 1 = History
+  int _selectedTab = 0; // 0 = Active, 1 = Event log
   DateTime? _selectedDate;
   String _severityFilter = 'all'; // 'all', 'critical', 'warning'
   String _searchQuery = '';
@@ -38,12 +42,18 @@ class _AlertsScreenState extends State<AlertsScreen> {
   bool _selectionMode = false;
   final Set<String> _selected = <String>{};
 
-  bool _historyLoaded = false;
-  bool _isHistoryLoading = true;
-  bool _isHistoryLoadingMore = false;
-  String? _historyError;
-  List<Alert> _historyAlerts = [];
-  bool _historyHasMore = false;
+  // The Event log merges three independent sources into one timeline. Each is
+  // fetched separately so one failure narrows the log instead of emptying it;
+  // `_eventLogFailures` names whatever could not be read.
+  bool _eventLogLoaded = false;
+  bool _isEventLogLoading = true;
+  bool _isEventLogLoadingMore = false;
+  List<EventLogEntry> _eventLog = [];
+  List<String> _eventLogFailures = [];
+  List<Alert> _resolvedAlerts = [];
+  List<BleSessionRecord> _bleSessions = [];
+  List<OtaEventRecord> _otaEvents = [];
+  bool _eventLogHasMoreAlerts = false;
 
   // The pack check is additive chrome at the top of the Active tab. Its own
   // fetch is kept separate from the alert fetch so a slow telemetry call can
@@ -179,58 +189,173 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Future<void> _loadHistory({bool refresh = false}) async {
+  // Fetches all three sources independently. A failed source becomes a stated
+  // gap in the log rather than an empty screen, and a failed gateway only
+  // removes that gateway's rows.
+  Future<void> _loadEventLog({bool refresh = false}) async {
     setState(() {
-      _isHistoryLoading = true;
-      _historyError = null;
+      _isEventLogLoading = true;
+      _eventLogFailures = const [];
       if (refresh) {
-        _historyAlerts = [];
+        _eventLog = const [];
+        _resolvedAlerts = const [];
+        _bleSessions = const [];
+        _otaEvents = const [];
+        _eventLogLoaded = false;
       }
     });
 
-    try {
-      final result = await _apiClient.getAlerts(status: 'resolved', limit: _pageSize, offset: 0);
-      setState(() {
-        _historyAlerts = result.alerts;
-        _historyHasMore = result.hasMore;
-        _historyLoaded = true;
-        _isHistoryLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _historyError = friendlyErrorMessage(e);
-        _isHistoryLoading = false;
-      });
-      JKBMSRToast.show(context, _historyError ?? 'Failed to load alert history', isError: true);
-    }
-  }
-
-  Future<void> _loadMoreHistory() async {
-    if (_isHistoryLoadingMore || !_historyHasMore) return;
-    setState(() {
-      _isHistoryLoadingMore = true;
-    });
+    final failures = <String>[];
+    var alerts = <Alert>[];
+    var hasMoreAlerts = false;
+    var bleSessions = <BleSessionRecord>[];
+    var otaEvents = <OtaEventRecord>[];
 
     try {
       final result = await _apiClient.getAlerts(
         status: 'resolved',
         limit: _pageSize,
-        offset: _historyAlerts.length,
+        offset: 0,
       );
+      alerts = result.alerts;
+      hasMoreAlerts = result.hasMore;
+    } catch (e) {
+      failures.add(
+          'Resolved alerts could not be read: ${friendlyErrorMessage(e)}');
+    }
+
+    List<Device>? devices;
+    try {
+      devices = await _apiClient.getDevices();
+    } catch (e) {
+      final reason = friendlyErrorMessage(e);
+      // Both per-gateway sources are unreadable without the device list, so
+      // say so for each rather than reporting one vague failure.
+      failures.add('Gateway connections could not be read: $reason');
+      failures.add('Firmware update events could not be read: $reason');
+    }
+
+    if (devices != null) {
+      var bleFailures = 0;
+      var otaFailures = 0;
+      String? bleReason;
+      String? otaReason;
+
+      final results = await Future.wait(devices.map((device) async {
+        List<BleHistoryEvent>? ble;
+        List<OtaEvent>? ota;
+        String? bleError;
+        String? otaError;
+        try {
+          ble = await _apiClient.getBleHistory(device.id);
+        } catch (e) {
+          bleError = friendlyErrorMessage(e);
+        }
+        try {
+          ota = await _apiClient.getOtaHistory(device.id);
+        } catch (e) {
+          otaError = friendlyErrorMessage(e);
+        }
+        return (
+          device: device,
+          ble: ble,
+          bleError: bleError,
+          ota: ota,
+          otaError: otaError,
+        );
+      }));
+
+      for (final result in results) {
+        final ble = result.ble;
+        if (ble == null) {
+          bleFailures++;
+          bleReason ??= result.bleError;
+        } else {
+          for (final event in ble) {
+            bleSessions.add(BleSessionRecord(
+              deviceId: result.device.id,
+              deviceName: result.device.name,
+              event: event,
+            ));
+          }
+        }
+
+        final ota = result.ota;
+        if (ota == null) {
+          otaFailures++;
+          otaReason ??= result.otaError;
+        } else {
+          for (final event in ota) {
+            otaEvents.add(OtaEventRecord(
+              deviceId: result.device.id,
+              deviceName: result.device.name,
+              event: event,
+            ));
+          }
+        }
+      }
+
+      if (bleFailures > 0) {
+        failures.add(_sourceFailure(
+            'Gateway connections', bleFailures, devices.length, bleReason));
+      }
+      if (otaFailures > 0) {
+        failures.add(_sourceFailure(
+            'Firmware update events', otaFailures, devices.length, otaReason));
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _resolvedAlerts = alerts;
+      _bleSessions = bleSessions;
+      _otaEvents = otaEvents;
+      _eventLogHasMoreAlerts = hasMoreAlerts;
+      _eventLogFailures = failures;
+      _eventLog = buildEventLog(
+        resolvedAlerts: alerts,
+        bleSessions: bleSessions,
+        otaEvents: otaEvents,
+      );
+      _eventLogLoaded = true;
+      _isEventLogLoading = false;
+    });
+  }
+
+  String _sourceFailure(
+      String label, int failed, int total, String? reason) {
+    final scope = total > 1 ? ' from $failed of $total gateways' : '';
+    final detail = reason == null ? '' : ' $reason';
+    return '$label could not be read$scope.$detail';
+  }
+
+  // Only the alert source is paged; the label says so rather than implying
+  // the whole log has been fetched.
+  Future<void> _loadMoreEventLogAlerts() async {
+    if (_isEventLogLoadingMore || !_eventLogHasMoreAlerts) return;
+    setState(() => _isEventLogLoadingMore = true);
+
+    try {
+      final result = await _apiClient.getAlerts(
+        status: 'resolved',
+        limit: _pageSize,
+        offset: _resolvedAlerts.length,
+      );
+      if (!mounted) return;
       setState(() {
-        _historyAlerts = [..._historyAlerts, ...result.alerts];
-        _historyHasMore = result.hasMore;
-        _isHistoryLoadingMore = false;
+        _resolvedAlerts = [..._resolvedAlerts, ...result.alerts];
+        _eventLogHasMoreAlerts = result.hasMore;
+        _eventLog = buildEventLog(
+          resolvedAlerts: _resolvedAlerts,
+          bleSessions: _bleSessions,
+          otaEvents: _otaEvents,
+        );
+        _isEventLogLoadingMore = false;
       });
     } catch (e) {
-      setState(() {
-        _isHistoryLoadingMore = false;
-      });
-      JKBMSRToast.show(
-        context,
-        friendlyErrorMessage(e),
-        isError: true,
-      );
+      if (!mounted) return;
+      setState(() => _isEventLogLoadingMore = false);
+      JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
     }
   }
 
@@ -238,8 +363,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
     setState(() {
       _selectedTab = index;
     });
-    if (index == 1 && !_historyLoaded) {
-      _loadHistory();
+    if (index == 1 && !_eventLogLoaded) {
+      _loadEventLog();
     }
   }
 
@@ -430,7 +555,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     setState(() => _deletingAlertId = alert.id);
     try {
       await _apiClient.deleteAlert(alert.id);
-      await _loadHistory(refresh: true);
+      await _loadEventLog(refresh: true);
       if (!mounted) return;
       JKBMSRToast.show(context, 'Alert deleted');
     } catch (e) {
@@ -447,7 +572,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       builder: (ctx) => _DeleteHistoryDialog(
         title: 'Delete all alert history?',
         message:
-            'Permanently remove every resolved alert across your gateways. This cannot be undone; active alarms are not affected.',
+            'Permanently remove every resolved alert from the event log. Gateway connections and firmware events are kept. This cannot be undone; active alarms are not affected.',
         confirmText: 'Delete all',
         onConfirm: () => Navigator.pop(ctx, true),
         onCancel: () => Navigator.pop(ctx, false),
@@ -460,7 +585,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     setState(() => _deletingAllHistory = true);
     try {
       final count = await _apiClient.deleteResolvedAlerts();
-      await _loadHistory(refresh: true);
+      await _loadEventLog(refresh: true);
       if (!mounted) return;
       JKBMSRToast.show(
         context,
@@ -591,7 +716,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Widget _buildAlertCard(BuildContext context, Alert alert, {VoidCallback? onDelete}) {
+  Widget _buildAlertCard(BuildContext context, Alert alert) {
     final isCritical = alert.severity.toLowerCase() == 'critical';
     final accentColor = alert.isResolved
         ? context.colors.accent
@@ -601,7 +726,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
     // Only allow swiping on unresolved alerts
     if (alert.isResolved) {
-      return _buildAlertCardContent(context, alert, isCritical, accentColor, onDelete: onDelete);
+      return _buildAlertCardContent(context, alert, isCritical, accentColor);
     }
 
     return Dismissible(
@@ -649,7 +774,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           ],
         ),
       ),
-      child: _buildAlertCardContent(context, alert, isCritical, accentColor, onDelete: onDelete),
+      child: _buildAlertCardContent(context, alert, isCritical, accentColor),
     );
   }
 
@@ -657,9 +782,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
     BuildContext context,
     Alert alert,
     bool isCritical,
-    Color accentColor, {
-    VoidCallback? onDelete,
-  }) {
+    Color accentColor,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: JKBMSRTokens.space12),
       decoration: BoxDecoration(
@@ -754,31 +878,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   ),
                 ),
               ],
-              // Delete is only offered on the History (resolved) tab — active
-              // alarms keep Resolve/Clear, which is a non-destructive state
-              // change, so a destructive affordance never sits next to it.
-              if (onDelete != null) ...[
-                const SizedBox(height: JKBMSRTokens.space12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: _deletingAlertId == alert.id ? null : onDelete,
-                    icon: _deletingAlertId == alert.id
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Delete'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: context.colors.critical,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      minimumSize: const Size(0, 48),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -793,12 +892,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
       body: Column(
         children: [
           JKBMSRTabs(
-            tabTitles: const ['Active Alarms', 'Alert History'],
+            tabTitles: const ['Active Alarms', 'Event log'],
             selectedIndex: _selectedTab,
             onTabSelected: _onTabSelected,
           ),
           Expanded(
-            child: _selectedTab == 0 ? _buildActiveTab(context) : _buildHistoryTab(context),
+            child: _selectedTab == 0 ? _buildActiveTab(context) : _buildEventLogTab(context),
           ),
         ],
       ),
@@ -1009,8 +1108,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 
-  Widget _buildHistoryTab(BuildContext context) {
-    if (_isHistoryLoading && !_historyLoaded) {
+  Widget _buildEventLogTab(BuildContext context) {
+    if (_isEventLogLoading && !_eventLogLoaded) {
       return ListView.builder(
         padding: const EdgeInsets.all(JKBMSRTokens.space16),
         itemCount: 3,
@@ -1021,87 +1120,160 @@ class _AlertsScreenState extends State<AlertsScreen> {
       );
     }
 
-    if (_historyError != null && _historyAlerts.isEmpty) {
-      return JKBMSREmptyState(
-        icon: Icons.error_outline,
-        title: 'Could not load alert history',
-        description: _historyError!,
-        action: OutlinedButton(
-          onPressed: () => _loadHistory(refresh: true),
-          child: const Text('Try Again'),
-        ),
-      );
-    }
-
-    if (_historyAlerts.isEmpty) {
+    if (_eventLog.isEmpty) {
+      if (_eventLogFailures.isNotEmpty) {
+        return JKBMSREmptyState(
+          icon: Icons.error_outline,
+          title: 'No events could be loaded',
+          description: _eventLogFailures.join('\n\n'),
+          action: OutlinedButton(
+            onPressed: () => _loadEventLog(refresh: true),
+            child: const Text('Try Again'),
+          ),
+        );
+      }
       return const JKBMSREmptyState(
         icon: Icons.history,
-        title: 'No resolved alerts yet',
-        description: 'Alerts that clear will show up here with when they were resolved.',
+        title: 'Nothing has happened yet',
+        description:
+            'Resolved alarms, gateway connections and firmware updates appear here as they occur.',
       );
     }
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            JKBMSRTokens.space16,
-            JKBMSRTokens.space4,
-            JKBMSRTokens.space16,
-            0,
-          ),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _deletingAllHistory ? null : _confirmDeleteAllHistory,
-              icon: _deletingAllHistory
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.delete_sweep_outlined, size: 18),
-              label: const Text('Delete all history'),
-              style: TextButton.styleFrom(foregroundColor: context.colors.critical),
+        if (_resolvedAlerts.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              JKBMSRTokens.space16,
+              JKBMSRTokens.space4,
+              JKBMSRTokens.space16,
+              0,
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed:
+                    _deletingAllHistory ? null : _confirmDeleteAllHistory,
+                style: TextButton.styleFrom(
+                    foregroundColor: context.colors.critical),
+                child: _deletingAllHistory
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Delete alert history'),
+              ),
             ),
           ),
-        ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
               JKBMSRHaptics.mediumImpact();
-              await _loadHistory(refresh: true);
+              await _loadEventLog(refresh: true);
             },
             color: context.colors.accent,
             backgroundColor: context.colors.panel,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(JKBMSRTokens.space16),
-              itemCount: _historyAlerts.length + (_historyHasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index >= _historyAlerts.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: JKBMSRTokens.space8),
-                    child: Center(
-                      child: _isHistoryLoadingMore
-                          ? CircularProgressIndicator(color: context.colors.accent)
-                          : OutlinedButton(
-                              onPressed: _loadMoreHistory,
-                              child: const Text('Load More'),
-                            ),
-                    ),
-                  );
-                }
-                final alert = _historyAlerts[index];
-                return _buildAlertCard(
-                  context,
-                  alert,
-                  onDelete: () => _confirmDeleteAlert(alert),
-                );
+            child: EventLogTimeline(
+              entries: _eventLog,
+              header: _eventLogFailures.isEmpty
+                  ? null
+                  : _buildEventLogFailureBanner(context),
+              footer: _eventLogHasMoreAlerts
+                  ? _buildEventLogFooter(context)
+                  : null,
+              actionBuilder: (entry) {
+                final alert = entry.alert;
+                if (alert == null) return null;
+                return _buildEventLogDeleteAction(alert);
               },
             ),
           ),
         ),
       ],
+    );
+  }
+
+  // The one place the log admits it is short. A source that could not be read
+  // is named here; an unreadable gateway narrows its source's coverage instead
+  // of removing the other gateways' rows.
+  Widget _buildEventLogFailureBanner(BuildContext context) {
+    return Container(
+      key: const ValueKey('event-log-source-failure'),
+      margin: const EdgeInsets.only(bottom: JKBMSRTokens.space12),
+      padding: const EdgeInsets.all(JKBMSRTokens.space12),
+      decoration: BoxDecoration(
+        color: context.colors.critical.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(JKBMSRTokens.radius12),
+        border:
+            Border.all(color: context.colors.critical.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, size: 18, color: context.colors.critical),
+          const SizedBox(width: JKBMSRTokens.space8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This log is incomplete',
+                  style: JKBMSRTypography.cardHeading.copyWith(
+                    fontSize: 14.0,
+                    color: context.colors.textPrimary,
+                  ),
+                ),
+                for (final failure in _eventLogFailures)
+                  Padding(
+                    padding: const EdgeInsets.only(top: JKBMSRTokens.space4),
+                    child: Text(
+                      failure,
+                      style: JKBMSRTypography.bodySecondary.copyWith(
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventLogFooter(BuildContext context) {
+    if (_isEventLogLoadingMore) {
+      return CircularProgressIndicator(color: context.colors.accent);
+    }
+    return OutlinedButton(
+      onPressed: _loadMoreEventLogAlerts,
+      child: const Text('Load older alerts'),
+    );
+  }
+
+  Widget _buildEventLogDeleteAction(Alert alert) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: OutlinedButton.icon(
+        onPressed: _deletingAlertId == alert.id
+            ? null
+            : () => _confirmDeleteAlert(alert),
+        icon: _deletingAlertId == alert.id
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.delete_outline, size: 16),
+        label: const Text('Delete'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: context.colors.critical,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          minimumSize: const Size(0, 48),
+        ),
+      ),
     );
   }
 }

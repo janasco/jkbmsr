@@ -117,9 +117,24 @@ void main() {
   testWidgets('resolved alert history does not overflow at textScale 2.0',
       (tester) async {
     await pumpAlerts(tester);
-    await tester.tap(find.text('Alert History'));
+    await tester.tap(find.text('Event log'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 6)); // drain toast timers
+  });
+
+  testWidgets('expanded event-log detail does not overflow at textScale 2.0',
+      (tester) async {
+    await pumpAlerts(tester);
+    await tester.tap(find.text('Event log'));
+    await tester.pumpAndSettle();
+
+    // The detail only exists once a row is opened, and it is where the long
+    // values and the destructive action live — the part most likely to overflow.
+    await tester.tap(find.text(_longMessage));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
     await tester.pump(const Duration(seconds: 6)); // drain toast timers
   });
 

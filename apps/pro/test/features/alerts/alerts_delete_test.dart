@@ -1,4 +1,4 @@
-// History-tab deletion: per-alert delete and "Delete all history", both behind
+// Event-log deletion: per-alert delete and "Delete alert history", both behind
 // an explicit permanent-deletion confirmation. The alerts screen is
 // offline-pumpable by injecting a mock http.Client into the APIClient singleton
 // (same seam the search/back tests use).
@@ -76,7 +76,7 @@ void main() {
     );
   }
 
-  Future<void> pumpHistory(WidgetTester tester) async {
+  Future<void> pumpEventLog(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1000, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -88,22 +88,25 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Alert History'));
+    await tester.tap(find.text('Event log'));
     await tester.pumpAndSettle();
   }
 
   testWidgets(
       'per-alert delete confirms permanently, calls DELETE, and refreshes',
       (tester) async {
-    await pumpHistory(tester);
+    await pumpEventLog(tester);
 
     expect(find.text('Over-voltage a1'), findsOneWidget);
     expect(find.text('Under-voltage a2'), findsOneWidget);
 
-    // Two history rows each expose a Delete affordance.
-    expect(find.text('Delete'), findsNWidgets(2));
+    // Detail — and with it the Delete affordance — is behind the row that
+    // owns it, so each entry only exposes the action for itself.
+    await tester.tap(find.text('Over-voltage a1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsOneWidget);
 
-    await tester.tap(find.text('Delete').first);
+    await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
     // Confirmation is explicit that this is permanent (unlike resolve).
@@ -121,11 +124,11 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
   });
 
-  testWidgets('Delete all history confirms and empties the list',
+  testWidgets('Delete alert history confirms and empties the list',
       (tester) async {
-    await pumpHistory(tester);
+    await pumpEventLog(tester);
 
-    await tester.tap(find.text('Delete all history'));
+    await tester.tap(find.text('Delete alert history'));
     await tester.pumpAndSettle();
 
     expect(find.text('Delete all alert history?'), findsOneWidget);
@@ -136,7 +139,7 @@ void main() {
 
     expect(find.text('Over-voltage a1'), findsNothing);
     expect(find.text('Under-voltage a2'), findsNothing);
-    expect(find.text('No resolved alerts yet'), findsOneWidget);
+    expect(find.text('Nothing has happened yet'), findsOneWidget);
     expect(find.textContaining('Deleted 2 resolved alerts'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 6));

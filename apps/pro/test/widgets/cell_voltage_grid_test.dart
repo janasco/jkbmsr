@@ -42,4 +42,40 @@ void main() {
     expect(find.text('3.200V'), findsOneWidget); // Min Cell
     expect(find.text('150mV'), findsOneWidget); // Imbalance: (3.35 - 3.20) * 1000
   });
+
+  testWidgets('a tappable row reports its own cell from a 48dp target', (tester) async {
+    final cells = [
+      CellVoltage(cell: 1, voltage: 3.28),
+      CellVoltage(cell: 2, voltage: 3.31),
+      CellVoltage(cell: 3, voltage: 3.29),
+    ];
+    CellVoltage? tapped;
+    await tester.pumpWidget(_wrap(JKBMSRCellVoltageGrid(
+      cells: cells,
+      onCellTap: (cell) => tapped = cell,
+    )));
+
+    final target = find.ancestor(
+      of: find.text('3.310 V'),
+      matching: find.byType(InkWell),
+    );
+    expect(target, findsOneWidget);
+    expect(tester.getSize(target).height, greaterThanOrEqualTo(48.0));
+
+    await tester.tap(find.text('3.310 V'));
+    await tester.pump();
+
+    expect(tapped, same(cells[1]));
+  });
+
+  testWidgets('rows are not interactive when no tap handler is given', (tester) async {
+    await tester.pumpWidget(_wrap(JKBMSRCellVoltageGrid(
+      cells: [
+        CellVoltage(cell: 1, voltage: 3.28),
+        CellVoltage(cell: 2, voltage: 3.31),
+      ],
+    )));
+
+    expect(find.byType(InkWell), findsNothing);
+  });
 }
