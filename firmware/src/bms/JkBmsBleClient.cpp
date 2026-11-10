@@ -1,5 +1,7 @@
 #include "JkBmsBleClient.h"
 
+#include "bms/BmsLinkLiveness.h"
+
 #include <NimBLEDevice.h>
 
 #include "bms/BmsBleConnectTimeout.h"
@@ -299,6 +301,10 @@ void JkBmsBleClient::processFrame(const uint8_t* frame, size_t length) {
   // after the base delay, not the widest one a previous outage reached.
   streamRequestBackoff_.reset();
   nextStreamRequestAtMs_ = 0;
+  // A frame is proof the link is alive, so the reconnect backoff returns to the
+  // fast path here rather than only on connect: a link that connects, half-fails
+  // and still delivers a frame must not keep widening its retry delay.
+  reconnectBackoff_.reset();
 
   switch (jk02FrameTypeOf(frame, length)) {
     case Jk02FrameType::kDeviceInfo: {
@@ -388,6 +394,23 @@ bool JkBmsBleClient::poll(BatteryTelemetry& telemetry) {
     sendReadOnlyCommand(JkBmsReadOnlyCommand::kSettingsAndTelemetryStream);
     streamRequestBackoff_.noteFailure();
     nextStreamRequestAtMs_ = millis() + streamRequestBackoff_.nextDelayMs();
+  }
+
+  // Escalation: a re-request that produces nothing for kSessionSilentDropMs means
+  // the link is half-open, not merely quiet. Drop it so the reconnect path runs
+  // instead of the gateway sitting attached to a dead link while it heartbeats
+  // that the BMS link is down. This is the case the field log showed: connected,
+  // identified, then silent for an hour.
+  if (deviceInfoReceived_ && BmsLinkLiveness::shouldDrop(
+          millis(),
+          status_.lastFrameAtMs,
+          status_.connected)) {
+    logWarn("JK-BMS source silent for " + String(kSessionSilentDropMs / 1000) +
+            "s; dropping the link to reconnect");
+    if (auto* client = static_cast<NimBLEClient*>(client_)) {
+      client->disconnect();
+    }
+    status_.lastError = "Stream silent";
   }
   if (!latest_.valid || millis() - latest_.capturedAtMs > kSampleFreshMs) {
     return false;

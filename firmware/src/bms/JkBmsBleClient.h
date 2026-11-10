@@ -41,11 +41,23 @@ class JkBmsBleClient : public BmsBleClient {
 
  private:
   // Reconnect: first retry after the base delay, doubling per consecutive
-  // failed attempt, capped at 300 s. A link that is down for minutes beeps
-  // (on each successful reconnect's 0x96) at widening intervals instead of
-  // every 30 s. Reset on a successful connection.
+  // failed attempt, capped at 60 s. The cap used to be 300 s, and a field log
+  // from 2026-11-10 showed why that is too long: a marginal link (-92 dBm)
+  // dropped, connections kept half-succeeding, and the backoff climbed to the
+  // cap on the strength of failures that were not really failures -- so one
+  // dropout cost five minutes of no telemetry, repeated. At 60 s the worst case
+  // is one missed upload per drop, and the beep cost is at most one connect per
+  // minute, which is the telemetry cadence anyway.
+  //
+  // Reset on a successful connection AND on every valid frame: a link that
+  // delivers anything is alive, and the next drop deserves the fast path again.
   static constexpr uint32_t kReconnectBaseDelayMs = 30000;
-  static constexpr uint32_t kReconnectMaxDelayMs = 300000;
+  static constexpr uint32_t kReconnectMaxDelayMs = 60000;
+  // A session that is connected but has produced no valid frame for this long is
+  // treated as dead and dropped. The stale-stream re-request has already run at
+  // 5 s; this is the escalation that used to not exist, so a half-open link
+  // could hold the gateway silent indefinitely while it kept heartbeating.
+  static constexpr uint32_t kSessionSilentDropMs = 30000;
   // JK-BMS auto-streams cell info at ~1-2 frames per second; a gap this long
   // means the stream has stalled and a re-request (with its beep) is due. The
   // re-request then backs off from this base, doubling to kStreamRequestMaxDelayMs.

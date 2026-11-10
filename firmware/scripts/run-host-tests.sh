@@ -71,6 +71,9 @@ SUITES=(
   # POSIX TZ validation. libc ignores a bad TZ silently, so this predicate is
   # what stops "Asia/Manila" from leaving the clock on UTC with no error.
   "test_time_zone:src/clock/SystemClock.cpp"
+  # When a connected-but-silent BLE session must be dropped (header-only; see
+  # include/bms/BmsLinkLiveness.h).
+  "test_bms_link_liveness"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the
