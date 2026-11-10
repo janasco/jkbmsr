@@ -24,7 +24,7 @@ dependencies:
   # until their own migration is reviewed.
   bms_core:
     path: ../../packages/bms_core
-  flutter_blue_plus: ^2.3.15   # 2.x requires a commercial licence; this is the MIT line
+  flutter_blue_plus: ^1.36.8   # MIT line: 2.x requires a paid commercial licence
   # Persists the single first-run consent decision (a bool + a UTC timestamp).
   # apps/ble has no local key-value store (its persistent state is the sqflite
   # logbook), and Contributor has none at all yet, so a minimal key-value store
@@ -50,7 +50,7 @@ dependencies:
   # Reads the installer package (com.android.vending) that created this
   # install, which decides whether Play's in-app update flow applies at all.
   package_info_plus: ^10.2.2
-  flutter_blue_plus_platform_interface: ^9.0.4
+  flutter_blue_plus_platform_interface: ^7.0.0
 
 dev_dependencies:
   flutter_test:
