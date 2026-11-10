@@ -104,7 +104,7 @@ class _DiagnosticsExpandableState extends State<DiagnosticsExpandable> {
               children: [
                 Row(
                   children: [
-                    const PulseDot(color: Color(0xFF10B981), size: 6),
+                    const StatusDot(color: Color(0xFF10B981), size: 6),
                     const SizedBox(width: 6),
                     const Text(
                       'LIVE BLE FRAME STREAM:',

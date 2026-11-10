@@ -72,12 +72,10 @@ class QuickToggleCards extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Green pulse while the MOS/balancer is ON,
-                        // static grey when off.
-                        PulseDot(
+                        // Green while the MOS/balancer is ON, grey when off.
+                        StatusDot(
                           color: card.isOn ? const Color(0xFF10B981) : const Color(0xFF64748B),
                           size: 7,
-                          active: card.isOn,
                         ),
                         Flexible(
                           child: Text(

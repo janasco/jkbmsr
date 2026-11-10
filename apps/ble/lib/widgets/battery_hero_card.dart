@@ -91,7 +91,7 @@ class BatteryHeroCard extends StatelessWidget {
                   children: [
                     // Live status dot: pulses while connected, static when
                     // offline.
-                    PulseDot(color: statusColor, size: 8, active: isConnected),
+                    StatusDot(color: statusColor, size: 8),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -297,7 +297,7 @@ class BatteryHeroCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const PulseDot(color: _green, size: 6),
+                        const StatusDot(color: _green, size: 6),
                         const SizedBox(width: 5),
                         Text(
                           'Balancing ${status.balanceCurrentA.toStringAsFixed(1)}A',

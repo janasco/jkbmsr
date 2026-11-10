@@ -101,7 +101,7 @@ class BrandHeroStrip extends StatelessWidget {
                     if (hasLiveData)
                       // Breathing confirmation dot next to the shield once
                       // real telemetry is flowing.
-                      const PulseDot(color: Color(0xFF10B981), size: 7)
+                      const StatusDot(color: Color(0xFF10B981), size: 7)
                     else
                       Icon(stateIcon, size: 12, color: stateColor),
                     const SizedBox(width: 4),

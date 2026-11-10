@@ -125,93 +125,27 @@ class _AmbientPainter extends CustomPainter {
       old.t != t || old.isDark != isDark;
 }
 
-// ─── Pulse dot ───────────────────────────────────────────────────────────────
+// ─── Status dot ──────────────────────────────────────────────────────────────
 
-/// Heartbeat status dot with a soft halo pulse. Drop-in replacement for any
-/// static colored circle that indicates connection / activity / scanning.
-class PulseDot extends StatefulWidget {
+/// A plain status dot.
+///
+/// It used to pulse: a heartbeat scale plus a halo that repeated every 1.5 s. The
+/// motion was removed deliberately, because the colour and the label already say
+/// what the state is, and a pulsing indicator draws the eye on every screen that
+/// shows a status. Removing it also stops a repeating animation from scheduling
+/// frames for as long as the app is open.
+class StatusDot extends StatelessWidget {
   final Color color;
   final double size;
-  final bool active;
 
-  /// When false the dot renders static at full opacity (offline state).
-  const PulseDot({super.key, required this.color, this.size = 8, this.active = true});
+  const StatusDot({super.key, required this.color, this.size = 8});
 
   @override
-  State<PulseDot> createState() => _PulseDotState();
-}
-
-class _PulseDotState extends State<PulseDot> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    if (widget.active && !_reducedMotion()) _controller.repeat();
-  }
-
-  @override
-  void didUpdateWidget(PulseDot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating && !_reducedMotion()) {
-      _controller.repeat();
-    } else if (!widget.active && _controller.isAnimating) {
-      _controller.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.active) {
-      return Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       );
-    }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final t = _controller.value;
-        // Heartbeat: rise → fall → small secondary bump → rest.
-        double scale;
-        if (t < 0.25) {
-          scale = 1.0 + 0.3 * Curves.easeOut.transform(t / 0.25);
-        } else if (t < 0.45) {
-          scale = 1.3 - 0.3 * Curves.easeIn.transform((t - 0.25) / 0.2);
-        } else if (t < 0.65) {
-          scale = 1.0 + 0.15 * Curves.easeOut.transform((t - 0.45) / 0.2);
-        } else {
-          scale = 1.15 - 0.15 * Curves.easeIn.transform((t - 0.65) / 0.35);
-        }
-        return Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: widget.color.withValues(alpha: 0.9),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: 0.3 * scale),
-                blurRadius: widget.size * 0.6 * scale,
-                spreadRadius: widget.size * 0.1 * scale,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
 // ─── Animated number ─────────────────────────────────────────────────────────

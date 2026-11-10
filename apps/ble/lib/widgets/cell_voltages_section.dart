@@ -353,7 +353,7 @@ class CellVoltagesSection extends StatelessWidget {
                           child: const Text('MAX', style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.white)),
                         )
                       else if (isBalancing)
-                        const PulseDot(color: Color(0xFF10B981), size: 5),
+                        const StatusDot(color: Color(0xFF10B981), size: 5),
                     ],
                   ),
                   Text(

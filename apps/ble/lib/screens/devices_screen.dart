@@ -319,7 +319,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                                               children: [
                                                 const Icon(Icons.check_circle_rounded, size: 10, color: Color(0xFF090D10)),
                                                 const SizedBox(width: 2),
-                                                const PulseDot(color: Color(0xFF090D10), size: 5),
+                                                const StatusDot(color: Color(0xFF090D10), size: 5),
                                               Text(
                                                 'CONNECTED',
                                                 style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF090D10)),
