@@ -132,8 +132,11 @@ Map<String, dynamic> _telemetry() => {
       'soc': 84,
       'temperature1': 22.4,
       'temperature2': 21.8,
+      // Unique voltages, 0.5 mV apart. The old `i % 5` pattern repeated every
+      // five cells, so a store screenshot showed TWO cells labelled MIN and two
+      // labelled MAX — which reads as a bug in the product.
       'cells': [
-        for (var i = 0; i < 16; i++) {'cell': i + 1, 'voltage': 3.327 + (i % 5) * 0.002},
+        for (var i = 0; i < 16; i++) {'cell': i + 1, 'voltage': 3.3270 + i * 0.0005},
       ],
       // Keys must match BmsExtras.fromJson exactly: the first version of this
       // fixture guessed them, and the hero card rendered "0.0 of 0 Ah" - a
@@ -141,11 +144,11 @@ Map<String, dynamic> _telemetry() => {
       'bms': {
         'mosfetTemperature': 24.1,
         'minCellVoltage': 3.327,
-        'maxCellVoltage': 3.335,
+        'maxCellVoltage': 3.3345,
         'avgCellVoltage': 3.331,
-        'deltaCellVoltage': 0.008,
+        'deltaCellVoltage': 0.0075,
         'minVoltageCell': 1,
-        'maxVoltageCell': 5,
+        'maxVoltageCell': 16,
         'cycleCount': 42,
         'cycleCapacityAh': 4212.0,
         'fullCapacityAh': 100.0,
