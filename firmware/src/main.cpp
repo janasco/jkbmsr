@@ -11,6 +11,7 @@
 #include "cloud/TelemetryClient.h"
 #include "cloud/RemoteConfigClient.h"
 #include "config/ConfigStore.h"
+#include "clock/SystemClock.h"
 #include "debug/DebugLog.h"
 #include "device/DeviceIdentity.h"
 #include "network/WifiManager.h"
@@ -506,6 +507,13 @@ void setup() {
   logInfo(String("Hardware target ") + kTargetHardware + " (" + kBoardProfile + ")");
   configStore.begin();
   config = configStore.load();
+  // Render the clock in the owner's zone before anything is logged with a time.
+  // The system clock itself stays UTC: only the rendering changes, so telemetry
+  // boundaries and stored timestamps keep meaning the same thing everywhere.
+  if (config.timeZone.length() > 0) {
+    applyTimeZone(config.timeZone);
+  }
+  logInfo(String("Time zone ") + currentTimeZone());
 
   resetTrigger.begin(kProvisioningButtonPin);
   // Sample once up front so a hold that started just after boot is observed

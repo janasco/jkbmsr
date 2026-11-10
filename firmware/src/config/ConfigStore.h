@@ -49,6 +49,11 @@ struct DeviceConfig {
   // MAC address to target, or empty for auto-discovery of the strongest
   // nearby unit advertising the vendor's service.
   String bmsBleAddress;
+  // How the UTC system clock is rendered (serial log today): a POSIX TZ string,
+  // because the ESP32 carries no tz database and cannot resolve "Asia/Manila".
+  // Empty means "never set", which main.cpp treats as UTC0. Pushed by the cloud
+  // so a changed timezone applies on the next config poll, without a reboot.
+  String timeZone = "UTC0";
 
   // True once Wi-Fi credentials have been provisioned. When false the device
   // enters provisioning mode instead of failing to connect silently.

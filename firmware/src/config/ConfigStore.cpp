@@ -79,6 +79,7 @@ DeviceConfig ConfigStore::load() {
   config.otaEnabled = prefs.getBool("ota_enabled", config.otaEnabled);
   config.bmsVendor = prefs.getString("bms_vendor", config.bmsVendor);
   config.bmsBleAddress = prefs.getString("bms_ble_addr", "");
+  config.timeZone = prefs.getString("tz", config.timeZone);
   prefs.end();
   return config;
 #endif
@@ -120,7 +121,8 @@ bool ConfigStore::save(const DeviceConfig& config) {
   }
 
   bool ok = true;
-  ok &= prefs.putString("device_id", config.deviceId) > 0;
+  ok &= prefs.putString("tz", config.timeZone) > 0;
+ok &= prefs.putString("device_id", config.deviceId) > 0;
   ok &= prefs.putString("fw_floor", config.firmwareVersionFloor) > 0;
   ok &= prefs.putString("wifi_ssid", config.wifiSsid) > 0;
   ok &= prefs.putString("wifi_pass", config.wifiPassword) > 0;

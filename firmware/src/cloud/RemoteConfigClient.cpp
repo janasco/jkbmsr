@@ -1,5 +1,7 @@
 #include "RemoteConfigClient.h"
 
+#include "../clock/SystemClock.h"
+
 #include <ArduinoJson.h>
 #if defined(ARDUINO_ARCH_ESP8266)
 #include <ESP8266HTTPClient.h>
@@ -61,6 +63,15 @@ bool RemoteConfigClient::fetch(const String& token, DeviceConfig& config, Remote
   config.otaEnabled = document["otaEnabled"] | true;
   config.bmsVendor = document["bmsVendor"] | config.bmsVendor;
   config.bmsBleAddress = document["bmsBleAddress"] | config.bmsBleAddress;
+  // A timezone pushed by the owner. Applied immediately so a change is visible
+  // in the very next log line, and persisted by the caller's configStore.save.
+  // applyTimeZone refuses a malformed string and keeps the previous one, so
+  // config.timeZone is only advanced when the value actually took effect.
+  const String remoteTimeZone = document["timeZone"] | "";
+  if (remoteTimeZone.length() > 0) {
+    applyTimeZone(remoteTimeZone);
+    config.timeZone = currentTimeZone();
+  }
   if (wifiActions != nullptr) {
     wifiActions->scanRequestId = document["wifiScanRequestId"] | "";
     wifiActions->changeRequestId = document["wifiChange"]["requestId"] | "";

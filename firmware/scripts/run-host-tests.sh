@@ -68,6 +68,9 @@ SUITES=(
   # Bounded exponential backoff for the beep-producing 0x96 requests
   # (header-only; see include/bms/BmsRequestBackoff.h).
   "test_bms_request_backoff"
+  # POSIX TZ validation. libc ignores a bad TZ silently, so this predicate is
+  # what stops "Asia/Manila" from leaving the clock on UTC with no error.
+  "test_time_zone:src/clock/SystemClock.cpp"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the
