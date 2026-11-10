@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+import 'ble_license.dart';
 import '../models/bms_models.dart';
 import '../models/bms_parameter.dart';
 import '../protocols/bms_protocol.dart';
@@ -336,7 +338,10 @@ class BleBmsService {
       _addLog("Connecting to Bluetooth device: $deviceId...");
 
       final device = BluetoothDevice.fromId(deviceId);
-      await device.connect(timeout: const Duration(seconds: 12));
+      await device.connect(
+        license: kFlutterBluePlusLicense,
+        timeout: const Duration(seconds: 12),
+      );
       _connectedDevice = device;
       _connectedBrand = BmsProtocolHelper.detectBrandFromName(device.platformName);
       _addLog("Connected to ${device.platformName}!");

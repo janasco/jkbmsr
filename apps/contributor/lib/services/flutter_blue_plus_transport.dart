@@ -4,6 +4,8 @@ import 'package:bms_core/bms_core.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import 'ble_license.dart';
+
 import 'ble_transport.dart';
 
 /// A GATT characteristic reduced to the two properties the JK choice depends
@@ -215,7 +217,10 @@ class FlutterBluePlusTransport implements BleTransport {
   @override
   Future<BleSession> connect(String deviceId) async {
     final device = BluetoothDevice.fromId(deviceId);
-    await device.connect(timeout: const Duration(seconds: 12));
+    await device.connect(
+      license: kFlutterBluePlusLicense,
+      timeout: const Duration(seconds: 12),
+    );
     try {
       final services = await device.discoverServices();
 
