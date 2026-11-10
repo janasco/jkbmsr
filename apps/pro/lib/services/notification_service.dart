@@ -91,11 +91,18 @@ class NotificationService {
     }
 
     try {
+      // firebase_messaging 17 deprecates getToken() in favour of register() +
+      // onRegistered, but that stream yields the Firebase Installation ID, not
+      // an FCM token, and this backend sends to FCM tokens. Switching would
+      // silently stop push, so the deprecated call is the correct one until the
+      // backend speaks FID.
+      // ignore: deprecated_member_use
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
         await _syncTokenWithBackend(token);
         if (!_refreshListenerAttached) {
           _refreshListenerAttached = true;
+          // ignore: deprecated_member_use
           FirebaseMessaging.instance.onTokenRefresh.listen(_syncTokenWithBackend);
         }
         _lastPushError = null;

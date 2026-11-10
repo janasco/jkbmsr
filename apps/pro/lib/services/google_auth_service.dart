@@ -15,10 +15,16 @@ class GoogleAuthService {
   static const String _serverClientId =
       '702996273044-omolsbpj15k3t6nm325gllnmhppej974.apps.googleusercontent.com';
 
-  static final GoogleSignIn _instance = GoogleSignIn(
-    scopes: const ['email'],
-    serverClientId: _serverClientId,
-  );
+  // google_sign_in 7 is a singleton: configuration moved from the constructor to
+  // initialize(), and signIn() became authenticate(). initialize() is idempotent
+  // and must run before any authentication attempt.
+  static bool _initialized = false;
+
+  static Future<void> _ensureInitialized() async {
+    if (_initialized) return;
+    await GoogleSignIn.instance.initialize(serverClientId: _serverClientId);
+    _initialized = true;
+  }
 
   /// Runs the native sign-in flow. Returns null if the user cancelled.
   ///
@@ -29,12 +35,21 @@ class GoogleAuthService {
   /// whichever account was used last, which is surprising on a
   /// multi-account device and makes switching accounts impossible.
   static Future<String?> signInAndGetIdToken() async {
-    await _instance.signOut();
-    final account = await _instance.signIn();
-    if (account == null) {
-      return null;
+    await _ensureInitialized();
+    await GoogleSignIn.instance.signOut();
+    final GoogleSignInAccount account;
+    try {
+      account = await GoogleSignIn.instance.authenticate();
+    } on GoogleSignInException catch (error) {
+      // Cancellation is a normal outcome, not a failure to report.
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        return null;
+      }
+      rethrow;
     }
-    final auth = await account.authentication;
-    return auth.idToken;
+    // The plugin caches the last account; signOut() above is what keeps the
+    // account picker from being skipped, which is the behaviour this method
+    // exists to guarantee on a multi-account device.
+    return account.authentication.idToken;
   }
 }

@@ -17,14 +17,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
   # The shared, pure-Dart JK-BMS protocol/model/detection core. Contributor is
   # the first consumer (see jkbmsr-private/ops/internal-notes/
   # contributor-app-plan.md §2); apps/ble and apps/pro keep their own copies
   # until their own migration is reviewed.
   bms_core:
     path: ../../packages/bms_core
-  flutter_blue_plus: ^1.34.4
+  flutter_blue_plus: ^1.34.4   # 2.x requires a commercial licence; this is the MIT line
   # Persists the single first-run consent decision (a bool + a UTC timestamp).
   # apps/ble has no local key-value store (its persistent state is the sqflite
   # logbook), and Contributor has none at all yet, so a minimal key-value store
@@ -41,7 +41,7 @@ dependencies:
   # documents directory and hand it to the OS share sheet. Both are already used
   # by apps/pro for its CSV export (lib/features/history/telemetry_history_screen.dart).
   path_provider: ^2.1.5
-  share_plus: ^10.1.2
+  share_plus: ^13.3.1
   # Google Play In-App Updates: Contributor ships only through Play, so this is
   # its whole update mechanism (there is no self-hosted APK channel). The
   # Play-vs-non-Play branch is in lib/services/app_update_service.dart. Same
@@ -49,12 +49,12 @@ dependencies:
   in_app_update: ^5.0.0
   # Reads the installer package (com.android.vending) that created this
   # install, which decides whether Play's in-app update flow applies at all.
-  package_info_plus: ^8.1.1
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   # Test-only: flutter_blue_plus throws UnsupportedError on the Dart VM, so
   # widget tests that mount the app install a no-op FlutterBluePlusPlatform.
   # Already a transitive dependency of flutter_blue_plus; pinned here so a test

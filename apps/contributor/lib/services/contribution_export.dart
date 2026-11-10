@@ -92,6 +92,7 @@ class ContributionExporter {
     return file;
   }
 
+  // share_plus 12 moved the static helpers onto an instance.
   static Future<void> _shareFile(File file, String text) =>
-      Share.shareXFiles([XFile(file.path)], text: text);
+      SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: text));
 }

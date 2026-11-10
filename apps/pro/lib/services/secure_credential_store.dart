@@ -13,9 +13,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureCredentialStore {
   static const String _keyUnlockToken = 'jkbmsr.biometricUnlockToken';
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // flutter_secure_storage 11 encrypts on Android by default (AES-GCM with
+  // RSA-OAEP key wrapping), so the old encryptedSharedPreferences flag has no
+  // replacement to name: passing no options is the strong path now.
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static final SecureCredentialStore instance = SecureCredentialStore._();
   SecureCredentialStore._();

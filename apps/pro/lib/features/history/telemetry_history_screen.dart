@@ -111,7 +111,10 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${result.filename}');
       await file.writeAsBytes(result.bytes);
-      await Share.shareXFiles([XFile(file.path)], text: 'JKBMSR telemetry export');
+      // share_plus 12 moved the static helpers onto an instance.
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'JKBMSR telemetry export'),
+      );
     } catch (e) {
       if (mounted) {
         JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);

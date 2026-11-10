@@ -52,18 +52,18 @@ class BiometricAuthService {
   /// Returns false if they cancelled or biometrics aren't available.
   Future<bool> authenticate({String? reason}) async {
     try {
+      // local_auth 3 folded AuthenticationOptions into named parameters:
+      // stickyAuth is now persistAcrossBackgrounding, and useErrorDialogs is
+      // gone because implementations must not show their own error UI.
       final authenticated = await _localAuth.authenticate(
         localizedReason: reason ?? 'Authenticate to access JK BMS Remote',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          // Biometrics only. With this false, Android shows the device
-          // PIN/pattern/passcode screen (biometrics as one option inside it),
-          // which is why users saw a PIN prompt even with biometric unlock on.
-          // Callers gate on isReady (available && enabled) first, so a device
-          // with no enrolled biometrics never reaches here.
-          biometricOnly: true,
-          useErrorDialogs: true,
-        ),
+        // Biometrics only. With this false, Android shows the device
+        // PIN/pattern/passcode screen (biometrics as one option inside it),
+        // which is why users saw a PIN prompt even with biometric unlock on.
+        // Callers gate on isReady (available && enabled) first, so a device
+        // with no enrolled biometrics never reaches here.
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
       return authenticated;
     } on PlatformException catch (_) {
