@@ -261,7 +261,7 @@ abstract interface class CaptureController {
 /// The transport is injected, so the whole flow except the radio calls is
 /// unit-tested with a fake.
 class CaptureService implements CaptureController {
-  /// [log] is an injectable seam (like `FlutterBluePlusTransport.log`) that
+  /// [log] is an injectable seam (like `UniversalBleTransport.log`) that
   /// records the raw reason a capture failed — which is never shown to the
   /// user.
   CaptureService({required BleTransport transport, void Function(String message)? log})

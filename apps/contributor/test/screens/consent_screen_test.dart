@@ -9,7 +9,7 @@ import 'package:jkbmsr_contributor/screens/home_screen.dart';
 import 'package:jkbmsr_contributor/services/consent_controller.dart';
 import 'package:jkbmsr_contributor/services/consent_store.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 
 Future<ConsentController> _pumpConsentScreen(WidgetTester tester) async {
   // A tall surface so the whole consent list is built without scrolling.
@@ -34,7 +34,7 @@ void _tallSurface(WidgetTester tester) {
 }
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   group('ConsentScreen', () {
     testWidgets('the opt-in is off and accept is disabled until turned on',

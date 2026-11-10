@@ -1,70 +1,146 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:flutter_blue_plus_platform_interface/flutter_blue_plus_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_contributor/services/ble_transport.dart';
-import 'package:jkbmsr_contributor/services/flutter_blue_plus_transport.dart';
+import 'package:jkbmsr_contributor/services/universal_ble_transport.dart';
+import 'package:universal_ble/universal_ble.dart';
 
-/// A platform fake whose adapter state and `startScan` outcome the test sets,
-/// so the transport can be driven without a radio. Stands in for the real
-/// Android/iOS plugin, which on the Dart VM throws `UnsupportedError`.
-final class _FakeFlutterBluePlusPlatform extends FlutterBluePlusPlatform {
-  _FakeFlutterBluePlusPlatform({this.startScanError, this.advertisements});
+/// A platform fake the test drives instead of a radio.
+///
+/// `UniversalBle` talks to the platform through this interface, so installing a
+/// fake with `UniversalBle.setInstance` exercises the real transport code —
+/// scanning, connecting, binding characteristics — without a device. Methods the
+/// capture flow never reaches throw, so an accidental new dependency on them
+/// fails loudly rather than silently returning a plausible value.
+final class _FakeUniversalBlePlatform extends UniversalBlePlatform {
+  _FakeUniversalBlePlatform({this.startScanError, this.scanDevices, this.services = const []});
 
   Object? startScanError;
-  List<BmScanAdvertisement>? advertisements;
+  List<BleDevice>? scanDevices;
+  List<BleService> services;
 
   bool startScanCalled = false;
   int stopScanCount = 0;
-
-  final StreamController<BmScanResponse> _scanResponses =
-      StreamController<BmScanResponse>.broadcast();
-
-  @override
-  Future<bool> isSupported(BmIsSupportedRequest request) async => true;
+  int? requestedMtu;
+  final Map<String, BleConnectionState> _states = {};
+  final List<(String, String, String, BleOutputProperty, List<int>)> writes = [];
 
   @override
-  Stream<BmScanResponse> get onScanResponse => _scanResponses.stream;
+  Future<AvailabilityState> getBluetoothAvailabilityState() async => AvailabilityState.poweredOn;
 
   @override
-  Future<bool> startScan(BmScanSettings request) async {
+  Future<void> startScan({ScanFilter? scanFilter, PlatformConfig? platformConfig}) async {
     startScanCalled = true;
     if (startScanError != null) throw startScanError!;
-    final ads = advertisements;
-    if (ads != null) {
-      // Deliver after `startScan` returns, so the plugin has attached its own
-      // listener (which it does before invoking the platform method).
-      scheduleMicrotask(() => _scanResponses.add(BmScanResponse(
-            advertisements: ads,
-            success: true,
-            errorCode: 0,
-            errorString: '',
-          )));
+    final devices = scanDevices;
+    if (devices != null) {
+      // Delivered after startScan returns, so the transport has attached its
+      // listener to the platform stream first — the same ordering a real plugin
+      // guarantees.
+      scheduleMicrotask(() {
+        for (final d in devices) {
+          updateScanResult(d);
+        }
+      });
     }
-    return true;
   }
 
   @override
-  Future<bool> stopScan(BmStopScanRequest request) async {
+  Future<void> stopScan() async {
     stopScanCount++;
-    return true;
   }
+
+  @override
+  Future<bool> isScanning() async => false;
+
+  @override
+  Future<void> connect(
+    String deviceId, {
+    Duration? connectionTimeout,
+    bool autoConnect = false,
+    ConnectionPlatformConfig? platformConfig,
+  }) async {
+    _states[deviceId] = BleConnectionState.connected;
+    updateConnection(deviceId, true);
+  }
+
+  @override
+  Future<void> disconnect(String deviceId) async {
+    _states[deviceId] = BleConnectionState.disconnected;
+    updateConnection(deviceId, false);
+  }
+
+  @override
+  Future<BleConnectionState> getConnectionState(String deviceId) async =>
+      _states[deviceId] ?? BleConnectionState.disconnected;
+
+  @override
+  Future<List<BleService>> discoverServices(
+    String deviceId,
+    bool withDescriptors, {
+    DiscoverServicesPlatformConfig? platformConfig,
+  }) async =>
+      services;
+
+  @override
+  Future<void> setNotifiable(
+    String deviceId,
+    String service,
+    String characteristic,
+    BleInputProperty bleInputProperty,
+  ) async {}
+
+  @override
+  Future<void> writeValue(
+    String deviceId,
+    String service,
+    String characteristic,
+    Uint8List value,
+    BleOutputProperty bleOutputProperty,
+  ) async {
+    writes.add((deviceId, service, characteristic, bleOutputProperty, value.toList()));
+  }
+
+  @override
+  Future<int> requestMtu(String deviceId, int expectedMtu) async {
+    requestedMtu = expectedMtu;
+    return expectedMtu;
+  }
+
+  @override
+  Future<int> readRssi(String deviceId) async => -55;
+
+  // Not reached by the capture flow; present because the interface requires them.
+  @override
+  Future<bool> enableBluetooth() async => true;
+  @override
+  Future<bool> disableBluetooth() async => true;
+  @override
+  Future<Uint8List> readValue(String deviceId, String service, String characteristic, {Duration? timeout}) async => Uint8List(0);
+  @override
+  Future<Uint8List> readDescriptorValue(String deviceId, String service, String characteristic, String descriptor, {Duration? timeout}) async => Uint8List(0);
+  @override
+  Future<void> writeDescriptorValue(String deviceId, String service, String characteristic, String descriptor, Uint8List value) async {}
+  @override
+  Future<void> requestConnectionPriority(String deviceId, BleConnectionPriority priority) async {}
+  @override
+  Future<bool> isPaired(String deviceId) async => false;
+  @override
+  Future<bool> pair(String deviceId) async => true;
+  @override
+  Future<void> unpair(String deviceId) async {}
+  @override
+  Future<List<BleDevice>> getSystemDevices(List<String>? withServices) async => const [];
 }
 
-BmScanAdvertisement _jkAdvertisement({String id = 'AA:BB:CC:11:22:33', String name = 'JK_B2A24S15P'}) {
-  return BmScanAdvertisement(
-    remoteId: DeviceIdentifier(id),
-    platformName: name,
-    advName: name,
-    connectable: true,
-    txPowerLevel: null,
-    appearance: null,
-    manufacturerData: const {},
-    serviceData: const {},
-    serviceUuids: [Guid('0000ffe0-0000-1000-8000-00805f9b34fb')],
+BleDevice _jkDevice({String id = 'AA:BB:CC:11:22:33', String name = 'JK_B2A24S15P'}) {
+  return BleDevice(
+    deviceId: id,
+    name: name,
     rssi: -63,
+    connectable: true,
+    services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
   );
 }
 
@@ -76,7 +152,7 @@ class _ScanRun {
   final Future<void> done;
 }
 
-_ScanRun _runScan(FlutterBluePlusTransport transport, {Duration? timeout}) {
+_ScanRun _runScan(UniversalBleTransport transport, {Duration? timeout}) {
   final events = <List<BleScanResult>>[];
   final errors = <Object>[];
   final done = Completer<void>();
@@ -216,21 +292,21 @@ void main() {
     });
   });
 
-  group('FlutterBluePlusTransport.scan', () {
+  group('UniversalBleTransport.scan', () {
     test('a Bluetooth-off PlatformException never reaches the stream raw; '
         'it becomes a bluetoothOff failure and is logged', () async {
-      final platform = _FakeFlutterBluePlusPlatform(
+      final platform = _FakeUniversalBlePlatform(
         startScanError: PlatformException(
           code: 'startScan',
           message: 'Bluetooth must be turned on',
         ),
       );
-      FlutterBluePlusPlatform.instance = platform;
+      UniversalBle.setInstance(platform);
       final logs = <String>[];
-      final transport = FlutterBluePlusTransport(
+      final transport = UniversalBleTransport(
         // The adapter pre-check says "on"; the failure falls through to the
         // classification path, which is what this test pins.
-        adapterState: () async => BluetoothAdapterState.on,
+        availability: () async => AvailabilityState.poweredOn,
         log: logs.add,
       );
 
@@ -247,15 +323,15 @@ void main() {
     });
 
     test('a different scan failure (permission) is still surfaced, not swallowed', () async {
-      final platform = _FakeFlutterBluePlusPlatform(
+      final platform = _FakeUniversalBlePlatform(
         startScanError: PlatformException(
           code: 'startScan',
           message: 'Permission BLUETOOTH_SCAN required to scan devices',
         ),
       );
-      FlutterBluePlusPlatform.instance = platform;
-      final transport = FlutterBluePlusTransport(
-        adapterState: () async => BluetoothAdapterState.on,
+      UniversalBle.setInstance(platform);
+      final transport = UniversalBleTransport(
+        availability: () async => AvailabilityState.poweredOn,
         log: (_) {},
       );
 
@@ -268,10 +344,10 @@ void main() {
     });
 
     test('an adapter that is off is reported without scanning at all', () async {
-      final platform = _FakeFlutterBluePlusPlatform();
-      FlutterBluePlusPlatform.instance = platform;
-      final transport = FlutterBluePlusTransport(
-        adapterState: () async => BluetoothAdapterState.off,
+      final platform = _FakeUniversalBlePlatform();
+      UniversalBle.setInstance(platform);
+      final transport = UniversalBleTransport(
+        availability: () async => AvailabilityState.poweredOff,
         log: (_) {},
       );
 
@@ -286,10 +362,10 @@ void main() {
     });
 
     test('an unauthorized adapter is reported as a permission failure', () async {
-      final platform = _FakeFlutterBluePlusPlatform();
-      FlutterBluePlusPlatform.instance = platform;
-      final transport = FlutterBluePlusTransport(
-        adapterState: () async => BluetoothAdapterState.unauthorized,
+      final platform = _FakeUniversalBlePlatform();
+      UniversalBle.setInstance(platform);
+      final transport = UniversalBleTransport(
+        availability: () async => AvailabilityState.unauthorized,
         log: (_) {},
       );
 
@@ -302,12 +378,12 @@ void main() {
     });
 
     test('with Bluetooth on, a scan still emits discovered JK devices and completes', () async {
-      final platform = _FakeFlutterBluePlusPlatform(
-        advertisements: [_jkAdvertisement()],
+      final platform = _FakeUniversalBlePlatform(
+        scanDevices: [_jkDevice()],
       );
-      FlutterBluePlusPlatform.instance = platform;
-      final transport = FlutterBluePlusTransport(
-        adapterState: () async => BluetoothAdapterState.on,
+      UniversalBle.setInstance(platform);
+      final transport = UniversalBleTransport(
+        availability: () async => AvailabilityState.poweredOn,
         log: (_) {},
       );
 
@@ -320,6 +396,38 @@ void main() {
       final names = run.events.expand((e) => e).map((d) => d.name);
       expect(names, contains('JK_B2A24S15P'));
       expect(platform.stopScanCount, greaterThanOrEqualTo(1));
+    });
+  });
+
+  group('UniversalBleTransport.connect', () {
+    test('binds the documented JK characteristic through its owning service, '
+        'and negotiates MTU after subscribing', () async {
+      final platform = _FakeUniversalBlePlatform(services: [
+        BleService('00001801-0000-1000-8000-00805f9b34fb', [
+          BleCharacteristic('00002a05-0000-1000-8000-00805f9b34fb',
+              [CharacteristicProperty.indicate], const []),
+        ]),
+        BleService('0000ffe0-0000-1000-8000-00805f9b34fb', [
+          BleCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb',
+              [CharacteristicProperty.notify, CharacteristicProperty.write], const []),
+        ]),
+      ]);
+      UniversalBle.setInstance(platform);
+      final transport = UniversalBleTransport(
+        availability: () async => AvailabilityState.poweredOn,
+        log: (_) {},
+      );
+
+      final session = await transport.connect('AA:BB:CC:11:22:33');
+
+      // Service Changed (0x2A05) is `indicate` and comes first; binding it is
+      // the failure this pins — the BMS never sends telemetry on it.
+      expect(session.serviceUuids, contains('0000ffe0-0000-1000-8000-00805f9b34fb'));
+      expect(session.rssi, -55);
+      expect(platform.requestedMtu, 517,
+          reason: 'MTU is negotiated after the CCCD subscription, not before');
+      await session.disconnect();
+      expect(platform.writes, isEmpty);
     });
   });
 

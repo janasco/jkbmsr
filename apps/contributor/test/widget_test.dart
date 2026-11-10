@@ -6,10 +6,10 @@ import 'package:jkbmsr_contributor/screens/home_screen.dart';
 import 'package:jkbmsr_contributor/services/app_info.dart';
 import 'package:jkbmsr_contributor/services/coverage_service.dart';
 
-import 'support/fake_flutter_blue_plus.dart';
+import 'support/fake_universal_ble.dart';
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   testWidgets('app launches to the home screen', (WidgetTester tester) async {
     await tester.pumpWidget(

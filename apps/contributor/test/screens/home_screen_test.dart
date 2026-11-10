@@ -10,7 +10,7 @@ import 'package:jkbmsr_contributor/screens/home_screen.dart';
 import 'package:jkbmsr_contributor/services/coverage_service.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 
 /// The aggregate-only summary, as the endpoint returns it. Only the two counts
 /// the screen displays are asserted; the rest exists so the parser is fed a
@@ -37,7 +37,7 @@ CoverageService _respondingWith(int status, String body) => CoverageService(
     );
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   testWidgets('a successful fetch renders the live corpus counts',
       (WidgetTester tester) async {

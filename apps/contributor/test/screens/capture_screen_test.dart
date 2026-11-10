@@ -10,7 +10,7 @@ import 'package:jkbmsr_contributor/services/ble_transport.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
 import 'package:jkbmsr_contributor/widgets/rotating_glyph.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 import '../support/jk02_fixtures.dart';
 
 const _device = BleScanResult(
@@ -108,7 +108,7 @@ class _PendingCaptureController implements CaptureController {
 }
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   testWidgets('scan -> select -> the result is its own screen', (WidgetTester tester) async {
     final controller = FakeCaptureController();

@@ -12,7 +12,7 @@ import 'package:jkbmsr_contributor/screens/review_screen.dart';
 import 'package:jkbmsr_contributor/services/contribution_export.dart';
 import 'package:jkbmsr_contributor/services/contribution_uploader.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 import '../support/jk02_fixtures.dart';
 
 /// Mounts the review screen on a tall surface so every field, the summary and
@@ -60,7 +60,7 @@ Future<String> _openRawJson(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   testWidgets('renders the real payload: values, counts and size',
       (WidgetTester tester) async {

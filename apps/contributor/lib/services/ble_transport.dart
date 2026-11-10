@@ -1,6 +1,6 @@
 /// The narrow BLE seam the capture logic talks to.
 ///
-/// The real implementation is [FlutterBluePlusTransport]; tests use a fake so
+/// The real implementation is [UniversalBleTransport]; tests use a fake so
 /// the frame-reassembly, decoding and payload-building logic can be exercised
 /// without a radio. Everything protocol-specific stays in `bms_core` and
 /// everything plugin-specific stays in the concrete transport.

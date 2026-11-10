@@ -9,7 +9,7 @@ import '../services/app_info.dart';
 import '../services/ble_transport.dart';
 import '../services/capture_service.dart';
 import '../services/consent_controller.dart';
-import '../services/flutter_blue_plus_transport.dart';
+import '../services/universal_ble_transport.dart';
 import '../widgets/app_surface.dart';
 import '../theme/app_theme.dart';
 import '../widgets/rotating_glyph.dart';
@@ -51,7 +51,7 @@ class CaptureScreen extends StatefulWidget {
 class _CaptureScreenState extends State<CaptureScreen>
     with SingleTickerProviderStateMixin {
   late final CaptureController _controller = widget.controller ??
-      CaptureService(transport: FlutterBluePlusTransport());
+      CaptureService(transport: UniversalBleTransport());
   late final Duration _duration =
       widget.captureDuration ?? CaptureService.defaultDuration;
 

@@ -15,14 +15,14 @@ import 'package:jkbmsr_contributor/services/consent_store.dart';
 import 'package:jkbmsr_contributor/services/coverage_service.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
-import '../support/fake_flutter_blue_plus.dart';
+import '../support/fake_universal_ble.dart';
 import '../support/jk02_fixtures.dart';
 
 /// There is no Android emulator on this host, so large-text behaviour is checked
 /// by walking the real widget tree at 2× text on a real phone frame. Text that
 /// overflows here is text a user who needs large type cannot read.
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   Future<void> mountAt2x(WidgetTester tester, Widget child) async {
     tester.view.physicalSize = const Size(1080, 2340);

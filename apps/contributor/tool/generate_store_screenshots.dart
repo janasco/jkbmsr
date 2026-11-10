@@ -43,7 +43,7 @@ import 'package:jkbmsr_contributor/services/consent_controller.dart';
 import 'package:jkbmsr_contributor/services/consent_store.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
-import '../test/support/fake_flutter_blue_plus.dart';
+import '../test/support/fake_universal_ble.dart';
 import '../test/support/jk02_fixtures.dart';
 
 /// Play wants phone screenshots between 320 and 3840 px. This renders a real
@@ -222,7 +222,7 @@ class _PendingCaptureController implements CaptureController {
 /// review), then the shell, and the consent gate last as the trust shot. A
 /// consent screen first is honest but reads like an obstacle in a thumbnail.
 void main() {
-  setUp(installFakeFlutterBluePlus);
+  setUp(installFakeUniversalBle);
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
