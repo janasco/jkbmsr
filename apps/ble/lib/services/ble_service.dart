@@ -6,8 +6,28 @@ import '../models/bms_models.dart';
 import '../models/bms_parameter.dart';
 import '../protocols/bms_protocol.dart';
 import 'app_database.dart';
+import 'ble_adapter.dart';
 import 'detection_engine.dart';
 import 'logbook_store.dart';
+
+/// Maps the current plugin's adapter state onto the app's own vocabulary.
+///
+/// This is the only place the plugin's enum is named outside the radio code, so
+/// swapping the BLE package is a change here rather than across the UI.
+BleAdapterState mapFlutterBluePlusAdapterState(BluetoothAdapterState state) {
+  switch (state) {
+    case BluetoothAdapterState.on:
+      return BleAdapterState.on;
+    case BluetoothAdapterState.off:
+      return BleAdapterState.off;
+    case BluetoothAdapterState.unauthorized:
+      return BleAdapterState.unauthorized;
+    case BluetoothAdapterState.unavailable:
+      return BleAdapterState.unsupported;
+    default:
+      return BleAdapterState.unknown;
+  }
+}
 
 class BleBmsService {
   static final BleBmsService _instance = BleBmsService._internal();
@@ -19,9 +39,11 @@ class BleBmsService {
   final _db = AppDatabase();
   static const String _lastDeviceIdKey = 'jkbmsr_last_device_id';
 
-  /// Live Bluetooth adapter on/off state, used to show an in-app notice
-  /// when Bluetooth is disabled.
-  Stream<BluetoothAdapterState> get adapterStateStream => FlutterBluePlus.adapterState;
+  /// Live Bluetooth adapter state, used to show an in-app notice when
+  /// Bluetooth is disabled. Mapped through [BleAdapterState] so no screen has to
+  /// know which BLE package produced it.
+  Stream<BleAdapterState> get adapterStateStream =>
+      FlutterBluePlus.adapterState.map(mapFlutterBluePlusAdapterState);
 
   /// Live scan lifecycle, mirrored from FlutterBluePlus.
   ///

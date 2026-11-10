@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/ble_adapter.dart';
 import 'services/ble_service.dart';
 import 'services/bluetooth_on.dart';
 import 'services/entitlement_service.dart';
@@ -133,7 +134,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   // Key to force recreation/relock of screens when tab is changed
   int _tabChangeCounter = 0;
 
-  StreamSubscription<BluetoothAdapterState>? _adapterStateSub;
+  StreamSubscription<BleAdapterState>? _adapterStateSub;
   bool _bluetoothOff = false;
 
   @override
@@ -141,7 +142,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     super.initState();
     _adapterStateSub = _bleService.adapterStateStream.listen((state) {
       if (!mounted) return;
-      setState(() => _bluetoothOff = state != BluetoothAdapterState.on);
+      setState(() => _bluetoothOff = !state.isOn);
     });
     // Attempt to reconnect to whichever BMS was connected last session.
     _bleService.autoReconnectLastDevice().then((_) {
