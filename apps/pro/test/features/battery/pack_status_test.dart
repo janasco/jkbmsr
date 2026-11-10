@@ -126,7 +126,7 @@ void main() {
 
       final firmware = _line(summary, 'Firmware up to date');
       expect(firmware.mark, PackStatusMark.done);
-      expect(firmware.detail, 'Up to date — 0.9.10');
+      expect(firmware.detail, 'Up to date: 0.9.10');
 
       expect(summary.health.tone, PackStatusHealthTone.clear);
       expect(
@@ -171,7 +171,7 @@ void main() {
 
       final firmware = _line(summary, 'Firmware up to date');
       expect(firmware.mark, PackStatusMark.pending);
-      expect(firmware.detail, 'Update available — 0.9.10');
+      expect(firmware.detail, 'Update available: 0.9.10');
     });
 
     test('an update with no published version still reads as pending', () {
@@ -286,7 +286,7 @@ void main() {
       expect(_line(summary, 'Reporting telemetry').mark, PackStatusMark.done);
       expect(_line(summary, 'Battery link').mark, PackStatusMark.done);
       expect(
-          _line(summary, 'Firmware up to date').detail, 'Up to date — 0.9.10');
+          _line(summary, 'Firmware up to date').detail, 'Up to date: 0.9.10');
       expect(summary.health.tone, PackStatusHealthTone.clear);
     });
 

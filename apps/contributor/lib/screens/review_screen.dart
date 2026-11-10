@@ -607,12 +607,12 @@ class _OmittedCard extends StatelessWidget {
 
 /// Compact, honest display of a payload value.
 String _formatValue(Object? value) {
-  if (value == null) return '—';
+  if (value == null) return '-';
   if (value is bool) return value ? 'yes' : 'no';
   if (value is num) return value.toString();
-  if (value is String) return value.isEmpty ? '—' : value;
+  if (value is String) return value.isEmpty ? '-' : value;
   if (value is Iterable) {
-    if (value.isEmpty) return '—';
+    if (value.isEmpty) return '-';
     final list = value.toList(growable: false);
     if (list.every((e) => e is num)) {
       final head = list.take(4).join(', ');
@@ -622,6 +622,6 @@ String _formatValue(Object? value) {
     }
     return '${list.length} items';
   }
-  if (value is Map) return value.isEmpty ? '—' : '${value.length} entries';
+  if (value is Map) return value.isEmpty ? '-' : '${value.length} entries';
   return value.toString();
 }

@@ -66,7 +66,7 @@ class SocRing extends StatelessWidget {
                           children: [
                             AnimatedNumber(
                               value: percent,
-                              formatted: (v) => live ? v.toStringAsFixed(0) : '—',
+                              formatted: (v) => live ? v.toStringAsFixed(0) : '-',
                               style: TextStyle(
                                 fontSize: size * 0.26,
                                 fontWeight: FontWeight.w800,

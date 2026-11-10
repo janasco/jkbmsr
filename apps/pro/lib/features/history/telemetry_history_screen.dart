@@ -274,7 +274,7 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
                   borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
                 ),
                 child: Text(
-                  'Historical data is retained for 365 days — anything older is deleted automatically. '
+                  'Historical data is retained for 365 days. Anything older is deleted automatically. '
                   'Export a CSV backup anytime using the button below.',
                   style: JKBMSRTypography.bodySecondary,
                 ),
@@ -333,7 +333,7 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
 
 /// Latest-values KPI strip for the history screen: one compact tile per
 /// metric (value + sublabel), mirroring the web TelemetryHistoryPanel strip.
-/// Takes the last non-null reading per metric; null renders as '—'.
+/// Takes the last non-null reading per metric; null renders as '-'.
 class _LatestKpiStrip extends StatelessWidget {
   final List<CloudHistoryPoint> points;
 
@@ -348,7 +348,7 @@ class _LatestKpiStrip extends StatelessWidget {
   }
 
   String _fmt(double? v, int decimals, String unit) =>
-      v == null ? '—' : '${v.toStringAsFixed(decimals)} $unit';
+      v == null ? '-' : '${v.toStringAsFixed(decimals)} $unit';
 
   @override
   Widget build(BuildContext context) {

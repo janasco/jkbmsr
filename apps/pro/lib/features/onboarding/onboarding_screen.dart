@@ -57,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       label: 'Monitor',
       title: 'Your pack, from anywhere',
       description:
-          'Live voltage, current, temperature and state of charge — from every '
+          'Live voltage, current, temperature and state of charge, from every '
           'gateway you own, on one screen.',
     ),
     _OnboardingStep(
@@ -73,7 +73,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       label: 'Alerts',
       title: 'Told before it matters',
       description:
-          'Over-voltage, high temperature, a gateway that stopped reporting — you '
+          'Over-voltage, high temperature, a gateway that stopped reporting. You '
           'get the alert instead of the surprise.',
     ),
     _OnboardingStep(

@@ -58,7 +58,7 @@ class BiometricRelogin {
       lastError = error.toString();
       if (!_isNetworkError(error)) {
         await SecureCredentialStore.instance.clear();
-        lastError = '$lastError (token cleared — re-enable Biometric Unlock)';
+        lastError = '$lastError (token cleared, so re-enable Biometric Unlock)';
       }
       return false;
     }

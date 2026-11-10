@@ -229,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const _dashboardTemplateOptions = <String, ({String label, String description})>{
     'default': (
       label: 'Default',
-      description: 'The standard panel-based layout — light or dark, follows your theme toggle.',
+      description: 'The standard panel-based layout: light or dark, follows your theme toggle.',
     ),
     'classic-dark': (
       label: 'Classic Readout',
@@ -241,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ),
     'icon-tiles': (
       label: 'Icon Tiles',
-      description: 'A dense grid of small icon tiles — one per metric — instead of label/value rows.',
+      description: 'A dense grid of small icon tiles (one per metric) instead of label/value rows.',
     ),
     'status-pills': (
       label: 'Status Pills',
@@ -257,7 +257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ),
     'mosaic-grid': (
       label: 'Mosaic Grid',
-      description: 'A mixed-size tile grid — a couple of large hero numbers and a big gauge, smaller tiles for everything else.',
+      description: 'A mixed-size tile grid: a couple of large hero numbers and a big gauge, with smaller tiles for everything else.',
     ),
     'at-a-glance-strip': (
       label: 'At-a-Glance Strip',
@@ -266,8 +266,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   };
 
   // Firmware & OTA
-  String _currentVersion = '—';
-  String _latestVersion = '—';
+  String _currentVersion = '-';
+  String _latestVersion = '-';
   bool _updateAvailable = false;
   bool _isOtaChecking = false;
 
@@ -446,8 +446,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _warningAlerts = warning;
         _batteryAnimationsEnabled = config['batteryAnimationsEnabled'] as bool? ?? true;
         _dashboardTemplate = config['dashboardTemplateMobile'] as String? ?? 'default';
-        _currentVersion = config['firmwareVersion'] as String? ?? '—';
-        _latestVersion = config['latestFirmwareVersion'] as String? ?? '—';
+        _currentVersion = config['firmwareVersion'] as String? ?? '-';
+        _latestVersion = config['latestFirmwareVersion'] as String? ?? '-';
         _updateAvailable = config['updateAvailable'] as bool? ?? false;
         _bmsVendor = config['bmsVendor'] as String? ?? 'jk';
         _bmsRxPinController.text = (config['bmsUartRxPin'] as num? ?? 16).toString();
@@ -673,7 +673,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             try {
               await _apiClient.requestOtaCheck(_activeDeviceId!);
               if (!mounted) return;
-              JKBMSRToast.show(context, 'Update check requested — the gateway will install it if one is available');
+              JKBMSRToast.show(context, 'Update check requested. The gateway will install it if one is available');
             } catch (e) {
               if (!mounted) return;
               JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);
@@ -804,11 +804,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: 'Set remote WiFi target?',
           content: isOpen
               ? 'The gateway will be told to join "$ssid", an OPEN network with no password. Anyone '
-                  'nearby could also join it. It applies this on its next check-in — a gateway that is '
+                  'nearby could also join it. It applies this on its next check-in. A gateway that is '
                   'offline or can\'t reach the cloud won\'t receive it until then. If it can\'t connect, '
                   'it keeps retrying and we\'ll alert you.'
               : 'The gateway will be told to join "$ssid". Your WiFi password is sent once and stored '
-                  'encrypted on the server — it is never shown again in the app. The gateway applies '
+                  'encrypted on the server, and it is never shown again in the app. The gateway applies '
                   'this on its next check-in; one that is offline or can\'t reach the cloud won\'t '
                   'receive it until then. If it can\'t connect, it keeps retrying and we\'ll alert you.',
           confirmText: 'Set',
@@ -971,7 +971,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {});
         JKBMSRToast.show(
           context,
-          'Push could not be enabled — see the message in this section',
+          'Push could not be enabled. See the message in this section',
           isError: true,
         );
         return;
@@ -2126,7 +2126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: JKBMSRTokens.space8),
             Text(
-              'Set the network you want this gateway on from anywhere — no need to be on site. It applies '
+              'Set the network you want this gateway on from anywhere, with no need to be on site. It applies '
               'the target on its next check-in and keeps retrying.',
               style: JKBMSRTypography.bodySecondary,
             ),
@@ -2180,7 +2180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       target.isOpen
                           ? 'No password. Anyone nearby can join this network.'
-                          : 'Password stored encrypted — it is never shown again.',
+                          : 'The password is stored encrypted and never shown again.',
                       style: JKBMSRTypography.bodySecondary,
                     ),
                     if ((target.setAt ?? '').isNotEmpty) ...[
@@ -2218,12 +2218,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: JKBMSRTokens.space4),
             if (!loaded)
-              Text('—', style: JKBMSRTypography.bodySecondary)
+              Text('-', style: JKBMSRTypography.bodySecondary)
             else if (reported == null)
               Text("The gateway hasn't reported its WiFi state yet.", style: JKBMSRTypography.bodySecondary)
             else ...[
               Text(
-                reported.ssid.isNotEmpty ? '${reported.stateLabel} — ${reported.ssid}' : reported.stateLabel,
+                reported.ssid.isNotEmpty ? '${reported.stateLabel}: ${reported.ssid}' : reported.stateLabel,
                 style: JKBMSRTypography.body,
               ),
               if ((reported.at ?? '').isNotEmpty)
@@ -2249,7 +2249,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Open network'),
-              subtitle: const Text('No password — anyone nearby can join.'),
+              subtitle: const Text('No password. Anyone nearby can join.'),
               value: _wifiTargetOpen,
               onChanged: _wifiTargetBusy
                   ? null
@@ -2527,7 +2527,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // A legacy value can still be stored on a deployed
                     // gateway. Say so plainly rather than presenting it as a
                     // supported option.
-                    return '${bmsVendorLabel(val)} — not a supported product';
+                    return '${bmsVendorLabel(val)}: not a supported product';
                 }
               },
               selectedItem: _bmsVendor,
@@ -2703,7 +2703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text('Alert Thresholds', style: JKBMSRTypography.cardHeading),
             const SizedBox(height: JKBMSRTokens.space8),
             Text(
-              'Applied to every telemetry reading. Defaults are LFP-appropriate — most owners never need to change these.',
+              'Applied to every telemetry reading. Defaults are LFP-appropriate, and most owners never need to change these.',
               style: JKBMSRTypography.bodySecondary,
             ),
             const SizedBox(height: JKBMSRTokens.space24),
@@ -3017,7 +3017,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: Icon(Icons.info_outline, color: context.colors.textMuted),
             title: Text('App Version', style: JKBMSRTypography.body),
             trailing: Text(
-              _appVersion.isEmpty ? '—' : _appVersion,
+              _appVersion.isEmpty ? '-' : _appVersion,
               style: JKBMSRTypography.bodySecondary,
             ),
           ),

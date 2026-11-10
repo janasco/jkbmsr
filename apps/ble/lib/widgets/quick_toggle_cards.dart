@@ -109,7 +109,7 @@ class QuickToggleCards extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      !isConnected ? '—' : (card.isOn ? 'ON' : 'OFF'),
+                      !isConnected ? '-' : (card.isOn ? 'ON' : 'OFF'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,

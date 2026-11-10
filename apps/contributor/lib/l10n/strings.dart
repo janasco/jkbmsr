@@ -24,23 +24,23 @@ abstract final class ConsentStrings {
 
   static const String collectedTitle = 'What we collect';
   static const List<String> collected = [
-    "Real JK02 frames from your JK-BMS — the battery's own bytes",
+    "Real JK02 frames from your JK-BMS: the battery's own bytes",
     'Device model, hardware and firmware version strings',
     'Decoded telemetry samples: voltage, current, temperature, state of charge, '
         'cell voltages and alarm flags',
     'Optionally, a settings snapshot and the on-board logbook',
-    'Your app build and phone details (platform and OS version — never the '
+    'Your app build and phone details (platform and OS version, never the '
         'phone model)',
   ];
 
   static const String notCollectedTitle = 'What we never collect';
   static const List<String> notCollected = [
-    'No account, no email, no name — you are never identified',
+    'No account, no email, no name. You are never identified',
     'No location, contacts, files, phone state or advertising ID',
     'The battery serial number (withheld by default; you can opt in per '
         'contribution)',
-    'The full Bluetooth/MAC address — only the vendor prefix is kept',
-    "Day-level device dates — the manufacturing date is kept only as a year "
+    'The full Bluetooth/MAC address: only the vendor prefix is kept',
+    "Day-level device dates. The manufacturing date is kept only as a year "
         'and month',
   ];
 
@@ -63,7 +63,7 @@ abstract final class ConsentStrings {
 
   static const String optInLabel = 'I agree to contribute my device data';
 
-  static const String accept = 'I understand — contribute';
+  static const String accept = 'I understand, contribute';
   static const String decline = 'Not now';
 
   static const String declineNote =
@@ -102,7 +102,7 @@ abstract final class ScanStrings {
         return 'JK BMS Contributor needs Bluetooth permission to scan. Allow it '
             'and try again.';
       case BleScanFailureKind.locationServicesOff:
-        return 'Turn on Location Services, then try again — Android needs it to '
+        return 'Turn on Location Services, then try again. Android needs it to '
             'scan for Bluetooth devices.';
       case BleScanFailureKind.unsupported:
         return 'This device does not support Bluetooth LE, so it cannot scan '
@@ -179,7 +179,7 @@ abstract final class SubmitStrings {
   // Success ----------------------------------------------------------------
   static const String successTitle = 'Contribution received';
   static const String successBody =
-      'Thank you. It is stored anonymously — no account was created and '
+      'Thank you. It is stored anonymously: no account was created and '
       'nothing identifies you.';
   static const String successReceiptLabel = 'Receipt id';
 
@@ -192,7 +192,7 @@ abstract final class SubmitStrings {
   // Failure ----------------------------------------------------------------
   /// Offered beside every failure so a contribution is never lost.
   static const String exportHint =
-      'Nothing is lost — you can save the file and send it later.';
+      'Nothing is lost. You can save the file and send it later.';
 
   static const String tryAgain = 'Try again';
 

@@ -376,7 +376,7 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               ] else ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Downloads in-app and opens the Android installer — '
+                  'Downloads in-app and opens the Android installer, '
                   'no browser needed. You will confirm the install.',
                   style: TextStyle(
                       fontSize: 11.0,
@@ -532,7 +532,7 @@ class _SoftwareUpdateModalState extends State<SoftwareUpdateModal> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Download complete — Android is asking to install v$_latestVersion. '
+                  'Download complete. Android is asking to install v$_latestVersion. '
                   'Tap Install, and the app restarts updated.',
                   style: TextStyle(
                       fontSize: 11,

@@ -97,7 +97,7 @@ void main() {
     const report = PackCheckReport(
       verdict: PackCheckVerdict.clear,
       facts: [
-        'Garage pack — 16 cells · 8 mV spread · 22.4 °C · 84% charge',
+        'Garage pack: 16 cells · 8 mV spread · 22.4 °C · 84% charge',
       ],
     );
 

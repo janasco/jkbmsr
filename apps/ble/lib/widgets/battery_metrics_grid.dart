@@ -92,7 +92,7 @@ class BatteryMetricsGrid extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    isConnected ? item.value : '—',
+                    isConnected ? item.value : '-',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,

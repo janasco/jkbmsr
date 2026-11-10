@@ -88,7 +88,7 @@ class JKBMSRStatusPillsTemplate extends StatelessWidget {
           children: [
             Expanded(child: _tile(context, TemplateStatCard(icon: Icons.battery_charging_full, label: 'SOC', value: '${(t?.soc ?? 0.0).toStringAsFixed(2)}%'))),
             const SizedBox(width: JKBMSRTokens.space8),
-            Expanded(child: _tile(context, TemplateStatCard(icon: Icons.favorite, label: 'SOH', value: stateOfHealth != null ? '${stateOfHealth.toStringAsFixed(2)}%' : '—'))),
+            Expanded(child: _tile(context, TemplateStatCard(icon: Icons.favorite, label: 'SOH', value: stateOfHealth != null ? '${stateOfHealth.toStringAsFixed(2)}%' : '-'))),
           ],
         ),
         const SizedBox(height: JKBMSRTokens.space16),

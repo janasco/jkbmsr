@@ -103,7 +103,7 @@ class AlertsSection extends StatelessWidget {
               color: active[i].$3 ? _critical : _warning,
               icon: active[i].$3 ? Icons.error_rounded : Icons.warning_amber_rounded,
               title: active[i].$2,
-              subtitle: active[i].$3 ? 'Critical — address promptly' : 'Warning',
+              subtitle: active[i].$3 ? 'Critical, address promptly' : 'Warning',
               trailing: true,
               delayIndex: i,
             ),

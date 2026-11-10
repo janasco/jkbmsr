@@ -108,7 +108,7 @@ class WelcomeScreen extends StatelessWidget {
                   icon: Icons.radar_rounded,
                   color: Color(0xFF38BDF8),
                   title: 'Auto-detection',
-                  subtitle: 'The app sniffed out the brand from the device name and GATT services — '
+                  subtitle: 'The app sniffed out the brand from the device name and GATT services, '
                       'then confirms it by probing with the real request command.',
                 ),
                 const SizedBox(height: 10),

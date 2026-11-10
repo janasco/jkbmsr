@@ -584,7 +584,7 @@ class _BalanceCallout extends StatelessWidget {
                 Text('Cell balance',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: textPrimary)),
                 Text(
-                  balanced ? 'All cells balanced' : 'Imbalance detected — check connections',
+                  balanced ? 'All cells balanced' : 'Imbalance detected, check connections',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],

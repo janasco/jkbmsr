@@ -96,7 +96,7 @@ class JKBMSRAtAGlanceStripTemplate extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: JKBMSRTokens.space12),
-              _bigStat(context, Icons.favorite, 'SoH', stateOfHealth != null ? '${stateOfHealth.toStringAsFixed(0)}%' : '—'),
+              _bigStat(context, Icons.favorite, 'SoH', stateOfHealth != null ? '${stateOfHealth.toStringAsFixed(0)}%' : '-'),
             ],
           ),
           const SizedBox(height: JKBMSRTokens.space12),

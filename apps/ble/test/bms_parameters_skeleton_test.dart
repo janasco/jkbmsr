@@ -1,6 +1,6 @@
 // Parameter editor: while live telemetry is flowing but the settings frame has
 // not arrived, the form must show skeleton value bars rather than a wall of
-// "—". The schema (labels and groups) is known immediately, so the real labels
+// "-". The schema (labels and groups) is known immediately, so the real labels
 // stay and only the values are placeholders. The amber "waiting" banner stays
 // too, because it is the actionable hint.
 import 'package:flutter/material.dart';
@@ -42,7 +42,7 @@ void main() {
     // A real schema label is still present, so it reads as pending, not blank.
     expect(find.text('Cell Undervoltage Protection'), findsOneWidget);
     expect(
-      find.text('Waiting for the settings frame — tap Sync to request it now.'),
+      find.text('Waiting for the settings frame. Tap Sync to request it now.'),
       findsOneWidget,
     );
   });

@@ -144,7 +144,7 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Update available — 0.9.10'), findsOneWidget);
+    expect(find.text('Update available: 0.9.10'), findsOneWidget);
     expect(find.text('The readings that could be checked look normal.'),
         findsOneWidget);
   });

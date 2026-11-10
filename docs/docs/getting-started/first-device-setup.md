@@ -19,7 +19,7 @@ Use this for the first physical board. Encrypted / Secure Boot prototypes are a 
 4. The flasher redirects to `https://web.jkbmsr.com/onboard?device=…&code=…`.
 5. Sign in or create an account (the onboard URL is preserved through login/register).
 6. Confirm the prefilled device ID and claim code, then **Claim device**.
-7. Open the dashboard — the gateway should appear. Pack SOC/cells stay empty until the BMS is in Bluetooth range and the BLE link is up.
+7. Open the dashboard: the gateway should appear. Pack SOC/cells stay empty until the BMS is in Bluetooth range and the BLE link is up.
 
 ## SoftAP fallback
 
@@ -42,7 +42,7 @@ Expect lines that include:
 
 | Symptom | Cause | What to do |
 | --- | --- | --- |
-| Claim says “Invalid device credentials” right after Wi‑Fi | Device has not finished registering yet | Keep the form open — the dashboard retries for ~90s. Or wait and claim again. |
+| Claim says “Invalid device credentials” right after Wi‑Fi | Device has not finished registering yet | Keep the form open. The dashboard retries for ~90s. Or wait and claim again. |
 | Claim says verify your email (403) | Email verification is enabled in production | Open the verification link, then sign in (return path is preserved when possible). |
 | Device online, SOC 0%, no cells | Claim succeeded; BMS not in Bluetooth range or asleep | Confirm the BMS is powered/awake and within range; check BLE state and address in device diagnostics. |
 | Redirect lost after register | Opened verify email on another device | Sign in on the original browser, or reopen the onboard URL from the flasher. |

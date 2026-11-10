@@ -289,7 +289,7 @@ class _CaptureScreenState extends State<CaptureScreen>
               const SizedBox(height: 8),
               Text(
                 'Read one telemetry session and turn it into an anonymous '
-                'contribution. The app only listens — it never writes to your '
+                'contribution. The app only listens and never writes to your '
                 'battery.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,

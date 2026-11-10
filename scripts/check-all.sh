@@ -15,7 +15,7 @@
 #   packages/bms_core  dart analyze && dart test             (expect 24 passing)
 #   firmware           native host suites under ASan/UBSan, plus the device-profile
 #                      and hardware-target validators — see firmware/scripts/run-checks.sh
-#   docs               npm run docs:build
+#   copy               scripts/check-copy.mjs (no em dash in copy)
 #   releases           python3 scripts/validate_ota_metadata.py
 #                      python3 apps/pro/scripts/test_play_api_upload.py
 #
@@ -51,7 +51,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
-COMPONENTS=(apps/ble apps/pro apps/contributor packages/bms_core firmware docs releases)
+COMPONENTS=(apps/ble apps/pro apps/contributor packages/bms_core firmware docs releases copy)
 
 RUN=0
 STRICT=0
@@ -254,6 +254,24 @@ dart_suite() {
   fi
 }
 
+copy_suite() {
+  # The house style is plain punctuation. The check reads app string literals and
+  # the published documentation, and skips code comments: a comment is where the
+  # reasoning belongs and no reader sees one. It is wired here rather than only
+  # at release time because a string that reaches an app is shipped in a build
+  # that nobody re-reads.
+  local log="$LOG_DIR/copy.log"
+  if [ ! -f "$REPO_ROOT/scripts/check-copy.mjs" ]; then
+    record SKIP "scripts/check-copy.mjs not found"
+    return 0
+  fi
+  if ( cd "$REPO_ROOT" && node scripts/check-copy.mjs ) >"$log" 2>&1; then
+    record PASS "no em dashes in app strings or documentation"
+  else
+    record FAIL "em dash found in copy (see $log)"
+  fi
+}
+
 docs_suite() {
   local log="$LOG_DIR/docs.log"
   local docs_dir="$REPO_ROOT/docs"
@@ -393,6 +411,7 @@ for component in "${COMPONENTS[@]}"; do
     firmware)         firmware_suite ;;
     docs)             docs_suite ;;
     releases)         releases_suite ;;
+    copy)             copy_suite ;;
   esac
   printf '   ->    %s\n' "${RESULT[-1]}: ${DETAIL[-1]}"
 done

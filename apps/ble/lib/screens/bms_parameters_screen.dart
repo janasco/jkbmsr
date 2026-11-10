@@ -163,7 +163,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
             )
           : const SnackBar(
               content: Text(
-                  'Not sent — this parameter isn\'t supported on this BMS, or the write failed.'),
+                  'Not sent. This parameter isn\'t supported on this BMS, or the write failed.'),
               backgroundColor: Color(0xFFEF4444),
             ),
     );
@@ -248,7 +248,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Waiting for the settings frame — tap Sync to request it now.',
+                              'Waiting for the settings frame. Tap Sync to request it now.',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFF59E0B)),
                             ),
                           ),
@@ -412,7 +412,7 @@ class _BmsParametersScreenState extends State<BmsParametersScreen> {
   }
 
   String _formatParameterValue(BmsParameter p, double? value) {
-    if (value == null) return p.type == BmsParameterType.choice ? 'Not read yet' : '—';
+    if (value == null) return p.type == BmsParameterType.choice ? 'Not read yet' : '-';
     if (p.type == BmsParameterType.choice) {
       final options = p.options ?? const [];
       final idx = value.toInt();

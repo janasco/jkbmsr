@@ -106,7 +106,7 @@ extension RestoreStatusMessage on RestoreStatus {
   String get message {
     switch (this) {
       case RestoreStatus.restored:
-        return 'Supporter restored — ads are off.';
+        return 'Supporter restored. Ads are off.';
       case RestoreStatus.notEntitled:
         return 'No Supporter purchase on this Google Play account.';
       case RestoreStatus.unavailable:

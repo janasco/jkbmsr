@@ -20,5 +20,5 @@ For the first board, follow the full runbook: [First device setup](/getting-star
 4. Make sure the JK-BMS is powered and within Bluetooth range of the ESP32 gateway.
 5. Confirm telemetry appears in the dashboard.
 
-Claim can succeed before the BMS link is up — empty SOC/cells until the BMS is
+Claim can succeed before the BMS link is up. Empty SOC/cells until the BMS is
 in range and connected is expected.

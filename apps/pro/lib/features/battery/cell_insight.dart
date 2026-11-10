@@ -67,7 +67,7 @@ class CellInsight {
       CellSpreadBand.veryBalanced => 'Well within the balanced range',
       CellSpreadBand.balanced => 'Within the balanced range',
       CellSpreadBand.checkCells =>
-        'Wider than the balanced range — check cells',
+        'Wider than the balanced range, check cells',
     };
     if (!balancing) return verdict;
     if (balancingCurrentAmps > 0) {

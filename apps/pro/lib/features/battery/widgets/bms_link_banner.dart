@@ -35,7 +35,7 @@ class BmsLinkBanner extends StatelessWidget {
     return JKBMSRAlertBanner(
       tone: JKBMSRAlertTone.warning,
       icon: Icons.link_off,
-      title: 'Gateway online — no data from the BMS',
+      title: 'Gateway online, but no data from the BMS',
       message: 'The gateway is connected, but it has no link to the battery, so '
           'the readings on this screen stay empty. It recovers automatically '
           'once the link is back.',

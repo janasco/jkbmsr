@@ -2,7 +2,7 @@
 
 The browser flasher verifies every part it writes against the release's
 published SHA-256 before writing it, and shows the release checksum for the
-build it is about to install. You do not need to download a file manually —
+build it is about to install. You do not need to download a file manually.
 `cdn.jkbmsr.com` does not serve firmware binaries.
 
 ## If you have a firmware file (advanced / OTA inspection)

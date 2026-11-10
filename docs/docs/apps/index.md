@@ -26,7 +26,7 @@ works from anywhere (same data as the web dashboard) and adds:
 
 ## JK BMS Bluetooth (Android)
 
-A standalone, direct-Bluetooth monitoring app — **no gateway, no cloud, no
+A standalone, direct-Bluetooth monitoring app: **no gateway, no cloud, no
 account required**. It connects straight to the BMS's Bluetooth module and
 is built and tested against JK-BMS:
 

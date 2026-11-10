@@ -11,12 +11,12 @@ Current production firmware target:
 ## JK-BMS model matrix
 
 Every model below is a JK-BMS product in the same JK protocol family. The
-**Status** column is marked honestly — a model is only marked
+**Status** column is marked honestly: a model is only marked
 `hardware-tested` or `protocol-verified` where that evidence actually exists:
 
-- `hardware-tested` — verified against live hardware.
-- `protocol-verified` — a protocol capture exists for the model family.
-- `listed` — same JK family, not individually tested.
+- `hardware-tested`: verified against live hardware.
+- `protocol-verified`: a protocol capture exists for the model family.
+- `listed`: same JK family, not individually tested.
 
 ### PB Series
 

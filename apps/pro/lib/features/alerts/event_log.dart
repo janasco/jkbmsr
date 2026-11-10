@@ -151,8 +151,8 @@ EventLogEntry _alertEntry(Alert alert) {
   final severity = alert.severity.toLowerCase();
   final fields = <EventLogField>[
     EventLogField('Severity', _capitalize(severity)),
-    EventLogField('Message', alert.message.isEmpty ? '—' : alert.message),
-    EventLogField('Gateway', alert.deviceName.isEmpty ? '—' : alert.deviceName),
+    EventLogField('Message', alert.message.isEmpty ? '-' : alert.message),
+    EventLogField('Gateway', alert.deviceName.isEmpty ? '-' : alert.deviceName),
     EventLogField('Raised', formatEventLogTime(alert.createdAt)),
   ];
   if (alert.resolvedAt != null && alert.resolvedAt!.trim().isNotEmpty) {
@@ -180,7 +180,7 @@ EventLogEntry _bleEntry(BleSessionRecord record, int index) {
   final frames = event.framesDecoded == 1 ? '1 frame' : '${event.framesDecoded} frames';
   final gateway = record.deviceName.isNotEmpty
       ? record.deviceName
-      : (record.deviceId.isNotEmpty ? record.deviceId : '—');
+      : (record.deviceId.isNotEmpty ? record.deviceId : '-');
 
   return EventLogEntry(
     id: 'ble:${record.deviceId}:$index:${event.timestamp}',
@@ -197,7 +197,7 @@ EventLogEntry _bleEntry(BleSessionRecord record, int index) {
       ),
       EventLogField(
         'Advertised name',
-        event.advertisedName.isEmpty ? '—' : event.advertisedName,
+        event.advertisedName.isEmpty ? '-' : event.advertisedName,
       ),
       EventLogField(
         'Signal',
@@ -206,12 +206,12 @@ EventLogEntry _bleEntry(BleSessionRecord record, int index) {
       ),
       EventLogField(
         'Hardware',
-        event.hardwareVersion.isEmpty ? '—' : event.hardwareVersion,
+        event.hardwareVersion.isEmpty ? '-' : event.hardwareVersion,
         mono: true,
       ),
       EventLogField(
         'Firmware',
-        event.softwareVersion.isEmpty ? '—' : event.softwareVersion,
+        event.softwareVersion.isEmpty ? '-' : event.softwareVersion,
         mono: true,
       ),
       EventLogField('Frames decoded', '${event.framesDecoded}', mono: true),
@@ -243,7 +243,7 @@ EventLogEntry _otaEntry(OtaEventRecord record) {
 
   final gateway = record.deviceName.isNotEmpty
       ? record.deviceName
-      : (record.deviceId.isNotEmpty ? record.deviceId : '—');
+      : (record.deviceId.isNotEmpty ? record.deviceId : '-');
 
   return EventLogEntry(
     id: 'ota:${record.deviceId}:${event.id}:${event.createdAt}',
@@ -255,9 +255,9 @@ EventLogEntry _otaEntry(OtaEventRecord record) {
       EventLogField('Gateway', gateway),
       EventLogField(
         'Result',
-        event.lastResult.isEmpty ? '—' : _capitalize(event.lastResult),
+        event.lastResult.isEmpty ? '-' : _capitalize(event.lastResult),
       ),
-      EventLogField('Offered version', version.isEmpty ? '—' : version, mono: true),
+      EventLogField('Offered version', version.isEmpty ? '-' : version, mono: true),
       EventLogField('Check succeeded', event.lastCheckSucceeded ? 'Yes' : 'No'),
       EventLogField('Update available', event.updateAvailable ? 'Yes' : 'No'),
       EventLogField('Update applied', event.updateApplied ? 'Yes' : 'No'),

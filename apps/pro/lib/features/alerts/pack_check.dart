@@ -338,7 +338,7 @@ PackCheckReport _evaluatePack(PackCheckInput pack) {
     return PackCheckReport.noData(_noDataReason(pack));
   }
 
-  final prefix = pack.deviceName.trim().isEmpty ? '' : '${pack.deviceName} — ';
+  final prefix = pack.deviceName.trim().isEmpty ? '' : '${pack.deviceName}: ';
   return PackCheckReport(
     verdict: PackCheckVerdict.clear,
     facts: ['$prefix${facts.join(' · ')}'],

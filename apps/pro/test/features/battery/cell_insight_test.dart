@@ -47,7 +47,7 @@ void main() {
       );
       expect(
         insight.meaningLine,
-        'Wider than the balanced range — check cells',
+        'Wider than the balanced range, check cells',
       );
       expect(insight.needsAttention, isTrue);
     });

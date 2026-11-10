@@ -1,7 +1,7 @@
 # Firmware Flashing
 
 Flash the ESP32 gateway over USB. All flashing happens in the browser flasher at
-<https://web.jkbmsr.com/flash> — it requires a signed-in JK BMS Remote account.
+<https://web.jkbmsr.com/flash>. It requires a signed-in JK BMS Remote account.
 There is no local flashing option; PlatformIO builds are for firmware
 development only, never for customer installs.
 
@@ -17,7 +17,7 @@ development only, never for customer installs.
    and password. Keep USB connected.
 5. On success the browser opens
    [web.jkbmsr.com/onboard](https://web.jkbmsr.com/onboard) with device ID +
-   claim code — sign in and claim.
+   claim code. Sign in and claim.
 
 Field fallback (no USB): hold **BOOT** ~5s, join SoftAP `JKBMSR-Setup-XXXX`
 (password = claim code), submit Wi‑Fi from a phone.

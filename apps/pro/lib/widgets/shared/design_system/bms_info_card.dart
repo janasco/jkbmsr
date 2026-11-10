@@ -22,18 +22,18 @@ class JKBMSRBmsInfoCard extends StatelessWidget {
     final bms = t?.bms;
 
     final rows = <(String, String)>[
-      ('Pack voltage', t != null ? '${t.voltage.toStringAsFixed(2)} V' : '—'),
-      ('Current', t != null ? '${t.current.toStringAsFixed(1)} A' : '—'),
-      ('Power', t != null ? '${t.power.toStringAsFixed(0)} W' : '—'),
-      ('Remaining capacity', bms != null ? '${bms.remainingCapacityAh.toStringAsFixed(1)} Ah' : '—'),
-      ('Full capacity', bms != null ? '${bms.fullCapacityAh.toStringAsFixed(1)} Ah' : '—'),
-      ('Cycle count', bms != null ? '${bms.cycleCount}' : '—'),
+      ('Pack voltage', t != null ? '${t.voltage.toStringAsFixed(2)} V' : '-'),
+      ('Current', t != null ? '${t.current.toStringAsFixed(1)} A' : '-'),
+      ('Power', t != null ? '${t.power.toStringAsFixed(0)} W' : '-'),
+      ('Remaining capacity', bms != null ? '${bms.remainingCapacityAh.toStringAsFixed(1)} Ah' : '-'),
+      ('Full capacity', bms != null ? '${bms.fullCapacityAh.toStringAsFixed(1)} Ah' : '-'),
+      ('Cycle count', bms != null ? '${bms.cycleCount}' : '-'),
       (
         'State of health',
-        (bms?.stateOfHealth != null) ? '${bms!.stateOfHealth!.toStringAsFixed(0)} %' : '—',
+        (bms?.stateOfHealth != null) ? '${bms!.stateOfHealth!.toStringAsFixed(0)} %' : '-',
       ),
-      ('Cell delta', bms != null ? '${bms.deltaCellVoltage.toStringAsFixed(0)} mV' : '—'),
-      ('Balancing', bms != null ? (bms.balancing ? 'Active' : 'Idle') : '—'),
+      ('Cell delta', bms != null ? '${bms.deltaCellVoltage.toStringAsFixed(0)} mV' : '-'),
+      ('Balancing', bms != null ? (bms.balancing ? 'Active' : 'Idle') : '-'),
     ];
 
     return Column(

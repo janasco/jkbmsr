@@ -28,7 +28,7 @@ Authenticated customer request:
 - Prefer `claimCode` for all current firmware.
 - Legacy `deviceSecret` is accepted only for devices registered before claim codes existed.
 - If email verification is enabled, the account must be verified first (403 otherwise).
-- Claiming before the device finishes register returns 401 — retry after Wi‑Fi/register completes.
+- Claiming before the device finishes register returns 401; retry after Wi‑Fi/register completes.
 
 Browser path: flash → Improv → [web.jkbmsr.com/onboard](https://web.jkbmsr.com/onboard)?device=…&code=….
 

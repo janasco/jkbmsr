@@ -17,11 +17,11 @@ class TemperaturesSection extends StatelessWidget {
     final mutedText = const Color(0xFF64748B);
 
     final temps = [
-      _TempData(label: 'MOS', temp: isConnected ? '${status.mosTemp.toStringAsFixed(1)} °C' : '—', icon: Icons.memory_rounded),
+      _TempData(label: 'MOS', temp: isConnected ? '${status.mosTemp.toStringAsFixed(1)} °C' : '-', icon: Icons.memory_rounded),
       _TempData(
-          label: 'Battery T1', temp: isConnected ? '${status.t1Temp.toStringAsFixed(1)} °C' : '—', icon: Icons.device_thermostat_rounded),
+          label: 'Battery T1', temp: isConnected ? '${status.t1Temp.toStringAsFixed(1)} °C' : '-', icon: Icons.device_thermostat_rounded),
       _TempData(
-          label: 'Battery T2', temp: isConnected ? '${status.t2Temp.toStringAsFixed(1)} °C' : '—', icon: Icons.device_thermostat_rounded),
+          label: 'Battery T2', temp: isConnected ? '${status.t2Temp.toStringAsFixed(1)} °C' : '-', icon: Icons.device_thermostat_rounded),
     ];
 
     return Column(

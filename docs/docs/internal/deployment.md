@@ -7,7 +7,7 @@ JKBMSR Cloud runs on managed serverless infrastructure (hosted API, managed data
 - `jkbmsr.com` (the marketing site and the docs at `/docs/`)
 - `web.jkbmsr.com`
 - `api.jkbmsr.com`
-- `docs.jkbmsr.com` (retired as a browsable copy — 301s to `jkbmsr.com/docs/`)
+- `docs.jkbmsr.com` (retired as a browsable copy; it 301s to `jkbmsr.com/docs/`)
 
 ## Docs Domain State
 

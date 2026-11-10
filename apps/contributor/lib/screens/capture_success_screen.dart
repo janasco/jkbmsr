@@ -66,7 +66,7 @@ class CaptureSuccessScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Real data from your pack. Nothing has been sent yet — you review '
+              'Real data from your pack. Nothing has been sent yet: you review '
               'it first and decide.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -115,7 +115,7 @@ class CaptureSuccessScreen extends StatelessWidget {
                   DetailRow(
                     label: 'Firmware',
                     value:
-                        bms.softwareVersion.isEmpty ? '—' : bms.softwareVersion,
+                        bms.softwareVersion.isEmpty ? '-' : bms.softwareVersion,
                   ),
                   DetailRow(
                     label: 'Serial',

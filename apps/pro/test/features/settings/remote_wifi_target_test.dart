@@ -181,11 +181,11 @@ void main() {
     expect(find.text('Remote WiFi target'), findsOneWidget);
     expect(find.text('HomeNet'), findsOneWidget);
     expect(find.text('Secured'), findsOneWidget);
-    expect(find.text('Password stored encrypted — it is never shown again.'), findsOneWidget);
+    expect(find.text('The password is stored encrypted and never shown again.'), findsOneWidget);
 
     // The gateway is still on the old network and reported the failure.
     expect(find.text('Last reported by the gateway'), findsOneWidget);
-    expect(find.text('Wrong password — OldNet'), findsOneWidget);
+    expect(find.text('Wrong password: OldNet'), findsOneWidget);
     expect(find.text('handshake timeout'), findsOneWidget);
 
     // The unreachable-alert episode is surfaced with the offline explanation.

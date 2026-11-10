@@ -15,7 +15,7 @@ class BmsInfoSection extends StatelessWidget {
   static const _muted = Color(0xFF64748B);
 
   static String _fmtDuration(int seconds) {
-    if (seconds <= 0) return '—';
+    if (seconds <= 0) return '-';
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     if (h == 0) return '${m}m';
@@ -60,7 +60,7 @@ class BmsInfoSection extends StatelessWidget {
               for (int i = 0; i < rows.length; i++) ...[
                 _InfoRow(
                   label: rows[i].$1,
-                  value: isConnected ? rows[i].$2 : '—',
+                  value: isConnected ? rows[i].$2 : '-',
                   textPrimary: textPrimary,
                 ),
                 if (i != rows.length - 1)

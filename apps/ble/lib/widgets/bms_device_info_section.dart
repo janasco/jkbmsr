@@ -32,7 +32,7 @@ class BmsDeviceInfoSection extends StatelessWidget {
   static const _muted = Color(0xFF64748B);
 
   static String _fmtDuration(int seconds) {
-    if (seconds <= 0) return '—';
+    if (seconds <= 0) return '-';
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     if (h == 0) return '${m}m';
@@ -57,8 +57,8 @@ class BmsDeviceInfoSection extends StatelessWidget {
       ('Firmware version', _orDash(i?.softwareVersion)),
       ('Serial number', _orDash(i?.serialNumber)),
       ('Manufactured', _orDash(i?.manufacturingDate)),
-      ('Power-on count', i == null ? '—' : '${i.powerOnCount}'),
-      ('Total run time', i == null ? '—' : _fmtDuration(i.uptimeSeconds)),
+      ('Power-on count', i == null ? '-' : '${i.powerOnCount}'),
+      ('Total run time', i == null ? '-' : _fmtDuration(i.uptimeSeconds)),
     ];
 
     return Column(
@@ -82,7 +82,7 @@ class BmsDeviceInfoSection extends StatelessWidget {
                 else
                   _InfoRow(
                     label: rows[r].$1,
-                    value: isConnected ? rows[r].$2 : '—',
+                    value: isConnected ? rows[r].$2 : '-',
                     textPrimary: textPrimary,
                   ),
                 if (r != rows.length - 1)
@@ -95,7 +95,7 @@ class BmsDeviceInfoSection extends StatelessWidget {
     );
   }
 
-  static String _orDash(String? v) => (v == null || v.isEmpty) ? '—' : v;
+  static String _orDash(String? v) => (v == null || v.isEmpty) ? '-' : v;
 }
 
 class _InfoRow extends StatelessWidget {

@@ -128,7 +128,7 @@ abstract final class ContributionFields {
       id: 'bms.manufacturingYearMonth',
       group: 'Device',
       label: 'Manufacturing month',
-      description: 'Year and month only — never the day.',
+      description: 'Year and month only, never the day.',
       topLevel: 'bms',
       key: 'manufacturingYearMonth',
     ),

@@ -714,10 +714,10 @@ class _BatteryDashboardScreenState extends State<BatteryDashboardScreen> with Wi
                   title: linkDown ? 'No data from the BMS' : 'Waiting for telemetry',
                   description: linkDown
                       ? 'The gateway is online but is not receiving battery '
-                          'data. See the note above for what to check — '
+                          'data. See the note above for what to check, and '
                           'readings return on their own once the link is back.'
                       : 'This gateway is online but hasn\'t reported any BMS data yet. '
-                          'This is normal right after pairing or a reconnect — '
+                          'This is normal right after pairing or a reconnect. '
                           'pull to refresh in a moment.',
                 ),
               ],
@@ -804,7 +804,7 @@ class _BleHistoryTile extends StatelessWidget {
     final connectedLabel = connectedAt != null ? _formatDateTime(connectedAt) : event.timestamp;
     final signalLabel = event.rssi > -128 ? '${event.rssi} dBm' : 'Unknown';
     final firmwareLabel =
-        '${event.hardwareVersion.isEmpty ? '—' : event.hardwareVersion} / ${event.softwareVersion.isEmpty ? '—' : event.softwareVersion}';
+        '${event.hardwareVersion.isEmpty ? '-' : event.hardwareVersion} / ${event.softwareVersion.isEmpty ? '-' : event.softwareVersion}';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: JKBMSRTokens.space16, vertical: JKBMSRTokens.space12),

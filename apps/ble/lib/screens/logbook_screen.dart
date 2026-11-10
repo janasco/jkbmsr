@@ -129,7 +129,7 @@ class _LogbookScreenState extends State<LogbookScreen> {
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not request the logbook — connect to a JK-BMS first.'),
+          content: Text('Could not request the logbook. Connect to a JK-BMS first.'),
           duration: Duration(seconds: 2),
         ),
       );

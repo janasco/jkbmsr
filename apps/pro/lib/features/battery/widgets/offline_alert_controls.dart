@@ -151,7 +151,7 @@ class OfflineAlertControls extends StatelessWidget {
               title: const Text('Mute offline alerts'),
               subtitle: Text(
                 alert.muted
-                    ? 'Muted — you will not be alerted for this gateway.'
+                    ? 'Muted. You will not be alerted for this gateway.'
                     : 'Silence offline alerts for this gateway.',
                 style: JKBMSRTypography.bodySecondary,
               ),

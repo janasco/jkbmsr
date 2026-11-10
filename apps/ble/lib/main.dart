@@ -178,7 +178,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       await FlutterBluePlus.turnOn();
     } catch (error) {
       final failure = classifyBluetoothOnFailure(error);
-      debugPrint('FlutterBluePlus.turnOn: ${failure.name} — $error');
+      debugPrint('FlutterBluePlus.turnOn: ${failure.name}: $error');
       if (failure == BluetoothOnFailure.declined || !mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

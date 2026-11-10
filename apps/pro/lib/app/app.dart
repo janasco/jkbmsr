@@ -30,7 +30,7 @@ class _JKBMSRShellLayoutState extends State<JKBMSRShellLayout> {
     if (r.startsWith('/cells')) return 1;
     if (r.startsWith('/alerts')) return 2;
     if (r.startsWith('/settings') || r.startsWith('/ota') || r.startsWith('/firmware')) return 3;
-    if (r.startsWith('/devices')) return -1; // gateway list — not one of the four tabs
+    if (r.startsWith('/devices')) return -1; // gateway list, not one of the four tabs
     return 0; // Dashboard (and /history, which is dashboard-scoped)
   }
 

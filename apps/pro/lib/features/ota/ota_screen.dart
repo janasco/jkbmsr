@@ -23,8 +23,8 @@ class _OTAScreenState extends State<OTAScreen> {
   bool _isLoading = true;
   bool _isChecking = false;
   bool _updateAvailable = false;
-  String _currentVersion = '—';
-  String _latestVersion = '—';
+  String _currentVersion = '-';
+  String _latestVersion = '-';
   String? _activeDeviceId;
   List<OtaEvent> _events = [];
   String? _error;
@@ -123,7 +123,7 @@ class _OTAScreenState extends State<OTAScreen> {
             });
             try {
               await _apiClient.requestOtaCheck(_activeDeviceId!);
-              JKBMSRToast.show(context, 'Update check requested — the gateway will install it if one is available');
+              JKBMSRToast.show(context, 'Update check requested. The gateway will install it if one is available');
               _loadOtaData();
             } catch (e) {
               JKBMSRToast.show(context, friendlyErrorMessage(e), isError: true);

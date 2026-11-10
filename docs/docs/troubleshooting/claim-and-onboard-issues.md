@@ -7,11 +7,11 @@ Problems claiming a gateway after browser flash or SoftAP setup.
 Usually the gateway has not registered with the cloud yet (Wi‑Fi just joined).
 
 1. Keep the gateway powered and on the target Wi‑Fi.
-2. Retry claim — the onboard form polls for about 90 seconds.
+2. Retry claim: the onboard form polls for about 90 seconds.
 3. If it still fails, open a serial monitor at 115200 and confirm the device ID / claim code match the form.
 4. Confirm production firmware is `0.1.4` or newer (claim-code path).
 
-Wrong claim code or typo also returns the same generic 401 — double-check the code from the label or serial log.
+Wrong claim code or typo also returns the same generic 401; double-check the code from the label or serial log.
 
 ## Claim blocked: verify your email
 

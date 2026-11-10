@@ -1,6 +1,6 @@
 # Cloud Setup
 
-JKBMSR Cloud runs on managed serverless infrastructure: a hosted API, a managed database, and private firmware storage — no self-managed servers.
+JKBMSR Cloud runs on managed serverless infrastructure: a hosted API, a managed database, and private firmware storage, and no self-managed servers.
 
 ## Components
 

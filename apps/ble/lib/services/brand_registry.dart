@@ -153,7 +153,7 @@ class BrandRegistry {
       brand: BmsBrand.ogt,
       name: 'Offgridtec',
       tag: 'OGT',
-      tagline: 'Detected by name only — protocol needs a per-device key',
+      tagline: 'Detected by name only; protocol needs a per-device key',
       accent: Color(0xFF64748B),
       icon: Icons.offline_bolt_rounded,
     ),

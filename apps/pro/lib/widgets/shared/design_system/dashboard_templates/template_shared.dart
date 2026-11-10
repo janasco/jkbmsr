@@ -436,7 +436,7 @@ class TemplateSwitchesPanel extends StatelessWidget {
           _ReadOnlySwitch(icon: Icons.arrow_downward, label: 'Discharging', on: bms.discharging),
           const SizedBox(height: JKBMSRTokens.space4),
           Text(
-            'Read-only — reflects the BMS\'s current state.',
+            'Read-only: reflects the BMS\'s current state.',
             style: JKBMSRTypography.label.copyWith(color: context.colors.textMuted),
           ),
         ],

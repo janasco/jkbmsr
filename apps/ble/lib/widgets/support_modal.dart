@@ -126,7 +126,7 @@ class SupportModal extends StatelessWidget {
       return 'This copy is already ad-free.';
     }
     if (entitlement.adFree) {
-      return 'You are a Supporter — this app is ad-free.';
+      return 'You are a Supporter. This app is ad-free.';
     }
     if (!AdsConfig.current.isConfigured) {
       return 'JK BMS Bluetooth is free and ad-free.';

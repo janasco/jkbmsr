@@ -17,7 +17,7 @@ import 'package:share_plus/share_plus.dart';
 abstract final class ContributionExport {
   /// The share-sheet caption shown beside the file. User-facing prose names the
   /// product "JK BMS Contributor", never "JKBMSR".
-  static const String shareText = 'JK BMS Contributor — anonymous capture';
+  static const String shareText = 'JK BMS Contributor: anonymous capture';
 
   /// `jkbmsr-contribution-<utc>-<shortid>.json`.
   ///

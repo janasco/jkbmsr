@@ -24,7 +24,7 @@ See [Firmware Flashing](/getting-started/firmware-flashing) for the full path.
 
 Firmware delivery is gated to keep anonymous bulk downloads, hotlinks and
 link-shared copies out of circulation. A logged-in user can still save the
-bytes the browser writes — the gate stops anonymous distribution, it is not
+bytes the browser writes. The gate stops anonymous distribution, it is not
 device binding.
 
 ## Public verification material

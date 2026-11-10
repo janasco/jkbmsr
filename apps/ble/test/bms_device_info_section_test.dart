@@ -35,9 +35,9 @@ void main() {
       home: Scaffold(body: BmsDeviceInfoSection(info: null, isConnected: true)),
     ));
 
-    // Still waiting for the 0x03 frame: value column is a skeleton, not "—".
+    // Still waiting for the 0x03 frame: value column is a skeleton, not "-".
     expect(find.byType(JkSkeleton), findsNWidgets(7));
-    expect(find.text('—'), findsNothing);
+    expect(find.text('-'), findsNothing);
     // The labels stay real, so the panel still reads as pending fields.
     expect(find.text('Model'), findsOneWidget);
     expect(find.text('Serial number'), findsOneWidget);
@@ -46,7 +46,7 @@ void main() {
   testWidgets('device-info panel shows dashes for fields absent from a decoded frame',
       (tester) async {
     // A frame HAS been decoded, but these string fields are empty in it: that
-    // is "not present", which must stay "—" and never become a skeleton.
+    // is "not present", which must stay "-" and never become a skeleton.
     const info = BmsModelInfo(
       modelName: 'JK-B2A24S15P',
       hardwareVersion: '',
@@ -62,8 +62,8 @@ void main() {
     ));
 
     expect(find.byType(JkSkeleton), findsNothing);
-    // hardware, software, serial, manufactured, run time (uptime 0) are all "—".
-    expect(find.text('—'), findsNWidgets(5));
+    // hardware, software, serial, manufactured, run time (uptime 0) are all "-".
+    expect(find.text('-'), findsNWidgets(5));
     expect(find.text('JK-B2A24S15P'), findsOneWidget);
   });
 
@@ -82,6 +82,6 @@ void main() {
     ));
 
     expect(find.text('JK-B2A24S15P'), findsNothing);
-    expect(find.text('—'), findsNWidgets(7));
+    expect(find.text('-'), findsNWidgets(7));
   });
 }

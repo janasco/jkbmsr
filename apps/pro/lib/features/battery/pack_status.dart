@@ -225,7 +225,7 @@ PackStatusLine _firmwareLine(PackStatusInput input) {
       label: 'Firmware up to date',
       detail: latest == null || latest.isEmpty
           ? 'Update available'
-          : 'Update available — $latest',
+          : 'Update available: $latest',
       mark: PackStatusMark.pending,
     );
   }
@@ -250,7 +250,7 @@ PackStatusLine _firmwareLine(PackStatusInput input) {
 
   return PackStatusLine(
     label: 'Firmware up to date',
-    detail: 'Up to date — $installed',
+    detail: 'Up to date: $installed',
     mark: PackStatusMark.done,
   );
 }

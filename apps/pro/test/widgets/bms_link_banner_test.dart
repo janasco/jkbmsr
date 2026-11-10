@@ -5,7 +5,7 @@ import 'package:jkbmsr_pro/models/telemetry.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/components.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/theme.dart';
 
-const _title = 'Gateway online — no data from the BMS';
+const _title = 'Gateway online, but no data from the BMS';
 
 Telemetry _telemetry(Map<String, dynamic> diagnostics) {
   return Telemetry(

@@ -57,7 +57,7 @@ class BatteryHeroCard extends StatelessWidget {
     final power = status.powerW;
     final powerLabel = isConnected
         ? (power.abs() >= 1000 ? '${(power / 1000).toStringAsFixed(2)} kW' : '${power.toStringAsFixed(0)} W')
-        : '—';
+        : '-';
 
     final deltaMv = status.deltaVoltageMv;
     final imbalanceOk = deltaMv < 30;
@@ -160,7 +160,7 @@ class BatteryHeroCard extends StatelessWidget {
                         label: 'Capacity',
                         value: isConnected
                             ? '${status.remainingCapacityAh.toStringAsFixed(1)} / ${status.nominalCapacityAh.toStringAsFixed(1)} Ah'
-                            : '— / — Ah',
+                            : '- / - Ah',
                         color: socColor,
                         textPrimary: textPrimary,
                       ),
@@ -168,7 +168,7 @@ class BatteryHeroCard extends StatelessWidget {
                       _SocStat(
                         icon: Icons.autorenew_rounded,
                         label: 'Cycles',
-                        value: isConnected ? '${status.cycleCount}' : '—',
+                        value: isConnected ? '${status.cycleCount}' : '-',
                         color: _blue,
                         textPrimary: textPrimary,
                       ),
@@ -187,7 +187,7 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'PACK VOLTAGE',
-                  value: isConnected ? '${status.totalVoltage.toStringAsFixed(2)} V' : '—',
+                  value: isConnected ? '${status.totalVoltage.toStringAsFixed(2)} V' : '-',
                   subValue: isConnected ? 'Avg: ${status.averageCellVoltage.toStringAsFixed(3)} V' : '',
                   icon: Icons.bolt_rounded,
                   accentColor: isConnected ? _blue : _muted,
@@ -200,7 +200,7 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'CURRENT',
-                  value: isConnected ? '${current.toStringAsFixed(1)} A' : '—',
+                  value: isConnected ? '${current.toStringAsFixed(1)} A' : '-',
                   animValue: isConnected ? current : null,
                   formatter: (v) => '${v.toStringAsFixed(1)} A',
                   subValue: isConnected ? (charging ? 'Charging' : (discharging ? 'Discharging' : 'Standby')) : '',
@@ -236,7 +236,7 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'MOSFET / CELL TEMP',
-                  value: isConnected ? '${status.mosTemp.toStringAsFixed(1)} °C' : '—',
+                  value: isConnected ? '${status.mosTemp.toStringAsFixed(1)} °C' : '-',
                   subValue: isConnected ? 'Cells: ${status.t1Temp.toStringAsFixed(1)} / ${status.t2Temp.toStringAsFixed(1)} °C' : '',
                   icon: Icons.thermostat_rounded,
                   accentColor: tempColor,
@@ -274,7 +274,7 @@ class BatteryHeroCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isConnected ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: —',
+                              isConnected ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: -',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
                             ),
                             if (isConnected && status.cells.isNotEmpty)

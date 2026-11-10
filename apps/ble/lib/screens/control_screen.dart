@@ -92,7 +92,7 @@ class _ControlScreenState extends State<ControlScreen> {
             )
           : SnackBar(
               content: Text(
-                  'Not sent — $switchKey isn\'t supported on this BMS, or the write failed.'),
+                  'Not sent: $switchKey isn\'t supported on this BMS, or the write failed.'),
               backgroundColor: const Color(0xFFEF4444),
               duration: const Duration(seconds: 3),
             ),
@@ -256,7 +256,7 @@ class _ControlScreenState extends State<ControlScreen> {
                   icon: Icons.visibility_rounded,
                   title: 'MONITORING ONLY',
                   message: brand.isPublic
-                      ? "Live control isn't supported for this firmware yet — you can still view telemetry on the Status tab."
+                      ? "Live control isn't supported for this firmware yet. You can still view telemetry on the Status tab."
                       : 'JK BMS Remote supports JK-BMS only. This device was identified as an '
                           'unsupported battery system, so it is read-only here and no '
                           'commands will be sent to it.',

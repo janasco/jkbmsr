@@ -364,7 +364,7 @@ class BleBmsService {
         } else {
           _connectedBrand = top.brand;
           _addLog("Best guess from service UUIDs: ${top.brand.name.toUpperCase()} "
-              "(${top.reason}) — not certain, and this brand has no probe "
+              "(${top.reason}), not certain, and this brand has no probe "
               "request, so treating it as assumed.");
         }
       } else if (_connectedBrand == BmsBrand.unknown) {
@@ -400,7 +400,7 @@ class BleBmsService {
         _addLog("Resolved brand: ${_connectedBrand.name.toUpperCase()}");
         _beginBrandPolling(_connectedBrand);
         if (_connectedBrand == BmsBrand.unknown) {
-          _addLog("Unrecognized BMS brand — live telemetry isn't available for this device.");
+          _addLog("Unrecognized BMS brand: live telemetry isn't available for this device.");
         }
       }
 
@@ -428,7 +428,7 @@ class BleBmsService {
       if (matches.isNotEmpty) {
         scanServices = matches;
       } else {
-        _addLog("Warning: expected BMS service $targetServiceUuid not found on this device — falling back to scanning all services.");
+        _addLog("Warning: expected BMS service $targetServiceUuid not found on this device; falling back to scanning all services.");
       }
     }
 
@@ -466,7 +466,7 @@ class BleBmsService {
       _notifySubscription = _notifyCharacteristic!.onValueReceived.listen(_handleIncomingBleData);
       _addLog("Subscribed to telemetry notifications: ${_notifyCharacteristic!.uuid}");
     } else {
-      _addLog("Warning: no notify characteristic found — live telemetry can't be received.");
+      _addLog("Warning: no notify characteristic found, so live telemetry can't be received.");
     }
     if (_writeCharacteristic != null) {
       // The official JK-BMS app always writes with WRITE_TYPE_NO_RESPONSE
@@ -479,7 +479,7 @@ class BleBmsService {
       _addLog(
           "Found command write characteristic: ${_writeCharacteristic!.uuid} (advertises writeWithoutResponse: ${_writeCharacteristic!.properties.writeWithoutResponse})");
     } else {
-      _addLog("Warning: no write characteristic found — commands can't be sent to hardware.");
+      _addLog("Warning: no write characteristic found, so commands can't be sent to hardware.");
     }
     return _notifyCharacteristic != null && _writeCharacteristic != null;
   }
@@ -680,7 +680,7 @@ class BleBmsService {
     _jkCellStreamSeen = false;
     _jkCellInfoRequested = false;
     _jkHandshakeTimer?.cancel();
-    _addLog('JK-BMS: one-time handshake (0x97 device info, then 0x96 cell info) — cell data auto-streams silently afterwards.');
+    _addLog('JK-BMS: one-time handshake (0x97 device info, then 0x96 cell info). Cell data auto-streams silently afterwards.');
     _writeCommand(BmsProtocolHelper.buildJk02Command(BmsProtocolHelper.jk02CommandDeviceInfo));
     _jkDeviceinfoLastRequestAt = DateTime.now();
     // Safety net for older/quirky firmware that never auto-streams: fall
@@ -691,7 +691,7 @@ class BleBmsService {
           isConnected &&
           !_jkCellStreamSeen &&
           !_jkHandshakeComplete) {
-        _addLog('JK-BMS: no auto-stream detected — falling back to periodic requests (buzzer will beep per request).');
+        _addLog('JK-BMS: no auto-stream detected, so falling back to periodic requests (buzzer will beep per request).');
         _startJkPolling();
       }
     });
@@ -720,7 +720,7 @@ class BleBmsService {
           isConnected &&
           _jkCellStreamSeen &&
           !_jkHandshakeComplete) {
-        _addLog('JK-BMS: cell stream stalled — resuming explicit cell-info requests.');
+        _addLog('JK-BMS: cell stream stalled, resuming explicit cell-info requests.');
         _startJkPolling();
       }
     });
@@ -961,7 +961,7 @@ class BleBmsService {
   void _startProbing(List<DetectionCandidate> candidates) {
     _probeCandidates = candidates;
     _probeIndex = 0;
-    _addLog("Brand not certain from name alone — probing ${candidates.length} candidate(s) in order.");
+    _addLog("Brand not certain from name alone, probing ${candidates.length} candidate(s) in order.");
     _probeStep();
   }
 
@@ -979,7 +979,7 @@ class BleBmsService {
       _bindGattForBrand(candidate.brand, services);
     }
     _addLog("Probe ${_probeIndex + 1}/${_probeCandidates!.length}: ${candidate.brand.name.toUpperCase()} "
-        "(${candidate.reason}) — sending its request and listening ${_probeTimeout.inMilliseconds}ms.");
+        "(${candidate.reason}): sending its request and listening ${_probeTimeout.inMilliseconds}ms.");
     _requestLiveFrame();
     _probeTimer = Timer(_probeTimeout, _probeNextCandidate);
   }
@@ -994,7 +994,7 @@ class BleBmsService {
       _probeCandidates = null;
       _probeTimer?.cancel();
       _connectedBrand = best.brand;
-      _addLog("No candidate answered its probe — keeping ${best.brand.name.toUpperCase()} as assumed brand.");
+      _addLog("No candidate answered its probe, keeping ${best.brand.name.toUpperCase()} as assumed brand.");
       _beginBrandPolling(best.brand);
       return;
     }
