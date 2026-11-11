@@ -4,6 +4,39 @@ Firmware is installed from the logged-in browser flasher at
 <https://web.jkbmsr.com/flash>. The current version per target is resolved from the
 authenticated API, not a static public file.
 
+## 2026-11-11 · v0.9.18
+
+- All three setup routes now run **at the same time**: the app over Bluetooth, USB
+  (Improv) and the setup network. Before this, the Bluetooth window came first, so
+  someone setting up from a laptop waited up to ten minutes before the setup
+  network appeared.
+- A gateway that is already configured never enters setup on its own, even if its
+  Wi-Fi fails. Only a device with no Wi-Fi stored, or a person holding BOOT, opens
+  setup. That keeps a running gateway's Bluetooth link to the battery undisturbed.
+
+## 2026-11-11 · v0.9.17
+
+- A configured gateway whose Wi-Fi fails goes straight back to the setup network,
+  with no Bluetooth window, so recovery is as fast as it was before.
+- The setup code is printed before the serial log is quietened for Improv, so it
+  always reaches the console.
+
+## 2026-11-11 · v0.9.16
+
+- **New: set the gateway up from the JK BMS Remote app.** It advertises
+  `JKBMSR-Setup-XXXX` while it has no Wi-Fi, and the app sends the network, the
+  time zone and the account link in one go.
+- The six digit code printed in the console is required. It is never sent back over
+  Bluetooth, so a gateway cannot be claimed by someone who is merely nearby.
+- The code is kept while the gateway is unprovisioned, so moving it from USB power
+  to the battery does not invalidate it.
+
+## 2026-11-11 · v0.9.15
+
+- Fixed: a gateway on the 5 minute trial interval could miss its upload window and
+  report far less often than the free tier. Uploads now fire on the interval they
+  belong to instead of on one exact second.
+
 ## 2026-11-11 · v0.9.14
 
 - The gateway now reports **once, immediately, after it connects to the BMS**,
