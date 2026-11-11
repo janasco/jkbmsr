@@ -18,6 +18,7 @@ class ProvisioningRequest {
     required this.ssid,
     required this.password,
     required this.timeZone,
+    required this.claimToken,
   });
 
   final DiscoveredGateway gateway;
@@ -27,6 +28,9 @@ class ProvisioningRequest {
 
   /// A POSIX TZ string, not an IANA name: the ESP32 has no time zone database.
   final String timeZone;
+
+  /// Minted by the signed-in account, presented once on first registration.
+  final String claimToken;
 }
 
 /// The seam the BLE transport plugs into. The flow is built against this so the

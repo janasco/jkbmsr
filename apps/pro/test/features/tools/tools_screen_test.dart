@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:jkbmsr_pro/features/provisioning/gateway_scan_source.dart';
 import 'package:jkbmsr_pro/features/tools/tools_screen.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/theme.dart';
 
@@ -41,7 +42,11 @@ void main() {
 
   testWidgets('add a gateway opens the scan screen, which says when the radio is absent',
       (tester) async {
-    await tester.pumpWidget(_host(const ToolsScreen()));
+    // The unavailable source stands in for a build without the radio, so the
+    // test never touches a platform channel.
+    await tester.pumpWidget(_host(ToolsScreen(
+      scanSource: UnavailableGatewayScanSource(),
+    )));
     await tester.pump();
 
     await tester.tap(find.text('Add a gateway'));

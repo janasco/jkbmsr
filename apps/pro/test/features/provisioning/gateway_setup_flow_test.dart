@@ -73,6 +73,7 @@ void main() {
     await tester.pumpWidget(_host(GatewaySetupFlow(
       gateway: _gateway,
       provisioner: provisioner,
+      claimTokenProvider: () async => 'aa.bb.cc',
     )));
 
     await _enterCode(tester, '418302');
@@ -101,6 +102,7 @@ void main() {
     await tester.pumpWidget(_host(GatewaySetupFlow(
       gateway: _gateway,
       provisioner: provisioner,
+      claimTokenProvider: () async => 'aa.bb.cc',
     )));
 
     await _enterCode(tester, '418302');
@@ -119,7 +121,10 @@ void main() {
 
   testWidgets('the default provisioner refuses rather than faking success',
       (tester) async {
-    await tester.pumpWidget(_host(const GatewaySetupFlow(gateway: _gateway)));
+    await tester.pumpWidget(_host(GatewaySetupFlow(
+      gateway: _gateway,
+      claimTokenProvider: () async => 'aa.bb.cc',
+    )));
 
     await _enterCode(tester, '418302');
     await tester.tap(find.text('Continue'));
@@ -151,5 +156,32 @@ void main() {
       expect(RegExp(r'^[A-Za-z]{2,}').hasMatch(zone.posix), isTrue,
           reason: 'a POSIX zone starts with a name: ${zone.posix}');
     }
+  });
+
+  testWidgets('a claim token that cannot be minted is said out loud',
+      (tester) async {
+    await tester.pumpWidget(_host(GatewaySetupFlow(
+      gateway: _gateway,
+      provisioner: FakeGatewayProvisioner(),
+      claimTokenProvider: () async =>
+          throw StateError('Please verify your email address before claiming a device.'),
+    )));
+
+    await _enterCode(tester, '418302');
+    await tester.tap(find.text('Continue'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).first, 'HouseWiFi');
+    await tester.pump();
+    await tester.tap(find.text('Start setup'));
+    await tester.pump();
+    await tester.pump();
+
+    // The server's own reason reaches the user: "verify your email" is
+    // actionable, and "setup failed" would not be.
+    expect(
+      find.textContaining('Please verify your email address'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Gateway added'), findsNothing);
   });
 }

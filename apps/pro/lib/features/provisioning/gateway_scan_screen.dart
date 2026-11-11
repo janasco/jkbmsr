@@ -6,6 +6,7 @@ import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
 import 'discovered_gateway.dart';
 import 'gateway_scan_source.dart';
+import 'gateway_provisioner.dart';
 import 'gateway_setup_flow.dart';
 import 'widgets/detected_gateway_tile.dart';
 import 'widgets/radar_pulse.dart';
@@ -20,6 +21,7 @@ class GatewayScanScreen extends StatefulWidget {
     super.key,
     this.scanSource,
     this.emptyAfter = const Duration(seconds: 20),
+    this.provisioner,
   });
 
   /// Injected in tests, and the seam the radio plugs into. Defaults to a source
@@ -30,6 +32,10 @@ class GatewayScanScreen extends StatefulWidget {
   /// How long to look before saying nothing was found. Injectable because a
   /// test that waits twenty real seconds is a test nobody runs.
   final Duration emptyAfter;
+
+  /// Forwarded to the setup flow. Null leaves the flow on its honest
+  /// "not available in this build" provisioner.
+  final GatewayProvisioner? provisioner;
 
   @override
   State<GatewayScanScreen> createState() => _GatewayScanScreenState();
@@ -109,7 +115,10 @@ class _GatewayScanScreenState extends State<GatewayScanScreen> {
   void _openSetup(DiscoveredGateway gateway) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => GatewaySetupFlow(gateway: gateway),
+        builder: (_) => GatewaySetupFlow(
+          gateway: gateway,
+          provisioner: widget.provisioner,
+        ),
       ),
     );
   }

@@ -5,6 +5,10 @@ import '../../widgets/shared/design_system/tokens.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../diagnose/diagnose_screen.dart';
 import '../guide/guide_screen.dart';
+import '../provisioning/ble_gateway_provisioner.dart';
+import '../provisioning/ble_gateway_scan_source.dart';
+import '../provisioning/gateway_provisioner.dart';
+import '../provisioning/gateway_scan_source.dart';
 import '../provisioning/gateway_scan_screen.dart';
 
 /// One place for the things that are not the dashboard.
@@ -13,7 +17,12 @@ import '../provisioning/gateway_scan_screen.dart';
 /// with a navigation bar nobody can read on a phone, and the dashboard is the
 /// screen an owner actually lives on. Three entries, each a verb.
 class ToolsScreen extends StatelessWidget {
-  const ToolsScreen({super.key});
+  const ToolsScreen({super.key, this.scanSource, this.provisioner});
+
+  /// Injectable so the hub can be tested without a radio, and so the default
+  /// stays in one place when the transport changes.
+  final GatewayScanSource? scanSource;
+  final GatewayProvisioner? provisioner;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +76,10 @@ class ToolsScreen extends StatelessWidget {
                   'Set up a new ESP32 gateway over Bluetooth and link it to this account.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const GatewayScanScreen(),
+                  builder: (_) => GatewayScanScreen(
+                    scanSource: scanSource ?? BleGatewayScanSource(),
+                    provisioner: provisioner ?? const BleGatewayProvisioner(),
+                  ),
                 ),
               ),
             ),

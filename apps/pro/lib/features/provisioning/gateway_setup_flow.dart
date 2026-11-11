@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
 import 'discovered_gateway.dart';
+import '../../services/api_client.dart';
 import 'gateway_provisioner.dart';
 
 /// One zone per label, in the format the gateway can actually apply.
@@ -40,10 +41,16 @@ class GatewaySetupFlow extends StatefulWidget {
     super.key,
     required this.gateway,
     this.provisioner,
+    this.claimTokenProvider,
   });
 
   final DiscoveredGateway gateway;
   final GatewayProvisioner? provisioner;
+
+  /// Mints the claim token for the signed-in account. Injectable so the flow can
+  /// be tested without a network, and because a claim token that cannot be
+  /// minted is a failure this screen has to say out loud.
+  final Future<String> Function()? claimTokenProvider;
 
   @override
   State<GatewaySetupFlow> createState() => _GatewaySetupFlowState();
@@ -106,12 +113,28 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
       _error = null;
       _reached.clear();
     });
+
+    String claimToken;
+    try {
+      claimToken = await (widget.claimTokenProvider ??
+          APIClient().createDeviceClaimToken)();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = error is StateError ? error.message : error.toString();
+      });
+      return;
+    }
+    if (!mounted) return;
+
     final request = ProvisioningRequest(
       gateway: widget.gateway,
       setupCode: _codeController.text,
       ssid: _ssidController.text.trim(),
       password: _passwordController.text,
       timeZone: _zone.posix,
+      claimToken: claimToken,
     );
     _subscription = _provisioner.provision(request).listen(
       (stage) {

@@ -343,6 +343,23 @@ class APIClient with RequestDeduplicationMixin {
     });
   }
 
+  /// Mints a short-lived claim token for the signed-in account.
+  ///
+  /// The gateway presents it once, on first registration, and is bound to this
+  /// account. It travels to the device over BLE during setup, which is why it is
+  /// minted when the user submits rather than when a scan starts: a token left
+  /// sitting on the setup screen can expire before it is used.
+  Future<String> createDeviceClaimToken() async {
+    final url = Uri.parse('$baseUrl/v1/user/devices/claim-token');
+    final response = await _client.post(url, headers: await _headers());
+    final data = _handleResponse(response);
+    final token = data['token'] as String?;
+    if (token == null || token.isEmpty) {
+      throw Exception('The server did not return a claim token.');
+    }
+    return token;
+  }
+
   /// Claims an unowned (or already-owned-by-this-account) device using its
   /// claim code — the preferred proof-of-possession — or, only as a legacy
   /// fallback, its raw device secret. Throws with the server's error message

@@ -8,6 +8,20 @@
          remains available, so the feature is not required to install. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Provisioning: the app finds an unconfigured gateway over BLE and hands
+         it Wi-Fi credentials and a claim token. Scan is never used for location,
+         which is why the neverForLocation flag is set: this app has no location
+         feature and must not ask for one. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Android 11 and below express BLE access through these. -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
     <application
         android:label="JK BMS Remote"
         android:name="${applicationName}"
