@@ -1,3 +1,4 @@
+import '../../widgets/shared/labelled_progress.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'event_log.dart';
 import 'event_log_timeline.dart';
 import 'pack_check.dart';
 import 'pack_check_card.dart';
+import 'pack_check_input.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({Key? key}) : super(key: key);
@@ -122,7 +124,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             failed++;
             continue;
           }
-          inputs.add(_packCheckInputFor(device, telemetry));
+          inputs.add(packCheckInputFor(device, telemetry));
         } catch (_) {
           failed++;
         }
@@ -162,32 +164,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
     }
   }
 
-  PackCheckInput _packCheckInputFor(Device device, Telemetry telemetry) {
-    // Same no-data signal the dashboard uses: the API sends voltage/SOC as 0
-    // when no telemetry row exists, and a real connected pack never sits at
-    // exactly 0 V.
-    final hasTelemetry = telemetry.voltage > 0.5 || telemetry.soc > 0;
-    final link = telemetry.linkDiagnostics;
-
-    return PackCheckInput(
-      deviceName: device.name,
-      hasTelemetry: hasTelemetry,
-      cellVoltages: hasTelemetry
-          ? [for (final cell in telemetry.cells) cell.voltage]
-          : const [],
-      temperature1C: telemetry.temperature1,
-      temperature2C: telemetry.temperature2,
-      socPercent: hasTelemetry ? telemetry.soc : null,
-      currentAmps: hasTelemetry ? telemetry.current : null,
-      fullCapacityAh:
-          telemetry.bms.fullCapacityAh > 0 ? telemetry.bms.fullCapacityAh : null,
-      isCharging: telemetry.bms.charging,
-      isDischarging: telemetry.bms.discharging,
-      bmsLinkUp: link.bmsLinkUp,
-      secondsSinceLastTelemetry: device.secondsSinceLastTelemetry,
-      expectedIntervalSeconds: device.expectedIntervalSeconds,
-    );
-  }
 
   // Fetches all three sources independently. A failed source becomes a stated
   // gap in the log rather than an empty screen, and a failed gateway only
@@ -1245,7 +1221,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   Widget _buildEventLogFooter(BuildContext context) {
     if (_isEventLogLoadingMore) {
-      return CircularProgressIndicator(color: context.colors.accent);
+      return LabelledProgress(
+        label: 'Loading more events',
+        compact: true,
+      );
     }
     return OutlinedButton(
       onPressed: _loadMoreEventLogAlerts,

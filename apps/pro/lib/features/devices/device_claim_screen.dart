@@ -1,3 +1,4 @@
+import '../../widgets/shared/labelled_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/shared/design_system/colors.dart';
@@ -177,7 +178,9 @@ class _DeviceClaimScreenState extends State<DeviceClaimScreen> {
               ),
               const SizedBox(height: JKBMSRTokens.space24),
               _isSubmitting
-                  ? Center(child: CircularProgressIndicator(color: context.colors.accent))
+                  ? const Center(
+                      child: LabelledProgress(label: 'Claiming the gateway'),
+                    )
                   : ElevatedButton(
                       onPressed: _submit,
                       child: const Text('Claim Gateway'),

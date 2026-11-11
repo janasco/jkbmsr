@@ -6,7 +6,7 @@ import '../../widgets/shared/design_system/colors.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/back_intent.dart';
 import '../../widgets/shared/design_system/tokens.dart';
-import '../guide/guide_screen.dart';
+import '../tools/tools_screen.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
@@ -1583,33 +1583,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _openGuide() {
+  void _openTools() {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const GuideScreen()),
+      MaterialPageRoute<void>(builder: (_) => const ToolsScreen()),
     );
   }
 
-  // Drill-in row: the guide answers the questions a reading raises, which is
-  // the one kind of help that does not need a support ticket.
+  // Drill-in row: checks and answers live one level down, so the dashboard
+  // stays the screen an owner lives on.
   Widget _guideEntry() {
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: _openGuide,
+        onTap: _openTools,
         child: Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: JKBMSRTokens.space16, vertical: JKBMSRTokens.space16),
           child: Row(
             children: [
-              Icon(Icons.menu_book_outlined, size: 22, color: context.colors.accent),
+              Icon(Icons.build_outlined, size: 22, color: context.colors.accent),
               const SizedBox(width: JKBMSRTokens.space16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Guide',
+                      'Tools',
                       style: JKBMSRTypography.body.copyWith(
                         fontWeight: FontWeight.w500,
                         color: context.colors.textPrimary,
@@ -1617,7 +1617,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: JKBMSRTokens.space4),
                     Text(
-                      'Short answers: cell spread, current direction, lost BMS link, time zones and the trial.',
+                      'Diagnose the latest readings, read the guide, or add a gateway.',
                       style: JKBMSRTypography.bodySecondary,
                     ),
                   ],

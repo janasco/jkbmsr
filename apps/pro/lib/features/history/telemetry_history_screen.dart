@@ -1,3 +1,4 @@
+import '../../widgets/shared/labelled_progress.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -319,7 +320,10 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
                 _chart(context, 'Power (W)', _points.map((p) => p.power).toList(), context.colors.critical),
                 const SizedBox(height: JKBMSRTokens.space16),
                 _isExporting
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const LabelledProgress(
+                        label: 'Preparing the export',
+                        compact: true,
+                      )
                     : OutlinedButton.icon(
                         onPressed: () => unawaited(_handleExport()),
                         icon: const Icon(Icons.ios_share),

@@ -1,3 +1,4 @@
+import '../../widgets/shared/labelled_progress.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import 'package:go_router/go_router.dart';
@@ -265,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: JKBMSRTokens.space24),
         _isLoading
-            ? Center(child: CircularProgressIndicator(color: context.colors.accent))
+            ? const Center(child: LabelledProgress(label: 'Signing you in'))
             : ElevatedButton(
                 onPressed: _handleLogin,
                 child: const Text('Sign In'),
@@ -340,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onSubmitted: (_) => _handleOtpVerify(),
         ),
         _isLoading
-            ? Center(child: CircularProgressIndicator(color: context.colors.accent))
+            ? const Center(child: LabelledProgress(label: 'Checking the code'))
             : ElevatedButton(
                 onPressed: _handleOtpVerify,
                 child: const Text('Verify & Sign In'),
