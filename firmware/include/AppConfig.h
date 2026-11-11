@@ -28,6 +28,10 @@ constexpr uint32_t kWifiConnectWindowMs = 180000;      // ~3 minutes of attempts
 constexpr uint32_t kWifiRetryDelayMs = 5000;           // pause between attempts
 constexpr int kWifiRestartsBeforeProvisioning = 5;
 constexpr uint32_t kLocalProvisioningWindowMs = 300000;  // bounded AP window (5 min)
+// The BLE setup window before falling back to the SoftAP portal. Long enough to
+// open the app and type a Wi-Fi password; short enough that a gateway with no
+// phone nearby still reaches a working setup path.
+constexpr uint32_t kBleProvisioningWindowMs = 600000;  // 10 min
 // TLS handshake cap. The verified handshake (bundle-based chain validation)
 // is heavier than the old insecure path, and flaky WiFi (RV/off-grid) can
 // stall it; bound it so a hung handshake can't wedge the loop.

@@ -45,3 +45,6 @@ temp/
 /notes.txt
 /whatsnew-en-US.txt
 /.wrangler/
+
+# Kotlin build artefact directory
+android/.kotlin/

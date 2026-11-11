@@ -21,6 +21,7 @@
 #include "ota/OtaClient.h"
 #include "esp_ota_ops.h"
 #include "ota/VersionCompare.h"
+#include "cloud/BleProvisioningServer.h"
 #include "provisioning/CaptivePortal.h"
 #include "provisioning/ProvisioningManager.h"
 #include "provisioning/ResetTrigger.h"
@@ -37,6 +38,7 @@ RemoteConfigClient remoteConfigClient(kApiBaseUrl);
 OtaClient otaClient(kApiBaseUrl);
 ProvisioningManager provisioner;
 CaptivePortal captivePortal;
+BleProvisioningServer bleProvisioning;
 ResetTrigger resetTrigger;
 DeviceConfig config;
 uint32_t lastTelemetryMs = 0;
@@ -182,6 +184,9 @@ bool applyResetTrigger() {
   if (resetTrigger.factoryResetRequested()) {
     logWarn("Factory reset requested (BOOT held ~10s)");
     clearFactoryAuth(config);
+    // The setup code protects an identity that no longer exists, so it is
+    // regenerated with it rather than kept as a credential for the next owner.
+    resetSetupCode();
   } else {
     logWarn("Re-provision requested (BOOT held ~5s)");
     clearWifiCredentials(config);
@@ -189,6 +194,49 @@ bool applyResetTrigger() {
   configStore.save(config);
   resetTrigger.clear();
   return true;
+}
+
+
+// Runs the BLE setup window: the app scans, writes the four fields, and the
+// gateway stores them and restarts into station mode.
+//
+// The SoftAP portal is still tried afterwards if this window closes without
+// credentials. It is the fallback for a phone whose BLE is broken, and it is
+// deliberately kept until the BLE path has been verified on hardware.
+bool runBleProvisioning(uint32_t windowMs) {
+  const String setupCode = loadOrCreateSetupCode();
+  // Printed for the owner to type into the app. It is NOT readable over BLE by
+  // design: a code the app could read is one anyone in range could read.
+  logInfo("Setup code: " + setupCode);
+
+  if (!bleProvisioning.begin(setupCode, BleProvisioningServer::advertisedName(config.deviceId))) {
+    logWarn("BLE setup service could not start");
+    return false;
+  }
+
+  const uint32_t startedAt = millis();
+  while (millis() - startedAt < windowMs) {
+    bleProvisioning.tick(millis());
+    if (bleProvisioning.hasOutcome()) {
+      const ProvisioningOutcome outcome = bleProvisioning.takeOutcome();
+      config.wifiSsid = outcome.ssid;
+      config.wifiPassword = outcome.password;
+      config.timeZone = outcome.timeZone;
+      config.claimToken = outcome.claimToken;
+      // A new claim token means the gateway must register again with it.
+      config.deviceToken = "";
+      configStore.save(config);
+      applyTimeZone(config.timeZone);
+      logInfo("BLE setup complete; restarting to join " + outcome.ssid);
+      bleProvisioning.end();
+      delay(300);
+      ESP.restart();
+    }
+    delay(10);
+  }
+
+  bleProvisioning.end();
+  return false;
 }
 
 // Runs Improv Serial (USB) and SoftAP captive-portal provisioning in parallel
@@ -320,6 +368,9 @@ bool recoverFromWifiFailure() {
   config.wifiRestartCount = 0;
   configStore.save(config);
   logWarn("WiFi still unreachable after repeated restarts; opening local provisioning");
+  // BLE first: the app is the intended path, and the service only exists while
+  // the gateway cannot reach the network. The portal stays as the fallback.
+  (void)runBleProvisioning(kLocalProvisioningWindowMs);
   if (!runProvisioning(kLocalProvisioningWindowMs)) {
     logWarn("Local provisioning window closed without connecting; restarting to retry");
     delay(1000);
@@ -607,6 +658,9 @@ void setup() {
   // AP every few boots), rather than falling straight back to setup mode.
   bool online = false;
   if (!config.wifiConfigured()) {
+    // The setup service is the intended path and reboots on success, so this
+    // only returns when its window closed without an app handshake.
+    (void)runBleProvisioning(kBleProvisioningWindowMs);
     online = runProvisioning(0);
   } else {
     online = connectWithRetry();
@@ -669,6 +723,7 @@ void loop() {
 
   resetTrigger.poll();
   if (applyResetTrigger()) {
+    (void)runBleProvisioning(kBleProvisioningWindowMs);
     if (runProvisioning(0)) {
       ensureDeviceAuth(true);
     }
