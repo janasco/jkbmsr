@@ -5,6 +5,17 @@ gateway is never locked out, deleted, or cut off for not paying. There is
 **no one-time license and no per-device fee**: flashing, re-flashing, and
 using the platform at the free tier cost nothing.
 
+## The trial
+
+Every gateway gets **7 days at the 5-minute interval** once, starting from the
+moment it is linked to your account. It is **per gateway**, not per account: a
+second gateway earns its own trial, and the first one does not get a second.
+
+When the 7 days end the gateway moves to the free tier's hourly interval on its
+own. Nothing is deleted and no data is lost; only the cadence changes, and you
+can see the end date on the dashboard. Subscribing at any point before or after
+the trial simply sets a faster interval.
+
 ## What changes between tiers
 
 Every tier includes the full platform: always-on monitoring, phone alerts,
