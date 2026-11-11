@@ -50,6 +50,33 @@ enum class SetupCodeResult {
   notConnected,
 };
 
+// When the setup service may be visible at all.
+//
+// The owner's correction to the first draft, and it is the right one: a gateway
+// that is running must not be provisionable, both because anyone in range could
+// bind it to their account and because advertising costs radio time that belongs
+// to the pack link. So the service exists only while the gateway cannot reach the
+// network.
+//
+// The grace period is not decoration. A two-second WiFi blip must not open
+// provisioning to the neighbourhood: jamming a 2.4 GHz network is easy, and
+// without the grace an attacker could force the window open and then provision
+// the device. Sixty seconds is longer than the existing reconnect backoff's first
+// attempts, so a blip recovers on its own and never advertises.
+constexpr uint32_t kWiFiLossGraceMs = 60000;
+
+inline bool shouldAdvertiseProvisioning(bool hasWiFiCredentials, bool wifiConnected,
+                                        uint32_t msSinceWiFiLost) {
+  // Never configured: nothing to protect yet, and this is the first-boot case.
+  if (!hasWiFiCredentials) {
+    return true;
+  }
+  if (wifiConnected) {
+    return false;
+  }
+  return msSinceWiFiLost >= kWiFiLossGraceMs;
+}
+
 class ProvisioningSession {
  public:
   // Sixty seconds for the credentials after a correct code, and sixty seconds of

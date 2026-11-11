@@ -260,6 +260,25 @@ void test_a_failure_carries_a_reason() {
   TEST_ASSERT_EQUAL_STRING("storage", session.errorReason().c_str());
 }
 
+// --- the advertising policy ------------------------------------------------
+
+void test_an_unconfigured_gateway_advertises_immediately() {
+  TEST_ASSERT_TRUE(shouldAdvertiseProvisioning(false, false, 0));
+}
+
+void test_a_running_gateway_never_advertises() {
+  TEST_ASSERT_FALSE(shouldAdvertiseProvisioning(true, true, 0));
+  TEST_ASSERT_FALSE(shouldAdvertiseProvisioning(true, true, 10 * 60000));
+}
+
+void test_a_short_wifi_blip_does_not_open_provisioning() {
+  // Jamming a 2.4 GHz network is easy; without the grace the window could be
+  // forced open and the device provisioned by whoever did it.
+  TEST_ASSERT_FALSE(shouldAdvertiseProvisioning(true, false, 2000));
+  TEST_ASSERT_FALSE(shouldAdvertiseProvisioning(true, false, 59000));
+  TEST_ASSERT_TRUE(shouldAdvertiseProvisioning(true, false, kWiFiLossGraceMs));
+}
+
 void setup() {
   UNITY_BEGIN();
   RUN_TEST(test_sequential_chunks_assemble_and_complete);
@@ -283,6 +302,9 @@ void setup() {
   RUN_TEST(test_the_happy_path_reaches_running);
   RUN_TEST(test_steps_out_of_order_are_refused);
   RUN_TEST(test_a_failure_carries_a_reason);
+  RUN_TEST(test_an_unconfigured_gateway_advertises_immediately);
+  RUN_TEST(test_a_running_gateway_never_advertises);
+  RUN_TEST(test_a_short_wifi_blip_does_not_open_provisioning);
   UNITY_END();
 }
 

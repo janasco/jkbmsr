@@ -9,32 +9,39 @@ firmware, then the JK BMS Remote app. Nothing here is live.
 |---|---|---|
 | D1 | **Setup code from the serial log** | the payload carries a WiFi password and a claim token; the code is physical-presence proof, and the person flashing already has the console open |
 | D2 | **SoftAP and Improv are removed in the same release** | owner's call: one path. Recovery from a failed setup is a USB reflash, and the claim token reaches the device only over BLE |
-| D3 | **The provisioning service is always advertised** | owner's call: a gateway can be reconfigured at any time without touching it |
+| D3 | **The service is visible only while the gateway cannot reach the network** | a running gateway must not be provisionable by anyone in range, and advertising costs radio time that belongs to the pack link |
 
-### What D3 costs, and how it is bounded
+### When the service is visible
 
-The ESP32-S3 has **one radio** and it is already a BLE **central** to the JK-BMS.
-Advertising alongside a connection is cheap (three packets per advertising
-interval); **a second connection** is what competes with the BMS link for
-connection events, and the BMS stream is our most timing-sensitive path - the
-gateway drops a link that goes silent for 30 s (0.9.12), and radio starvation
-looks exactly like that.
+This was first specified as *always advertised*, on the reasoning that a gateway
+should be reconfigurable without touching it. That was wrong, and the correction
+is now the rule:
 
-So "always advertised" is honoured, with three hard bounds:
+```
+never configured          -> advertise
+configured, WiFi connected -> do not advertise
+configured, WiFi down      -> advertise, but only after 60 s down
+```
 
-1. **One provisioning connection at a time.** A second phone is refused while the
-   first is connected.
-2. **An idle connection is dropped after 60 s**, and a connection that fails
-   authentication is dropped immediately.
-3. **The provisioning connection uses a slow interval** (requested 100 ms) so it
-   cannot monopolise the radio.
+Two reasons, both concrete. A running gateway that advertises can be claimed by
+anyone within radio range who can also read the setup code, and the pack link is
+the most timing-sensitive path in the product - 0.9.12 drops a link that goes
+silent for 30 s, and radio starvation looks identical. Restricting the service to
+"cannot reach the network" removes both problems: provisioning and the pack link
+are never live at the same time, so there is no contention to measure.
 
-**This must be measured on hardware with a pack connected**, not assumed: a
-gateway with a phone attached must keep decoding frames with no gap near 5 s. If
-it does not, the fallback is to stop advertising while the BMS link is up, and
-that is a conversation, not a silent change.
+**The 60 s grace is security, not politeness.** Jamming 2.4 GHz is easy; without
+it, an attacker could force the WiFi down, wait for the window, and provision the
+device. Sixty seconds is longer than the first reconnect attempts, so an ordinary
+blip recovers without ever advertising, and a deliberate, sustained outage is the
+only thing that opens the window.
 
-## Service
+Consequence for the firmware's WiFi failure loop: it currently restarts the
+gateway on repeated failure. It must instead enter provisioning after the grace
+period, because restarting forever never offers the owner a way to fix a wrong
+password.
+
+## Service## Service
 
 | | UUID |
 |---|---|
@@ -49,14 +56,29 @@ device id (the same suffix the SoftAP used, so the muscle memory survives).
 
 ## Authentication (D1)
 
-The device generates six digits at boot and prints them:
+The device generates six digits and prints them:
 
 ```
 [info] Setup code: 418302
 ```
 
-That line is already visible in the flasher's console. It is regenerated on every
-boot, so a code photographed last month is useless.
+That line is already visible in the flasher's console.
+
+**The code is stable while the device is unprovisioned**, stored in NVS, and
+regenerated only by a factory reset. The first draft had it regenerated on every
+boot, and that breaks the actual flow: flashing happens over USB, the device is
+then moved to the pack, and moving it reboots it - so a per-boot code would be
+dead before the owner reached the app. Stability also lets a future flasher hand
+the code to the app through the API instead of the owner typing it.
+
+**It is never readable over BLE.** The characteristic is write-only and the
+device only answers accepted or rejected; a code the app could read would prove
+nothing, because anyone in range could read it too. It is out-of-band proof, and
+the out-of-band channel is the console the owner already has open.
+
+Brute force is closed by the lockout: three wrong codes drop the connection, and
+successive lockouts back off (5 s, 30 s, 5 min), so a million candidates is not
+reachable in the minutes a device sits unprovisioned and powered.
 
 - The app writes the six ASCII digits to `setup`.
 - Three wrong codes drop the connection and require a scan again.
