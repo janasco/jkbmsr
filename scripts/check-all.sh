@@ -39,7 +39,7 @@
 #                            /home/jkbmsr/flutter/bin, prepended only if it exists
 #                            and flutter is not already on PATH)
 #   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 172)
-#   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 332)
+#   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 335)
 #   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 157)
 #   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 24)
 #
@@ -57,7 +57,7 @@ RUN=0
 STRICT=0
 ONLY=()
 BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-177}
-PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-332}
+PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-335}
 CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-157}
 BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-33}
 LOG_DIR=""

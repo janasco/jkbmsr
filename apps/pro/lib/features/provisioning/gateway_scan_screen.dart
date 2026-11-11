@@ -201,6 +201,10 @@ class _GatewayScanScreenState extends State<GatewayScanScreen> {
                 failure: _failure,
                 nothingFound: _nothingFound,
               ),
+              if (_nothingFound && _failure == null) ...[
+                const SizedBox(height: JKBMSRTokens.space16),
+                const _SetupChecklist(),
+              ],
               if (_failure == ScanFailure.bluetoothOff ||
                   _failure == ScanFailure.permissionDenied) ...[
                 const SizedBox(height: JKBMSRTokens.space16),
@@ -277,6 +281,53 @@ class _StatusBlock extends StatelessWidget {
             style: text.bodySmall?.copyWith(color: colors.textSubtle),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// What to check when nothing appeared.
+///
+/// Three items, each something the person can see for themselves. The paragraph
+/// this replaces was accurate and unread; a checklist is read.
+class _SetupChecklist extends StatelessWidget {
+  const _SetupChecklist();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<JKBMSRColors>()!;
+    const items = [
+      'The gateway is powered on and its light is blinking.',
+      'It has never been set up. A gateway already on Wi-Fi does not advertise.',
+      'Bluetooth is on and the phone is within a few metres.',
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: JKBMSRTokens.space8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(Icons.check_circle_outline,
+                      size: 16, color: colors.textSubtle),
+                ),
+                const SizedBox(width: JKBMSRTokens.space8),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: colors.textMuted),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

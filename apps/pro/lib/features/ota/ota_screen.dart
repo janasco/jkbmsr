@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
+import '../../widgets/shared/labelled_progress.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
@@ -250,7 +251,10 @@ class _OTAScreenState extends State<OTAScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 _isChecking
-                                    ? CircularProgressIndicator(color: context.colors.accent)
+                                    ? const LabelledProgress(
+                                        label: 'Checking for firmware',
+                                        compact: true,
+                                      )
                                     : OutlinedButton(
                                         onPressed: _checkUpdate,
                                         child: const Text('Check Update'),

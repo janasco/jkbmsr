@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../widgets/shared/design_system/colors.dart';
 import '../../widgets/shared/design_system/tokens.dart';
 import 'discovered_gateway.dart';
 import '../../services/api_client.dart';
 import 'gateway_provisioner.dart';
+import 'widgets/setup_code_field.dart';
 
 /// One zone per label, in the format the gateway can actually apply.
 ///
@@ -60,7 +60,7 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
   late final GatewayProvisioner _provisioner =
       widget.provisioner ?? const UnavailableGatewayProvisioner();
 
-  final _codeController = TextEditingController();
+  String _code = '';
   final _ssidController = TextEditingController();
   final _passwordController = TextEditingController();
   GatewayTimeZone _zone = GatewayTimeZone.all[1];
@@ -75,13 +75,12 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
   @override
   void dispose() {
     _subscription?.cancel();
-    _codeController.dispose();
     _ssidController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  bool get _codeValid => _codeController.text.length == 6;
+  bool get _codeValid => _code.length == 6;
   bool get _networkValid => _ssidController.text.trim().isNotEmpty;
 
   void _next() {
@@ -130,7 +129,7 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
 
     final request = ProvisioningRequest(
       gateway: widget.gateway,
-      setupCode: _codeController.text,
+      setupCode: _code,
       ssid: _ssidController.text.trim(),
       password: _passwordController.text,
       timeZone: _zone.posix,
@@ -185,6 +184,8 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
                 ),
               ),
               const SizedBox(height: JKBMSRTokens.space8),
+              _ProgressSegments(step: _step.index, total: 3),
+              const SizedBox(height: JKBMSRTokens.space16),
               Text(
                 _headline,
                 style: text.displayMedium?.copyWith(color: colors.textPrimary),
@@ -249,17 +250,13 @@ class _GatewaySetupFlowState extends State<GatewaySetupFlow> {
               ),
             ),
             const SizedBox(height: JKBMSRTokens.space24),
-            TextField(
-              controller: _codeController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              autofocus: true,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Setup code',
-                counterText: '',
-              ),
-              onChanged: (_) => setState(() {}),
+            SetupCodeField(
+              onChanged: (code) => setState(() => _code = code),
+            ),
+            const SizedBox(height: JKBMSRTokens.space12),
+            Text(
+              'The code is not sent over Bluetooth: it is typed here, from the screen the gateway printed it on.',
+              style: text.bodySmall?.copyWith(color: colors.textSubtle),
             ),
           ],
         );
@@ -447,5 +444,42 @@ class _StageMark extends StatelessWidget {
       case _StageState.skipped:
         return Icon(Icons.circle_outlined, size: 20, color: colors.textSubtle);
     }
+  }
+}
+
+/// Three segments, one per step.
+///
+/// A counter says where you are; a bar says how much is left. The flow is short
+/// enough that people finish it, so the useful thing to show is the end.
+class _ProgressSegments extends StatelessWidget {
+  const _ProgressSegments({required this.step, required this.total});
+
+  final int step;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<JKBMSRColors>()!;
+    return Row(
+      children: [
+        for (var i = 0; i < total; i++)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i == total - 1 ? 0 : 6),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: i <= step
+                      ? colors.accent
+                      : colors.accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
