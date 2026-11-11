@@ -58,6 +58,9 @@ SUITES=(
   # deliberately absent -- the suite only reads its constexpr hold windows, so
   # nothing from it is ODR-used and adding it would just drag pinMode()/
   # digitalRead() into the link for no extra coverage.
+  # BLE provisioning core: chunk buffer, field validation and the session state
+  # machine. Pure headers, no radio - the radio path is verified on hardware.
+  "test_ble_provisioning:src/clock/SystemClock.cpp"
   "test_provisioning:src/config/ConfigStore.cpp:src/device/DeviceIdentity.cpp:src/provisioning/CaptivePortal.cpp:src/provisioning/ImprovProtocol.cpp:src/provisioning/ProvisioningManager.cpp"
   "test_version_compare:src/ota/VersionCompare.cpp"
   # Pure Wi-Fi connect/retry/restart timing logic (src/network/WifiRetryPolicy.h
