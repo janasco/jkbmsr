@@ -10,6 +10,7 @@
 #include "cloud/DeviceRegistrationClient.h"
 #include "cloud/TelemetryClient.h"
 #include "cloud/RemoteConfigClient.h"
+#include "cloud/UploadGate.h"
 #include "config/ConfigStore.h"
 #include "clock/SystemClock.h"
 #include "debug/DebugLog.h"
@@ -46,6 +47,17 @@ uint32_t lastOtaCheckMs = 0;
 bool firstOtaCheckDone = false;
 uint32_t lastCloudBootstrapAttemptMs = 0;
 uint32_t lastHeartbeatMs = 0;
+
+// Latched once a sample has been reported since the BMS link came up, so a
+// fresh boot uploads immediately instead of waiting for the interval boundary.
+// Reset when the link drops; see UploadGate.
+bool reportedSinceBmsLinkUp = false;
+
+// When the last upload was ATTEMPTED (success or not). The eager first-report
+// path is throttled by this: without it, a failed upload would retry on every
+// loop iteration, because the latch only sets on success.
+uint32_t lastUploadAttemptMs = 0;
+constexpr uint32_t kEagerUploadRetryMs = 30000;
 uint32_t identityDiscoveryUntilMs = 0;
 uint32_t lastDeviceAuthMs = 0;
 String activeBleVendor = "";
@@ -712,13 +724,29 @@ void loop() {
   bmsBleClient.loop();
 
   BatteryTelemetry telemetry;
-  if (telemetryDue()) {
+  // A BMS link that has delivered a frame counts as "up": poll() can return a
+  // sample for a link that is already stale, so the latch keys on the stream
+  // rather than the connection.
+  const BmsBleStatus linkStatus = bmsBleClient.status();
+  const bool bmsStreaming = linkStatus.connected && linkStatus.lastFrameAtMs != 0;
+  if (!bmsStreaming) {
+    // The link dropped, so the next one reports immediately rather than waiting
+    // for a boundary that may be an hour away.
+    reportedSinceBmsLinkUp = false;
+  }
+
+  const bool uploadDue = telemetryDue();
+  const bool eagerAllowed = lastUploadAttemptMs == 0 ||
+      millis() - lastUploadAttemptMs >= kEagerUploadRetryMs;
+  const bool firstAfterLinkUp = bmsStreaming && !reportedSinceBmsLinkUp && eagerAllowed;
+  if (uploadDue || firstAfterLinkUp) {
     const bool haveSample = bmsBleClient.poll(telemetry);
     // With no BMS answering, still report in at a lower cadence so
     // the dashboard shows the gateway online (BMS link flagged down) instead
     // of "last seen never".
     const bool heartbeatDue = millis() - lastHeartbeatMs >= kHeartbeatIntervalMs;
-    if (cloudReady && (haveSample || heartbeatDue)) {
+    if (cloudReady && shouldUploadNow({uploadDue, haveSample, heartbeatDue, firstAfterLinkUp})) {
+      lastUploadAttemptMs = millis();
       const OtaStatus& otaStatus = otaClient.status();
       telemetry.otaLastCheckAtMs = otaStatus.lastCheckAtMs;
       telemetry.otaLastCheckSucceeded = otaStatus.lastCheckSucceeded;
@@ -750,6 +778,9 @@ void loop() {
       }
       if (telemetryClient.upload(config.deviceToken, telemetry)) {
         lastHeartbeatMs = millis();
+        if (haveSample) {
+          reportedSinceBmsLinkUp = true;
+        }
       } else if (telemetryClient.authRejected()) {
         // The server rejected our token (e.g. a signing-secret rotation). Drop
         // it and force a fresh login so telemetry resumes — otherwise the

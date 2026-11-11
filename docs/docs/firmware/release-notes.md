@@ -4,6 +4,16 @@ Firmware is installed from the logged-in browser flasher at
 <https://web.jkbmsr.com/flash>. The current version per target is resolved from the
 authenticated API, not a static public file.
 
+## 2026-11-11 · v0.9.14
+
+- The gateway now reports **once, immediately, after it connects to the BMS**,
+  instead of waiting for the next interval boundary. On the free tier that
+  boundary is an hour away, so a freshly booted gateway used to be invisible on
+  the dashboard for up to an hour even though it was working.
+- The regular hourly (or faster, with Cloud Service) cadence is unchanged. One
+  extra report per connection, throttled so a failed upload cannot retry in a
+  tight loop.
+
 ## 2026-11-11 · v0.9.13
 
 - **New target: `esp32-s3-16mb-quad`** for 16 MB ESP32-S3 modules with **quad**

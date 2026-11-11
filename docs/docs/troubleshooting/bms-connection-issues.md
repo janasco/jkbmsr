@@ -26,6 +26,11 @@ While the link is down the gateway keeps sending a heartbeat, so the gateway
 stays visible and the missing piece is named rather than looking like a dead
 device.
 
+**"Online" means the gateway is talking to us, not that it has data.** A gateway
+polling for settings is alive even when it has never uploaded a reading, so it
+reads as online within a minute of boot; `hasTelemetry` and the BMS link state
+carry the separate question of whether the pack link is working.
+
 From firmware 0.9.12 the recovery path is bounded:
 
 - a dropped link is retried after 30 seconds, then at most every 60 seconds;

@@ -74,6 +74,8 @@ SUITES=(
   # When a connected-but-silent BLE session must be dropped (header-only; see
   # include/bms/BmsLinkLiveness.h).
   "test_bms_link_liveness"
+  # The telemetry upload decision (header-only; see include/cloud/UploadGate.h).
+  "test_upload_gate"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the
