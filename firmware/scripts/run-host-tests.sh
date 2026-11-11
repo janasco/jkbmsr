@@ -76,6 +76,9 @@ SUITES=(
   "test_bms_link_liveness"
   # The telemetry upload decision (header-only; see include/cloud/UploadGate.h).
   "test_upload_gate"
+  # The interval-boundary predicate that replaced "now % interval == 0"
+  # (header-only; see include/cloud/IntervalBucket.h).
+  "test_interval_bucket"
 )
 
 # Every directory under test/ is listed in SUITES above, and the loop at the

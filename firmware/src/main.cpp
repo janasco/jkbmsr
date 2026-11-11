@@ -10,6 +10,7 @@
 #include "cloud/DeviceRegistrationClient.h"
 #include "cloud/TelemetryClient.h"
 #include "cloud/RemoteConfigClient.h"
+#include "cloud/IntervalBucket.h"
 #include "cloud/UploadGate.h"
 #include "config/ConfigStore.h"
 #include "clock/SystemClock.h"
@@ -41,7 +42,7 @@ DeviceConfig config;
 uint32_t lastTelemetryMs = 0;
 // Epoch second of the last wall-clock-aligned telemetry send (0 = none
 // yet) — see telemetryDue() below.
-time_t lastTelemetryEpoch = 0;
+time_t lastTelemetryBucket = 0;
 uint32_t lastConfigFetchMs = 0;
 uint32_t lastOtaCheckMs = 0;
 bool firstOtaCheckDone = false;
@@ -145,10 +146,14 @@ bool telemetryDue() {
   }
   const time_t intervalSeconds = intervalMs / 1000;
   const time_t now = time(nullptr);
-  if (intervalSeconds <= 0 || now % intervalSeconds != 0 || now == lastTelemetryEpoch) {
+  // "Which interval are we in", not "is the clock exactly on the boundary".
+  // The latter is true for one second per interval and is missed whenever the
+  // loop is busy -- a real upload takes several seconds, so a 5-minute trial
+  // gateway missed boundary after boundary. See IntervalBucket.h.
+  if (!crossedIntervalBoundary(now, intervalSeconds, lastTelemetryBucket)) {
     return false;
   }
-  lastTelemetryEpoch = now;
+  lastTelemetryBucket = intervalBucket(now, intervalSeconds);
   return true;
 }
 
