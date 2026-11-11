@@ -13,6 +13,17 @@ import 'provisioning_protocol.dart';
 /// the name prefix as a second condition: the UUID is the contract, and the name
 /// is what the user sees, so a device advertising one without the other is not
 /// shown as a candidate.
+/// Whether a scan result is one of our gateways.
+///
+/// The service UUID is the contract; the name is what the user reads. Requiring
+/// **both** made the list silently empty whenever the name was truncated out of a
+/// 31-byte advertisement (a 128-bit UUID takes 18 bytes, the name takes 19), which
+/// is a failure with no visible cause anywhere.
+bool isProvisioningCandidate(List<String> services, String name) {
+  return services.any((s) => s.toLowerCase() == ProvisioningProtocol.service) ||
+      name.startsWith(ProvisioningProtocol.namePrefix);
+}
+
 class BleGatewayScanSource implements GatewayScanSource {
   BleGatewayScanSource({this.emitDebounce = const Duration(milliseconds: 250)});
 
@@ -68,17 +79,28 @@ class BleGatewayScanSource implements GatewayScanSource {
 
   void _onScanResult(BleDevice device) {
     final name = device.name ?? device.rawName ?? '';
-    if (!name.startsWith(ProvisioningProtocol.namePrefix)) {
+    if (!isProvisioningCandidate(device.services, name)) {
       return;
     }
+
+    final displayName = name.startsWith(ProvisioningProtocol.namePrefix)
+        ? name
+        : ProvisioningProtocol.namePrefix + _shortCode(device.deviceId);
+
     _seen[device.deviceId] = DiscoveredGateway(
       id: device.deviceId,
-      name: name,
+      name: displayName,
       // A device that did not report RSSI is shown at the weakest bar rather
       // than a made-up middle value.
       rssi: device.rssi ?? -100,
     );
     _scheduleEmit();
+  }
+
+  static String _shortCode(String deviceId) {
+    final compact = deviceId.replaceAll(RegExp(r'[^0-9a-fA-F]'), '');
+    final tail = compact.length >= 4 ? compact.substring(compact.length - 4) : compact;
+    return tail.toUpperCase().padLeft(4, '0');
   }
 
   void _scheduleEmit() {
