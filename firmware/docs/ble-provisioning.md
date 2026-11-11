@@ -8,8 +8,30 @@ firmware, then the JK BMS Remote app. Nothing here is live.
 | | decision | why |
 |---|---|---|
 | D1 | **Setup code from the serial log** | the payload carries a WiFi password and a claim token; the code is physical-presence proof, and the person flashing already has the console open |
-| D2 | **SoftAP and Improv are removed in the same release** | owner's call: one path. Recovery from a failed setup is a USB reflash, and the claim token reaches the device only over BLE |
+| D2 | **SoftAP and Improv stay, permanently** | owner's call, revised: a gateway on a PC can be flashed and configured remotely over USB, which a phone-only path cannot do. All three ways in, at the same time |
 | D3 | **The service is visible only while the gateway cannot reach the network** | a running gateway must not be provisionable by anyone in range, and advertising costs radio time that belongs to the pack link |
+
+### Three ways in, on purpose, in one window
+
+The first draft removed the older paths in the same release. That was wrong for a
+concrete case: someone away from home, flashing a gateway from a laptop, has a PC
+and a USB cable and no phone in the loop.
+
+So one provisioning window offers all three inputs **concurrently**:
+
+| the user has | the path |
+|---|---|
+| the app on a phone | BLE setup service |
+| a laptop and a cable | Improv over USB serial |
+| neither, only a browser | SoftAP captive portal |
+
+Concurrently and not in sequence, because a sequential order makes whichever came
+second wait out the first, and for a PC-based flash that reads as a device that
+will not start.
+
+One consequence: the **setup code is printed before logs are suppressed** for
+Improv, since the two share UART0. A code logged after that point never reaches
+the screen the owner is reading.
 
 ### When the service is visible
 
@@ -41,7 +63,7 @@ gateway on repeated failure. It must instead enter provisioning after the grace
 period, because restarting forever never offers the owner a way to fix a wrong
 password.
 
-## Service## Service
+## Service
 
 | | UUID |
 |---|---|

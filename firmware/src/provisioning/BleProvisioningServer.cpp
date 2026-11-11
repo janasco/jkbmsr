@@ -84,8 +84,19 @@ bool BleProvisioningServer::begin(const String& setupCode, const String& name) {
   NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
   advertising->reset();
   advertising->addServiceUUID(kServiceUuid);
+  // Legacy advertising is 31 bytes. A 128-bit UUID takes 18 of them and the
+  // name takes 19, so both in the advertisement does not fit and one silently
+  // disappears - which a scan filter then never matches. The scan response
+  // carries the name instead, and Android merges it into the scan record.
+#if defined(NIMBLE_CPP_VERSION_MAJOR) && NIMBLE_CPP_VERSION_MAJOR >= 2
+  advertising->enableScanResponse(true);
+#else
+  advertising->setScanResponse(true);
+#endif
   advertising->setName(name.c_str());
-  advertising->start();
+  if (!advertising->start()) {
+    return false;
+  }
 
   active_ = true;
   return true;

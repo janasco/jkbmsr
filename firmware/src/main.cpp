@@ -197,56 +197,32 @@ bool applyResetTrigger() {
 }
 
 
-// Runs the BLE setup window: the app scans, writes the four fields, and the
-// gateway stores them and restarts into station mode.
-//
-// The SoftAP portal is still tried afterwards if this window closes without
-// credentials. It is the fallback for a phone whose BLE is broken, and it is
-// deliberately kept until the BLE path has been verified on hardware.
-bool runBleProvisioning(uint32_t windowMs) {
-  const String setupCode = loadOrCreateSetupCode();
-  // Printed for the owner to type into the app. It is NOT readable over BLE by
-  // design: a code the app could read is one anyone in range could read.
-  logInfo("Setup code: " + setupCode);
-
-  if (!bleProvisioning.begin(setupCode, BleProvisioningServer::advertisedName(config.deviceId))) {
-    logWarn("BLE setup service could not start");
-    return false;
-  }
-
-  const uint32_t startedAt = millis();
-  while (millis() - startedAt < windowMs) {
-    bleProvisioning.tick(millis());
-    if (bleProvisioning.hasOutcome()) {
-      const ProvisioningOutcome outcome = bleProvisioning.takeOutcome();
-      config.wifiSsid = outcome.ssid;
-      config.wifiPassword = outcome.password;
-      config.timeZone = outcome.timeZone;
-      config.claimToken = outcome.claimToken;
-      // A new claim token means the gateway must register again with it.
-      config.deviceToken = "";
-      configStore.save(config);
-      applyTimeZone(config.timeZone);
-      logInfo("BLE setup complete; restarting to join " + outcome.ssid);
-      bleProvisioning.end();
-      delay(300);
-      ESP.restart();
-    }
-    delay(10);
-  }
-
-  bleProvisioning.end();
-  return false;
-}
-
 // Runs Improv Serial (USB) and SoftAP captive-portal provisioning in parallel
 // until Wi-Fi is connected (or timeoutMs elapses; 0 means wait indefinitely).
 // On success the captured credentials are persisted. Serial logging is
 // suppressed for the duration because Improv shares UART0 and text would
 // corrupt its binary stream.
-bool runProvisioning(uint32_t timeoutMs) {
+bool runProvisioning(uint32_t timeoutMs, bool withBleSetup = false) {
   const String apSsid = CaptivePortal::softApSsid(config.deviceId);
   logInfo("Entering WiFi provisioning mode");
+
+  // Both ways in, at the same time. A phone uses the app over BLE; a laptop uses
+  // Improv over USB; a device with neither uses the portal. Running them in
+  // sequence would make whichever came second wait out the first, which for a
+  // PC-based flash is minutes of a device that looks stuck.
+  String setupCode;
+  if (withBleSetup) {
+    setupCode = loadOrCreateSetupCode();
+    // Printed before logging is suppressed for Improv: this line is what the
+    // owner types into the app, and it is never readable over BLE.
+    logInfo("Setup code: " + setupCode);
+    const String advertised = BleProvisioningServer::advertisedName(config.deviceId);
+    if (bleProvisioning.begin(setupCode, advertised)) {
+      logInfo("BLE setup advertising as " + advertised + " (service 9a1f0000-...)");
+    } else {
+      logWarn("BLE setup service could not start; the portal and USB still work");
+    }
+  }
   logInfo("SoftAP SSID: " + apSsid);
   // Derived from this device's claim code, not a shared constant. The user
   // needs it to join the AP, and it is printed on serial (physical access) —
@@ -298,6 +274,27 @@ bool runProvisioning(uint32_t timeoutMs) {
     // lands; credentials capture below takes priority once submitted.
     resetTrigger.poll();
 
+    if (withBleSetup) {
+      bleProvisioning.tick(millis());
+      if (bleProvisioning.hasOutcome()) {
+        const ProvisioningOutcome outcome = bleProvisioning.takeOutcome();
+        config.wifiSsid = outcome.ssid;
+        config.wifiPassword = outcome.password;
+        config.timeZone = outcome.timeZone;
+        config.claimToken = outcome.claimToken;
+        // A new claim token means the gateway must register again with it.
+        config.deviceToken = "";
+        config.wifiRestartCount = 0;
+        configStore.save(config);
+        applyTimeZone(config.timeZone);
+        bleProvisioning.end();
+        setLoggingEnabled(true);
+        logInfo("BLE setup complete; restarting to join " + outcome.ssid);
+        delay(300);
+        ESP.restart();
+      }
+    }
+
     if (provisioner.poll(tryConnect, ssid, password, scanNetworks, persistClaimToken) ||
         captivePortal.poll(tryConnect, captiveScanNetworks, ssid, password)) {
       config.wifiSsid = ssid;
@@ -312,6 +309,9 @@ bool runProvisioning(uint32_t timeoutMs) {
     delay(10);
   }
 
+  if (withBleSetup) {
+    bleProvisioning.end();
+  }
   captivePortal.end();
   setLoggingEnabled(true);
   if (connected) {
@@ -368,9 +368,12 @@ bool recoverFromWifiFailure() {
   config.wifiRestartCount = 0;
   configStore.save(config);
   logWarn("WiFi still unreachable after repeated restarts; opening local provisioning");
-  // BLE first: the app is the intended path, and the service only exists while
-  // the gateway cannot reach the network. The portal stays as the fallback.
-  (void)runBleProvisioning(kLocalProvisioningWindowMs);
+  // Deliberately NO BLE setup window on this path. This is a configured gateway
+  // whose network went away, and it may still have the pack link up: starting a
+  // GATT server here would put a second connection on a radio that is carrying
+  // telemetry, to solve a problem the owner did not ask about. WiFi recovery is
+  // the portal's job; changing the network is a BOOT-hold, which is an explicit
+  // physical action.
   if (!runProvisioning(kLocalProvisioningWindowMs)) {
     logWarn("Local provisioning window closed without connecting; restarting to retry");
     delay(1000);
@@ -658,10 +661,9 @@ void setup() {
   // AP every few boots), rather than falling straight back to setup mode.
   bool online = false;
   if (!config.wifiConfigured()) {
-    // The setup service is the intended path and reboots on success, so this
-    // only returns when its window closed without an app handshake.
-    (void)runBleProvisioning(kBleProvisioningWindowMs);
-    online = runProvisioning(0);
+    // Unconfigured: nothing to protect and nothing else to do, so every path
+    // (app over BLE, Improv over USB, the portal) is open until one succeeds.
+    online = runProvisioning(0, /*withBleSetup=*/true);
   } else {
     online = connectWithRetry();
     if (online) {
@@ -723,8 +725,7 @@ void loop() {
 
   resetTrigger.poll();
   if (applyResetTrigger()) {
-    (void)runBleProvisioning(kBleProvisioningWindowMs);
-    if (runProvisioning(0)) {
+    if (runProvisioning(0, /*withBleSetup=*/true)) {
       ensureDeviceAuth(true);
     }
     delay(10);
