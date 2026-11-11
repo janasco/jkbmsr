@@ -1,10 +1,10 @@
 {
-  "version": "0.9.14",
+  "version": "0.9.15",
   "targetHardware": "esp32-classic-4mb",
-  "releasedAt": "2026-11-11T08:37:05Z",
+  "releasedAt": "2026-11-11T10:14:46Z",
   "downloadUrl": "/v1/ota/firmware",
-  "sha256": "4fcbe5cec81528ee40b13d866f7d776324f77f0300ef65441de00b800d5d7050",
-  "signature": "MEQCICViZT840sKyRlegguSTFJmPYuzU4zDD3E76Ah/X2hgQAiBkd4ImkdQx3blTrTMRdpbGppsAIbpo3YPzTtAN3jhhkw==",
+  "sha256": "0de358af05e6b6f2982bcbf4eea8b441271f3808e049650d5d7293bbfd1279b9",
+  "signature": "MEUCIQDtkd9Vucef2rbkFRDw0kcKKX17cZfWP3J+ghGHxPhOeAIgbBJZkxU8S/XpnUrjx6FsSpvFLjnkPMI1d0qxYWq7OzQ=",
   "signingKeyId": "jkbmsr-ota-p256-20260705",
   "signatureAlgorithm": "ecdsa-p256-sha256"
 }
