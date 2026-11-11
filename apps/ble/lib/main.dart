@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'services/ble_adapter.dart';
 import 'services/ble_service.dart';
 import 'services/bluetooth_on.dart';
@@ -80,9 +79,7 @@ class JkbmsrBleApp extends StatelessWidget {
             primaryColor: const Color(0xFF10B981),
             cardColor: const Color(0xFFFFFFFF),
             dividerColor: const Color(0xFFE2E8F0),
-            textTheme: GoogleFonts.plusJakartaSansTextTheme(
-              ThemeData.light().textTheme,
-            ),
+            textTheme: ThemeData.light().textTheme.apply(fontFamily: 'PlusJakartaSans'),
             colorScheme: const ColorScheme.light(
               primary: Color(0xFF10B981),
               secondary: Color(0xFF0284C7),
@@ -96,9 +93,7 @@ class JkbmsrBleApp extends StatelessWidget {
             primaryColor: const Color(0xFF10B981),
             cardColor: const Color(0xFF131A20),
             dividerColor: const Color(0xFF1E2830),
-            textTheme: GoogleFonts.plusJakartaSansTextTheme(
-              ThemeData.dark().textTheme,
-            ),
+            textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'PlusJakartaSans'),
             colorScheme: const ColorScheme.dark(
               primary: Color(0xFF10B981),
               secondary: Color(0xFF38BDF8),
