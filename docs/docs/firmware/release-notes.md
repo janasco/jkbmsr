@@ -4,6 +4,14 @@ Firmware is installed from the logged-in browser flasher at
 <https://web.jkbmsr.com/flash>. The current version per target is resolved from the
 authenticated API, not a static public file.
 
+## 2026-11-11 · v0.9.13
+
+- **New target: `esp32-s3-16mb-quad`** for 16 MB ESP32-S3 modules with **quad**
+  PSRAM. Until now the only 16 MB image was built for octal PSRAM, and a quad
+  module running it resets in the bootloader before printing anything. If your
+  board showed no log output at all after flashing, this is the image for it.
+- No change to the other seven targets beyond the version.
+
 ## 2026-11-10 · v0.9.12
 
 - Faster recovery when the pack link drops. The reconnect delay now caps at

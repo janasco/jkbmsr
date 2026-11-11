@@ -8,9 +8,22 @@
       "platform": "esp32",
       "releaseStatus": "supported",
       "minimumFlashMb": 4,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32dev"],
-      "boards": ["ESP32-WROOM-32", "ESP32-WROOM-32D", "ESP32-WROOM-32E", "ESP32-WROOM-32U", "DOIT ESP32 DEVKIT V1", "NodeMCU-32S"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32dev"
+      ],
+      "boards": [
+        "ESP32-WROOM-32",
+        "ESP32-WROOM-32D",
+        "ESP32-WROOM-32E",
+        "ESP32-WROOM-32U",
+        "DOIT ESP32 DEVKIT V1",
+        "NodeMCU-32S"
+      ]
     },
     {
       "targetHardware": "esp32-c3-4mb",
@@ -19,9 +32,21 @@
       "platform": "esp32",
       "releaseStatus": "experimental",
       "minimumFlashMb": 4,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32-c3-devkitm-1"],
-      "boards": ["ESP32-C3-DevKitM-1", "Lolin C3 Mini", "ESP32-C3 Super Mini", "Seeed XIAO ESP32-C3", "WeAct Studio ESP32-C3 CoreBoard"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32-c3-devkitm-1"
+      ],
+      "boards": [
+        "ESP32-C3-DevKitM-1",
+        "Lolin C3 Mini",
+        "ESP32-C3 Super Mini",
+        "Seeed XIAO ESP32-C3",
+        "WeAct Studio ESP32-C3 CoreBoard"
+      ]
     },
     {
       "targetHardware": "esp32-s3-4mb",
@@ -30,9 +55,20 @@
       "platform": "esp32",
       "releaseStatus": "experimental",
       "minimumFlashMb": 4,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32-s3-devkitc-1"],
-      "boards": ["ESP32-S3-DevKitC-1", "Lolin S3 Mini", "ESP32-S3 Super Mini", "Seeed XIAO ESP32-S3"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32-s3-devkitc-1"
+      ],
+      "boards": [
+        "ESP32-S3-DevKitC-1",
+        "Lolin S3 Mini",
+        "ESP32-S3 Super Mini",
+        "Seeed XIAO ESP32-S3"
+      ]
     },
     {
       "targetHardware": "esp32-s3-16mb",
@@ -41,9 +77,19 @@
       "platform": "esp32",
       "releaseStatus": "supported",
       "minimumFlashMb": 16,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32-s3-devkitc-1"],
-      "boards": ["ESP32-S3-N16R8 (16 MB flash, 8 MB Octal PSRAM)", "ESP32-S3-DevKitC-1 (16 MB flash variant)", "ESP32-S3 modules with 16 MB flash"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32-s3-devkitc-1"
+      ],
+      "boards": [
+        "ESP32-S3-N16R8 (16 MB flash, 8 MB Octal PSRAM)",
+        "ESP32-S3-DevKitC-1 (16 MB, Octal PSRAM)",
+        "ESP32-S3 modules with 16 MB flash and Octal PSRAM"
+      ]
     },
     {
       "targetHardware": "esp32-classic-8mb",
@@ -52,9 +98,19 @@
       "platform": "esp32",
       "releaseStatus": "experimental",
       "minimumFlashMb": 8,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32dev"],
-      "boards": ["ESP32-WROOM-32 (8 MB flash)", "ESP32-WROOM-32D/32E (8 MB flash)", "Generic ESP32-WROOM development boards with 8 MB flash"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32dev"
+      ],
+      "boards": [
+        "ESP32-WROOM-32 (8 MB flash)",
+        "ESP32-WROOM-32D/32E (8 MB flash)",
+        "Generic ESP32-WROOM development boards with 8 MB flash"
+      ]
     },
     {
       "targetHardware": "esp32-c6-4mb",
@@ -63,9 +119,41 @@
       "platform": "esp32",
       "releaseStatus": "experimental",
       "minimumFlashMb": 4,
-      "capabilities": { "wifi": true, "ble": true, "ota": true },
-      "boardProfiles": ["esp32-c6-devkitc-1"],
-      "boards": ["ESP32-C6-DevKitC-1", "ESP32-C6-DevKitM-1", "ESP32-C6 Super Mini", "Compatible 4 MB ESP32-C6 development boards"]
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32-c6-devkitc-1"
+      ],
+      "boards": [
+        "ESP32-C6-DevKitC-1",
+        "ESP32-C6-DevKitM-1",
+        "ESP32-C6 Super Mini",
+        "Compatible 4 MB ESP32-C6 development boards"
+      ]
+    },
+    {
+      "targetHardware": "esp32-s3-16mb-quad",
+      "platformioEnvironment": "esp32-s3-16mb-quad",
+      "chipFamily": "ESP32-S3",
+      "platform": "esp32",
+      "releaseStatus": "experimental",
+      "minimumFlashMb": 16,
+      "capabilities": {
+        "wifi": true,
+        "ble": true,
+        "ota": true
+      },
+      "boardProfiles": [
+        "esp32-s3-devkitc-1"
+      ],
+      "boards": [
+        "ESP32-S3 (16 MB flash, Quad PSRAM)",
+        "ESP32-S3-DevKitC-1 (16 MB, Quad PSRAM)",
+        "ESP32-S3 modules with 16 MB flash and Quad PSRAM"
+      ]
     }
   ]
 }

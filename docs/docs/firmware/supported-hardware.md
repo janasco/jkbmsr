@@ -2,11 +2,36 @@
 
 JK BMS Remote version 1 supports JK-BMS monitoring only.
 
-## Gateway firmware target
+## Gateway firmware targets
 
-Current production firmware target:
+The flasher offers one image per gateway target. The **target** decides the
+bootloader, the partition table and the PSRAM mode, so it has to match the board
+in your hand. The version number is the same for all of them: the version
+identifies the source, the target identifies the build.
 
-- `esp32dev` (ESP32-family gateway)
+| Target | Chip | Flash | PSRAM | Status |
+|---|---|---|---|---|
+| `esp32-classic-4mb` | ESP32 | 4 MB | none | supported |
+| `esp32-classic-8mb` | ESP32 | 8 MB | none | experimental |
+| `esp32-c3-4mb` | ESP32-C3 | 4 MB | none | experimental |
+| `esp32-c6-4mb` | ESP32-C6 | 4 MB | none | experimental |
+| `esp32-s3-4mb` | ESP32-S3 | 4 MB | Quad | experimental |
+| `esp32-s3-16mb` | ESP32-S3 | 16 MB | **Octal** | supported |
+| `esp32-s3-16mb-quad` | ESP32-S3 | 16 MB | **Quad** | experimental |
+
+### ESP32-S3: which image?
+
+PSRAM mode is a compile-time setting, not something the firmware can detect at
+runtime, so this is the one choice you cannot get wrong and fix later.
+
+- The common **N16R8** module has **octal** PSRAM: use `esp32-s3-16mb`.
+- A 16 MB module with **quad** PSRAM has no correct image in the older target, so
+  use `esp32-s3-16mb-quad`. It uses the whole 16 MB either way.
+- Not sure, or the board is a clone? **The symptom tells you.** An octal image on
+  a quad module resets in the bootloader before it can print anything: you see
+  the ROM banner, the segment loads, then `rst:0x3 (RTC_SW_SYS_RESET)` in a loop
+  with no `[info]` lines at all. If you see the firmware's own log lines, the
+  PSRAM mode is right and the target is right.
 
 ## JK-BMS model matrix
 
