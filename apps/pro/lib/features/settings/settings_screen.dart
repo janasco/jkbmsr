@@ -6,6 +6,7 @@ import '../../widgets/shared/design_system/colors.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/back_intent.dart';
 import '../../widgets/shared/design_system/tokens.dart';
+import '../guide/guide_screen.dart';
 import '../../widgets/shared/design_system/typography.dart';
 import '../../widgets/shared/design_system/components.dart';
 import '../../services/api_client.dart';
@@ -1542,6 +1543,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // The Contributor app is a direct action, not a drill-in, so it
               // sits alongside About rather than becoming its own category.
               if (group.title == 'Support') ...[
+                _guideEntry(),
+                const SizedBox(height: JKBMSRTokens.space8),
                 _contributorEntry(),
                 const SizedBox(height: JKBMSRTokens.space8),
               ],
@@ -1572,6 +1575,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: JKBMSRTypography.body.copyWith(fontWeight: FontWeight.w500, color: context.colors.textPrimary),
                 ),
               ),
+              Icon(Icons.chevron_right, size: 20, color: context.colors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openGuide() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const GuideScreen()),
+    );
+  }
+
+  // Drill-in row: the guide answers the questions a reading raises, which is
+  // the one kind of help that does not need a support ticket.
+  Widget _guideEntry() {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: _openGuide,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: JKBMSRTokens.space16, vertical: JKBMSRTokens.space16),
+          child: Row(
+            children: [
+              Icon(Icons.menu_book_outlined, size: 22, color: context.colors.accent),
+              const SizedBox(width: JKBMSRTokens.space16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Guide',
+                      style: JKBMSRTypography.body.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: JKBMSRTokens.space4),
+                    Text(
+                      'Short answers: cell spread, current direction, lost BMS link, time zones and the trial.',
+                      style: JKBMSRTypography.bodySecondary,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: JKBMSRTokens.space8),
               Icon(Icons.chevron_right, size: 20, color: context.colors.textMuted),
             ],
           ),
