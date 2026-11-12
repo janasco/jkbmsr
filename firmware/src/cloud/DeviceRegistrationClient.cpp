@@ -175,4 +175,35 @@ bool DeviceRegistrationClient::loginDevice(
   return true;
 }
 
+bool DeviceRegistrationClient::bindAccount(const String& deviceId, const String& claimToken) {
+  if (deviceId.length() == 0 || claimToken.length() == 0) {
+    return false;
+  }
+  JsonDocument document;
+  document["deviceId"] = deviceId;
+  document["claimToken"] = claimToken;
+  String payload;
+  serializeJson(document, payload);
+
+  GatewaySecureClient client;
+  configureSecureClient(client);
+
+  HTTPClient http;
+  if (!http.begin(client, apiBaseUrl_ + "/v1/device/bind")) {
+    return false;
+  }
+  http.addHeader("Content-Type", "application/json");
+  const int status = http.POST(payload);
+  http.end();
+
+  // 400 means the token was spent or expired, which is not worth retrying; 200
+  // means bound or already bound.
+  if (status >= 200 && status < 300) {
+    logInfo("Gateway bound to the account");
+    return true;
+  }
+  logWarn("Account bind request failed with status " + String(status));
+  return false;
+}
+
 }  // namespace jkbmsr

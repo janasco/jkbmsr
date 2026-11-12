@@ -414,6 +414,15 @@ void applyDeviceAuthResult(const DeviceRegistrationResult& result) {
   config.bmsVendor = result.bmsVendor;
   applyBmsConfig();
   configStore.save(config);
+
+  // A preserved identity logs in instead of registering, so the claim token the
+  // flasher stored was never consumed and the gateway could stay unowned while
+  // reporting perfectly. Present it now; on success it is spent, so clear it.
+  if (config.claimToken.length() > 0 &&
+      deviceRegistrationClient.bindAccount(config.deviceId, config.claimToken)) {
+    config.claimToken = "";
+    configStore.save(config);
+  }
 }
 
 void ensureDeviceAuth(bool forceRefresh = false) {

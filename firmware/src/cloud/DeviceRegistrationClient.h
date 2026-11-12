@@ -32,6 +32,11 @@ class DeviceRegistrationClient {
       const String& claimCode,
       const String& claimToken,
       DeviceRegistrationResult& result);
+  /// Presents a stored claim token so a gateway that already has an identity can
+  /// bind itself after login. The token is only consumed at first registration,
+  /// so a preserved identity would otherwise never use it.
+  bool bindAccount(const String& deviceId, const String& claimToken);
+
   bool loginDevice(
       const String& deviceId,
       const String& deviceSecret,
