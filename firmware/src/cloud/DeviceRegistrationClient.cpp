@@ -175,9 +175,9 @@ bool DeviceRegistrationClient::loginDevice(
   return true;
 }
 
-bool DeviceRegistrationClient::bindAccount(const String& deviceId, const String& claimToken) {
+int DeviceRegistrationClient::bindAccount(const String& deviceId, const String& claimToken) {
   if (deviceId.length() == 0 || claimToken.length() == 0) {
-    return false;
+    return 0;
   }
   JsonDocument document;
   document["deviceId"] = deviceId;
@@ -190,7 +190,7 @@ bool DeviceRegistrationClient::bindAccount(const String& deviceId, const String&
 
   HTTPClient http;
   if (!http.begin(client, apiBaseUrl_ + "/v1/device/bind")) {
-    return false;
+    return 0;
   }
   http.addHeader("Content-Type", "application/json");
   const int status = http.POST(payload);
@@ -200,10 +200,14 @@ bool DeviceRegistrationClient::bindAccount(const String& deviceId, const String&
   // means bound or already bound.
   if (status >= 200 && status < 300) {
     logInfo("Gateway bound to the account");
-    return true;
+  } else if (status == 400) {
+    // Spent or expired. Clearing it is the point: a device that kept a dead
+    // token retried it on every boot and logged a warning each time.
+    logWarn("Account bind token is no longer valid; clearing it");
+  } else {
+    logWarn("Account bind request failed with status " + String(status));
   }
-  logWarn("Account bind request failed with status " + String(status));
-  return false;
+  return status;
 }
 
 }  // namespace jkbmsr

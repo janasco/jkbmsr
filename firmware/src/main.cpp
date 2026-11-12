@@ -418,10 +418,15 @@ void applyDeviceAuthResult(const DeviceRegistrationResult& result) {
   // A preserved identity logs in instead of registering, so the claim token the
   // flasher stored was never consumed and the gateway could stay unowned while
   // reporting perfectly. Present it now; on success it is spent, so clear it.
-  if (config.claimToken.length() > 0 &&
-      deviceRegistrationClient.bindAccount(config.deviceId, config.claimToken)) {
-    config.claimToken = "";
-    configStore.save(config);
+  if (config.claimToken.length() > 0) {
+    const int status = deviceRegistrationClient.bindAccount(config.deviceId, config.claimToken);
+    // 2xx: spent on success. 400: spent or expired, and retrying it every boot
+    // only produces a warning. Anything else (transport, 5xx) keeps the token so
+    // the next boot can try again.
+    if ((status >= 200 && status < 300) || status == 400) {
+      config.claimToken = "";
+      configStore.save(config);
+    }
   }
 }
 

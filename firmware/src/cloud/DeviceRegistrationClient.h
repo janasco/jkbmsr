@@ -35,7 +35,10 @@ class DeviceRegistrationClient {
   /// Presents a stored claim token so a gateway that already has an identity can
   /// bind itself after login. The token is only consumed at first registration,
   /// so a preserved identity would otherwise never use it.
-  bool bindAccount(const String& deviceId, const String& claimToken);
+  /// Returns the HTTP status, or 0 when the request could not be made. A 400
+  /// means the token is spent or expired, which is worth distinguishing from a
+  /// transport failure: retrying a dead token every boot is pointless.
+  int bindAccount(const String& deviceId, const String& claimToken);
 
   bool loginDevice(
       const String& deviceId,
