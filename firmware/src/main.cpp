@@ -22,6 +22,7 @@
 #include "esp_ota_ops.h"
 #include "ota/VersionCompare.h"
 #include "cloud/BleProvisioningServer.h"
+#include "cloud/HealthWatchdog.h"
 #include "provisioning/CaptivePortal.h"
 #include "provisioning/ProvisioningManager.h"
 #include "provisioning/ResetTrigger.h"
@@ -39,6 +40,7 @@ OtaClient otaClient(kApiBaseUrl);
 ProvisioningManager provisioner;
 CaptivePortal captivePortal;
 BleProvisioningServer bleProvisioning;
+HealthWatchdog healthWatchdog;
 ResetTrigger resetTrigger;
 DeviceConfig config;
 uint32_t lastTelemetryMs = 0;
@@ -382,6 +384,12 @@ bool recoverFromWifiFailure() {
   }
   return true;
 }
+
+namespace jkbmsr {
+// Declared in HealthWatchdog.h; defined here because the instance is here. It has to
+// live in the namespace the clients call, not at global scope.
+void noteCloudContact(uint32_t nowMs) { healthWatchdog.noteContact(nowMs); }
+}  // namespace jkbmsr
 
 void normalizeBmsConfig(DeviceConfig& target) {
   if (!isKnownBmsVendor(target.bmsVendor)) {
@@ -783,6 +791,17 @@ void loop() {
   }
 
   const bool cloudReady = systemClockValid() && config.deviceToken.length() > 0;
+
+  // Health watchdog: Wi-Fi up, credentials held, and nothing has reached the cloud for
+  // the threshold. That is the one failure a restart can fix, and it is logged so the
+  // next person has the reason rather than the pattern.
+  healthWatchdog.noteWifi(wifiManager.connected());
+  if (cloudReady && healthWatchdog.shouldRestart(millis())) {
+    logWarn("No cloud contact for " + String(healthWatchdog.thresholdMs() / 60000UL) +
+            " min while connected; restarting (restart " + String(healthWatchdog.restarts()) + ")");
+    delay(200);
+    ESP.restart();
+  }
 
   // Device JWTs are deliberately short-lived. Renew them well before expiry
   // using the persistent per-device secret, even if Wi-Fi never drops.

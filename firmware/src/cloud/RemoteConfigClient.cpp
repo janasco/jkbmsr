@@ -13,6 +13,7 @@
 #include "debug/DebugLog.h"
 #include "net/PlatformNetwork.h"
 #include "net/SecureClient.h"
+#include "cloud/HealthWatchdog.h"
 
 namespace jkbmsr {
 
@@ -84,6 +85,7 @@ bool RemoteConfigClient::fetch(const String& token, DeviceConfig& config, Remote
     wifiActions->otaUpdateRequestId = document["otaUpdateRequestId"] | "";
   }
   logInfo("Remote config applied");
+  noteCloudContact(millis());
   return true;
 }
 

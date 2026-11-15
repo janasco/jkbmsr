@@ -11,6 +11,7 @@
 #include "debug/DebugLog.h"
 #include "net/PlatformNetwork.h"
 #include "net/SecureClient.h"
+#include "cloud/HealthWatchdog.h"
 
 namespace jkbmsr {
 
@@ -176,6 +177,7 @@ bool TelemetryClient::upload(const String& token, const BatteryTelemetry& teleme
 
   if (sendPayload(token, payload)) {
     logInfo(telemetry.valid ? "Telemetry uploaded" : "Heartbeat uploaded (BMS link down)");
+    noteCloudContact(millis());
     return true;
   }
 
