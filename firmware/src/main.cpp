@@ -389,6 +389,12 @@ namespace jkbmsr {
 // Declared in HealthWatchdog.h; defined here because the instance is here. It has to
 // live in the namespace the clients call, not at global scope.
 void noteCloudContact(uint32_t nowMs) { healthWatchdog.noteContact(nowMs); }
+
+// Wi-Fi modem sleep is on by default, and it is what breaks a BLE link on an idle
+// gateway: the radio naps between beacons, BLE connection events are missed, and at
+// -88 dBm the supervision timeout fires before the next wake. A gateway is mains or
+// pack powered, so the power saving buys nothing and costs the link.
+void disableWifiPowerSave() { WiFi.setSleep(false); }
 }  // namespace jkbmsr
 
 void normalizeBmsConfig(DeviceConfig& target) {
@@ -707,6 +713,7 @@ void setup() {
 
   if (online) {
     logInfo("WiFi connected");
+    disableWifiPowerSave();
     if (ensureSystemClock()) {
       // NVS may contain a short-lived token from a previous boot. Always
       // authenticate with the persistent rotating secret at boot so a gateway
