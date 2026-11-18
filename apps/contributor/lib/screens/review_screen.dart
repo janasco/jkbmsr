@@ -66,6 +66,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   /// A submit or export is in flight; both actions are disabled meanwhile.
   _BusyAction _busy = _BusyAction.none;
 
+  /// Optional Contributor code, typed by the donor. Empty means anonymous.
+  String _accountCode = '';
+
   /// The receipt from a successful submit, if any.
   SubmitReceipt? _receipt;
 
@@ -99,7 +102,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       _exported = false;
     });
 
-    final result = await _uploader.submit(_payload);
+    final result = await _uploader.submit(_payload, accountCode: _accountCode);
     if (!mounted) return;
     setState(() {
       _busy = _BusyAction.none;
@@ -236,6 +239,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 child: const Text(SubmitStrings.done),
               )
             else ...[
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Contributor code (optional)',
+                  helperText: 'Leave empty to stay anonymous.',
+                ),
+                textCapitalization: TextCapitalization.characters,
+                autocorrect: false,
+                onChanged: (value) => setState(() => _accountCode = value.trim()),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Linking means this capture, its BMS model and its serial hash are '
+                'associated with your account, and it earns points you can use for '
+                'Cloud Service.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
               FilledButton(
                 onPressed: _busy == _BusyAction.none ? _onSubmitPressed : null,
                 child: _busy == _BusyAction.submit
@@ -318,6 +338,21 @@ class _SuccessCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onPrimaryContainer),
             ),
+            if (receipt.linked) ...[
+              const SizedBox(height: 8),
+              // Stated only when it happened: an anonymous capture has nothing to
+              // say about points, and a "0 points" line would read as a failure.
+              Text(
+                receipt.credited > 0
+                    ? 'Linked to your account, ${receipt.credited} points added.'
+                    : 'Linked to your account. No points this time: the daily limit or an '
+                        'already credited pack.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               SubmitStrings.successReceiptLabel,
