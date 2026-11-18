@@ -147,6 +147,10 @@ class Jk02CaptureSession {
 
   int fragmentCount = 0;
   int frameCount = 0;
+  /// Cell-info frames that were stored as bytes but produced no sample. Counted
+  /// rather than logged, because this class has no logger; the capture screen
+  /// reports it when a capture finishes.
+  int undecodedCellFrames = 0;
 
   List<int>? _pendingCellInfo;
   int _pendingCellInfoOffsetMs = 0;
@@ -212,7 +216,13 @@ class Jk02CaptureSession {
 
   void _decodeCellInfo(List<int> frame, int offsetMs) {
     final status = BmsProtocolHelper.parseJk02CellInfoFrame(frame, is32s: is32s);
-    if (status == null) return;
+    if (status == null) {
+      // The frame is kept as raw bytes but produced no sample. Without this line
+      // the payload has a frame and no sample and no explanation, which is what
+      // six donated captures looked like: "117 cellInfo frames but 116 samples".
+      undecodedCellFrames += 1;
+      return;
+    }
     statuses.add(status);
     statusOffsetsMs.add(offsetMs);
   }
