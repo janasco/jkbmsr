@@ -50,8 +50,18 @@ enum SubmitFailureKind {
 class SubmitReceipt {
   final String id;
   final DateTime? receivedAt;
+  /// True when the capture was linked to an account by the code the donor pasted.
+  final bool linked;
+  /// Points credited for this capture, as the server decided. Zero when the
+  /// capture was anonymous, unidentifiable, or the daily allowance is used up.
+  final int credited;
 
-  const SubmitReceipt({required this.id, this.receivedAt});
+  const SubmitReceipt({
+    required this.id,
+    this.receivedAt,
+    this.linked = false,
+    this.credited = 0,
+  });
 }
 
 /// The outcome of a submit: exactly one of [receipt] / [failure] is set.
@@ -107,8 +117,13 @@ class ContributionUploader {
   /// It never retries: a failure is returned to the caller so the user can
   /// choose to try again or export. Auto-retrying would turn a `429` into a
   /// longer rate-limit window and would hide a real failure behind a spinner.
-  Future<SubmitResult> submit(String payload) async {
-    final bytes = utf8.encode(payload);
+  Future<SubmitResult> submit(String payload, {String? accountCode}) async {
+    // The code travels beside the contribution document, not inside it: the
+    // document is the redacted evidence, and mixing an account identifier into it
+    // would mean the export file carried it too.
+    final code = accountCode?.trim();
+    final body = (code == null || code.isEmpty) ? payload : _withAccountCode(payload, code);
+    final bytes = utf8.encode(body);
     // Same cap the server enforces, checked before the network so an oversized
     // document fails fast with the same reason the server would give.
     if (bytes.length > Contribution.maxPayloadBytes) {
@@ -142,6 +157,20 @@ class ContributionUploader {
     }
 
     return _interpret(response);
+  }
+
+  /// Adds the optional code to the request body. Done by editing the JSON rather
+  /// than threading a parameter through the model, because the document itself must
+  /// stay exactly what an export produces.
+  String _withAccountCode(String payload, String code) {
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map<String, dynamic>) return payload;
+      decoded['accountCode'] = code;
+      return jsonEncode(decoded);
+    } catch (_) {
+      return payload;
+    }
   }
 
   SubmitResult _interpret(http.Response response) {
@@ -178,9 +207,13 @@ class ContributionUploader {
       if (decoded is Map<String, dynamic>) {
         final id = decoded['id'];
         final received = decoded['receivedAt'];
+        final linked = decoded['linked'];
+        final credited = decoded['credited'];
         return SubmitReceipt(
           id: id is String && id.isNotEmpty ? id : '(unconfirmed)',
           receivedAt: received is String ? DateTime.tryParse(received)?.toUtc() : null,
+          linked: linked == true,
+          credited: credited is num ? credited.toInt() : 0,
         );
       }
     } catch (_) {

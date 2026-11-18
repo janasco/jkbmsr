@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/shared/design_system/colors.dart';
@@ -1754,7 +1755,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'appearance':
         return [_appearanceCard()];
       case 'account':
-        return [_securityCard(), const SizedBox(height: JKBMSRTokens.space16), _recentSignInsCard(), const SizedBox(height: JKBMSRTokens.space16), _deleteAccountCard()];
+        return [
+          const _ContributorCodeCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          _securityCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          _recentSignInsCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          _deleteAccountCard(),
+        ];
       case 'gateway':
         return [
           _gatewayNameCard(),
@@ -3457,6 +3466,108 @@ class _WifiTargetSkeleton extends StatelessWidget {
         JKBMSRSkeletonListRow(
             leadingSize: 16, leadingIsCircle: false, trailingWidth: 0),
       ],
+    );
+  }
+}
+
+/// The code a donor pastes into the Contributor app.
+///
+/// Own widget rather than a card in the main state: it fetches once, it has its own
+/// failure, and putting that in the settings screen's state would make every rebuild
+/// depend on a network call that has nothing to do with the rest of the page.
+class _ContributorCodeCard extends StatefulWidget {
+  const _ContributorCodeCard();
+
+  @override
+  State<_ContributorCodeCard> createState() => _ContributorCodeCardState();
+}
+
+class _ContributorCodeCardState extends State<_ContributorCodeCard> {
+  String? _code;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final code = await APIClient().getAccountCode();
+      if (!mounted) return;
+      setState(() => _code = code.isEmpty ? null : code);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(JKBMSRTokens.space16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Contributor code',
+              style: JKBMSRTypography.cardHeading.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: JKBMSRTokens.space8),
+            Text(
+              'Paste this in the JK BMS Contributor app to link a capture to this account. '
+              'Without it, a capture stays anonymous and earns nothing.',
+              style: JKBMSRTypography.bodySecondary.copyWith(color: colors.textMuted),
+            ),
+            const SizedBox(height: JKBMSRTokens.space16),
+            if (_failed)
+              Text(
+                'The code could not be loaded. Reopen this screen.',
+                style: JKBMSRTypography.bodySecondary.copyWith(color: colors.critical),
+              )
+            else
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: JKBMSRTokens.space16,
+                      vertical: JKBMSRTokens.space8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.inset,
+                      borderRadius: BorderRadius.circular(JKBMSRTokens.radius8),
+                      border: Border.all(color: colors.line),
+                    ),
+                    child: Text(
+                      _code ?? '…',
+                      style: JKBMSRTypography.tableText.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: JKBMSRTokens.space12),
+                  TextButton(
+                    onPressed: _code == null
+                        ? null
+                        : () async {
+                            await Clipboard.setData(ClipboardData(text: _code!));
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Code copied')),
+                            );
+                          },
+                    child: const Text('Copy'),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

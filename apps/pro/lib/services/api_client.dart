@@ -297,6 +297,15 @@ class APIClient with RequestDeduplicationMixin {
     return (data['user']?['authMethod'] as String?) ?? 'password';
   }
 
+  /// The code to paste into the Contributor app. The server generates it on the
+  /// first call, so this is also where an account gets one.
+  Future<String> getAccountCode() async {
+    final url = Uri.parse('$baseUrl/v1/user/me/account-code');
+    final response = await _client.get(url, headers: await _headers());
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return (data['code'] as String?) ?? '';
+  }
+
   /// Permanently deletes the signed-in account (see jkbmsr-api's DELETE
   /// /user/me): every gateway it owns and that gateway's telemetry/alert/OTA
   /// history, device shares in either direction,
