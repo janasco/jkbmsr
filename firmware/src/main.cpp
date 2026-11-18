@@ -26,6 +26,7 @@
 #include "provisioning/CaptivePortal.h"
 #include "provisioning/ProvisioningManager.h"
 #include "provisioning/ResetTrigger.h"
+#include <WiFi.h>
 
 using namespace jkbmsr;
 
@@ -390,11 +391,11 @@ namespace jkbmsr {
 // live in the namespace the clients call, not at global scope.
 void noteCloudContact(uint32_t nowMs) { healthWatchdog.noteContact(nowMs); }
 
-// Wi-Fi modem sleep is on by default, and it is what breaks a BLE link on an idle
-// gateway: the radio naps between beacons, BLE connection events are missed, and at
-// -88 dBm the supervision timeout fires before the next wake. A gateway is mains or
-// pack powered, so the power saving buys nothing and costs the link.
-void disableWifiPowerSave() { WiFi.setSleep(false); }
+// DO NOT disable Wi-Fi modem sleep here. The ESP32 WiFi driver calls abort() when
+// modem sleep is off while Bluetooth is enabled - "Should enable WiFi modem sleep when
+// both WiFi and Bluetooth are enabled" - so 0.9.22 and 0.9.23 reset in a boot loop on
+// every gateway. The BLE link stays as it was; if it needs tuning, it needs BLE
+// connection parameters, not the Wi-Fi power mode.
 }  // namespace jkbmsr
 
 void normalizeBmsConfig(DeviceConfig& target) {
@@ -713,7 +714,6 @@ void setup() {
 
   if (online) {
     logInfo("WiFi connected");
-    disableWifiPowerSave();
     if (ensureSystemClock()) {
       // NVS may contain a short-lived token from a previous boot. Always
       // authenticate with the persistent rotating secret at boot so a gateway
