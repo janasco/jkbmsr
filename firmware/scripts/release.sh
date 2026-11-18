@@ -60,7 +60,11 @@ PIO_BIN="${PIO_BIN:-pio}"
 # signed a release. OTA_SIGNING_KEY_ID was a workflow-level env in CI; it was
 # also listed as a secret in firmware/.env.example because it must be bumped in
 # lockstep with a key rotation. Same default, same meaning.
-OTA_SIGNING_KEY_ID="${OTA_SIGNING_KEY_ID:-jkbmsr-ota-p256-20260705}"
+# Must match kOtaSigningKeyId in include/OtaSigningKey.h. The default was the
+# pre-rotation id (20260705), so every metadata file since 2026-10-09 named a key the
+# firmware no longer accepts: devices answered "metadata-signing-key-mismatch" and
+# refused to update. The private key was already the rotated one.
+OTA_SIGNING_KEY_ID="${OTA_SIGNING_KEY_ID:-jkbmsr-ota-p256-20261009}"
 OTA_SIGNATURE_ALGORITHM="${OTA_SIGNATURE_ALGORITHM:-ecdsa-p256-sha256}"
 
 FIRMWARE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
