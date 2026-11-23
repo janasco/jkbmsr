@@ -50,8 +50,8 @@ class CaptureScreen extends StatefulWidget {
 
 class _CaptureScreenState extends State<CaptureScreen>
     with SingleTickerProviderStateMixin {
-  late final CaptureController _controller = widget.controller ??
-      CaptureService(transport: UniversalBleTransport());
+  late final CaptureController _controller =
+      widget.controller ?? CaptureService(transport: UniversalBleTransport());
   late final Duration _duration =
       widget.captureDuration ?? CaptureService.defaultDuration;
 
@@ -254,94 +254,146 @@ class _CaptureScreenState extends State<CaptureScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+    // The primary action lives OUTSIDE the scrolling content. The idle screen is
+    // long enough that the button, and now the points line above it, fell below the
+    // fold on a small phone; an action that has to be found is an action some people
+    // never take. The list scrolls, the button does not.
+    return Column(
       children: [
-        AppSurface(
-          border: false,
-          padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              scheme.primary.withValues(alpha: 0.20),
-              scheme.tertiary.withValues(alpha: 0.06),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(18),
+              AppSurface(
+                border: false,
+                padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.primary.withValues(alpha: 0.20),
+                    scheme.tertiary.withValues(alpha: 0.06),
+                  ],
                 ),
-                child: Icon(
-                  Icons.battery_charging_full_rounded,
-                  size: 28,
-                  color: scheme.primary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Icon(
+                        Icons.battery_charging_full_rounded,
+                        size: 28,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text('Capture your JK-BMS',
+                        style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Read one telemetry session and turn it into an anonymous '
+                      'contribution. The app only listens and never writes to your '
+                      'battery.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 18),
-              Text('Capture your JK-BMS', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(
-                'Read one telemetry session and turn it into an anonymous '
-                'contribution. The app only listens and never writes to your '
-                'battery.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  height: 1.45,
+              const SizedBox(height: 20),
+              AppSurface(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                child: Column(
+                  children: [
+                    const AssuranceRow(
+                      icon: Icons.visibility_off_outlined,
+                      title: 'Read-only',
+                      detail: 'Nothing is ever written to the BMS.',
+                    ),
+                    const Divider(),
+                    const AssuranceRow(
+                      icon: Icons.person_off_outlined,
+                      title: 'No account, no identity',
+                      detail:
+                          'No sign-in, no device ID and no IP address are stored.',
+                    ),
+                    const Divider(),
+                    AssuranceRow(
+                      icon: Icons.timer_outlined,
+                      // Derived, not typed: the claim cannot drift from the capture
+                      // this build actually performs.
+                      title:
+                          'About ${CaptureService.defaultDuration.inSeconds} seconds',
+                      detail: 'Keep the pack powered and within a few metres.',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Points were earned and spendable but invisible: no donor has ever used a
+              // code, so the reward loop has never been exercised in the field. This is the
+              // one screen a donor sees before the work, which is where the ask belongs.
+              AppSurface(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.stars_outlined, size: 20, color: scheme.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Have a code? Earn points',
+                              style: theme.textTheme.titleSmall),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Paste it on the Review screen. Points pay for cloud '
+                            'service days.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        AppSurface(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Column(
-            children: [
-              const AssuranceRow(
-                icon: Icons.visibility_off_outlined,
-                title: 'Read-only',
-                detail: 'Nothing is ever written to the BMS.',
-              ),
-              const Divider(),
-              const AssuranceRow(
-                icon: Icons.person_off_outlined,
-                title: 'No account, no identity',
-                detail:
-                    'No sign-in, no device ID and no IP address are stored.',
-              ),
-              const Divider(),
-              AssuranceRow(
-                icon: Icons.timer_outlined,
-                // Derived, not typed: the claim cannot drift from the capture
-                // this build actually performs.
-                title:
-                    'About ${CaptureService.defaultDuration.inSeconds} seconds',
-                detail: 'Keep the pack powered and within a few metres.',
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _startScan,
+              icon: const Icon(Icons.bluetooth_searching_rounded),
+              label: const Text('Scan for JK-BMS'),
+            ),
           ),
         ),
-        const SizedBox(height: 28),
-        FilledButton.icon(
-          onPressed: _startScan,
-          icon: const Icon(Icons.bluetooth_searching_rounded),
-          label: const Text('Scan for JK-BMS'),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Bluetooth must be on. Nothing leaves this phone until you press '
-          'Contribute. · v${AppInfo.version}',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-            height: 1.4,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
+          child: Text(
+            'Bluetooth must be on. Nothing leaves this phone until you press '
+            'Contribute. · v${AppInfo.version}',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              height: 1.4,
+            ),
           ),
         ),
       ],

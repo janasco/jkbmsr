@@ -40,7 +40,7 @@
 #                            and flutter is not already on PATH)
 #   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 180)
 #   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 335)
-#   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 160)
+#   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 161)
 #   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 37)
 #
 # Exit status: 0 everything that ran passed (skips are allowed unless --strict),
@@ -58,7 +58,7 @@ STRICT=0
 ONLY=()
 BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-180}
 PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-335}
-CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-160}
+CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-161}
 BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-37}
 LOG_DIR=""
 
