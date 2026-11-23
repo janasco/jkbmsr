@@ -16,6 +16,7 @@ import '../widgets/wire_resistance_section.dart';
 import '../widgets/diagnostics_expandable.dart';
 import '../widgets/info_banner.dart';
 import '../widgets/ad_slot.dart';
+import '../widgets/no_cell_data_banner.dart';
 
 class StatusScreen extends StatelessWidget {
   const StatusScreen({super.key});
@@ -109,6 +110,11 @@ class StatusScreen extends StatelessWidget {
                       message:
                           "This device doesn't report per-cell voltage or wire-resistance data to this app yet. Only JK-BMS is supported for that today.",
                     ),
+                    const SizedBox(height: 14),
+                  ] else if (isConnected && status.cells.isEmpty) ...[
+                    // Connected, supported, and still no per-cell readings: a real
+                    // state, and one the empty section used to render as nothing.
+                    NoCellDataBanner(status: status),
                     const SizedBox(height: 14),
                   ] else ...[
                     CellVoltagesSection(cells: status.cells),

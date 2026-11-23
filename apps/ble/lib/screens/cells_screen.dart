@@ -7,6 +7,7 @@ import '../widgets/cell_voltages_section.dart';
 import '../widgets/temperatures_section.dart';
 import '../widgets/info_banner.dart';
 import '../widgets/ad_slot.dart';
+import '../widgets/no_cell_data_banner.dart';
 
 /// Dedicated Cells tab — per-cell voltages, balance state, and temperatures.
 /// Promoted to a bottom-nav tab (it replaced the Control tab, which now lives
@@ -59,6 +60,8 @@ class CellsScreen extends StatelessWidget {
                     message:
                         "This device doesn't report per-cell voltage or wire-resistance data to this app yet. Only JK-BMS is supported for that today.",
                   )
+                else if (status.cells.isEmpty)
+                  NoCellDataBanner(status: status)
                 else
                   CellVoltagesSection(cells: status.cells),
                 const SizedBox(height: 16),

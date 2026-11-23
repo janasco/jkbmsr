@@ -1,7 +1,7 @@
 name: jkbmsr_ble
 description: "JK BMS Bluetooth - Bluetooth telemetry and control for JK-BMS."
 publish_to: 'none'
-version: 4.17.33+53
+version: 4.17.34+54
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
