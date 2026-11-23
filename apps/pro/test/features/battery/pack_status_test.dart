@@ -203,7 +203,9 @@ void main() {
 
       final latest = _line(noLatest, 'Firmware up to date');
       expect(latest.mark, PackStatusMark.unknown);
-      expect(latest.detail, 'Installed 0.9.10 · latest version unknown');
+      // The installed version is known, so it is stated plainly. "latest version
+      // unknown" described our data gap, not the gateway.
+      expect(latest.detail, 'Installed 0.9.10');
     });
 
     test('a gateway that checked in without readings is not ticked', () {

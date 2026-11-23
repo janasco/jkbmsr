@@ -243,7 +243,10 @@ PackStatusLine _firmwareLine(PackStatusInput input) {
   if (latest == null || latest.isEmpty) {
     return PackStatusLine(
       label: 'Firmware up to date',
-      detail: 'Installed $installed · latest version unknown',
+      // The gateway knows what it is running; the server has not said what the newest
+      // build is. That is a fact about our data, not about the gateway, so it is not
+      // dressed up as something the owner must act on.
+      detail: 'Installed $installed',
       mark: PackStatusMark.unknown,
     );
   }
