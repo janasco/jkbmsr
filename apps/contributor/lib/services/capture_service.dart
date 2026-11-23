@@ -152,8 +152,15 @@ class Jk02CaptureSession {
   /// reports it when a capture finishes.
   int undecodedCellFrames = 0;
 
-  List<int>? _pendingCellInfo;
-  int _pendingCellInfoOffsetMs = 0;
+  /// Cell-info frames that arrived before the device-info frame, in order.
+  ///
+  /// A LIST, not a single slot. The layout is unknown until device-info arrives, so
+  /// those frames are held; with one slot a second frame overwrote the first, and the
+  /// payload ended up with 117 cellInfo frames and 116 samples - which is exactly the
+  /// mismatch three donated captures showed. Bounded so a device that never identifies
+  /// cannot grow it without limit.
+  final List<(List<int> frame, int offsetMs)> _pendingCellInfos = [];
+  static const int _maxPendingCellInfos = 64;
 
   void start() => _stopwatch.start();
 
@@ -176,18 +183,18 @@ class Jk02CaptureSession {
         deviceInfo = BmsProtocolHelper.parseJk02DeviceInfoFrame(frame);
         is32s = BmsProtocolHelper.parseJk02DeviceInfoIs32s(frame) ?? false;
         rawFrames.add(_raw(frame, offsetMs, 'deviceInfo'));
-        final pending = _pendingCellInfo;
-        if (pending != null) {
-          _pendingCellInfo = null;
-          _decodeCellInfo(pending, _pendingCellInfoOffsetMs);
+        for (final pending in _pendingCellInfos) {
+          _decodeCellInfo(pending.$1, pending.$2);
         }
+        _pendingCellInfos.clear();
         break;
       case 0x02:
         rawFrames.add(_raw(frame, offsetMs, 'cellInfo'));
         if (deviceInfo == null) {
           // Layout unknown until device-info arrives; stash rather than guess.
-          _pendingCellInfo = frame;
-          _pendingCellInfoOffsetMs = offsetMs;
+          if (_pendingCellInfos.length < _maxPendingCellInfos) {
+            _pendingCellInfos.add((frame, offsetMs));
+          }
         } else {
           _decodeCellInfo(frame, offsetMs);
         }

@@ -203,6 +203,28 @@ void main() {
       }
       expect(session.statuses.length, 1); // parsed once layout is known
     });
+
+    test('two cell-info frames before device-info both survive', () {
+      // The defect three donated captures showed: one pending slot meant the second
+      // frame overwrote the first, so the payload held 117 cellInfo frames and 116
+      // samples. Two frames, one slot, one lost sample.
+      final session = Jk02CaptureSession();
+      session.start();
+      final cellInfo = bytesFromHex(cellInfo24sHex);
+      for (final c in chunk(cellInfo)) {
+        session.addFragment(c);
+      }
+      for (final c in chunk(cellInfo)) {
+        session.addFragment(c);
+      }
+      expect(session.statuses, isEmpty);
+
+      for (final c in chunk(bytesFromHex(devInfo24sHex))) {
+        session.addFragment(c);
+      }
+      expect(session.statuses.length, 2, reason: 'both stashed frames are decoded');
+      expect(session.rawFrames.where((f) => f.frameType == 'cellInfo').length, 2);
+    });
   });
 
   group('CaptureService.capture', () {
