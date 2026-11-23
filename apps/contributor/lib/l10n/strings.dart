@@ -131,6 +131,15 @@ abstract final class CaptureStrings {
   static const String noCellInfo =
       'No cell-info frames arrived (frame 0x02). Nothing to contribute.';
 
+  /// Frames arrived, but every one reported zero volts for every cell.
+  ///
+  /// Two real captures arrived in this state (75 and 76 samples, the cell region of
+  /// every frame zero, everything else parsing). It is a pack on a bench or with its
+  /// balance wires off, and it teaches nothing, so it is refused rather than stored.
+  static const String noCellVoltages =
+      'The pack reported no cell voltages. Check the balance wires and that the '
+      'pack is switched on, then try again.';
+
   /// Turns a [BleCaptureFailureKind] into the sentence the user sees.
   static String captureFailure(BleCaptureFailureKind kind) {
     switch (kind) {

@@ -138,6 +138,15 @@ class Jk02CaptureSession {
   bool is32s = false;
 
   final List<BmsStatus> statuses = [];
+
+  /// Whether any sample carries a per-cell voltage.
+  ///
+  /// A frame can be valid and still report nothing per cell, which is what a
+  /// bench pack or a disconnected sense harness looks like. The caller uses this
+  /// to refuse an empty capture; it is a pure decision so it can be tested
+  /// against real donated bytes on the host.
+  static bool hasAnyCellVoltage(Iterable<BmsStatus> samples) =>
+      samples.any((sample) => sample.cells.isNotEmpty);
   final List<int> statusOffsetsMs = [];
 
   Map<String, double>? settingsValues;
@@ -371,6 +380,15 @@ class CaptureService implements CaptureController {
 
       if (session.statuses.isEmpty) {
         return CaptureOutcome.failure(CaptureStrings.noCellInfo);
+      }
+
+      // Samples with no cells are not a donation. Two real captures arrived like
+      // this, every frame's cell region zero while the model and settings parsed,
+      // and they were stored as if they were data. Refusing here says so at the
+      // moment it can still be fixed: a sense harness, or a pack not switched on.
+      if (!Jk02CaptureSession.hasAnyCellVoltage(session.statuses)) {
+        _log('every cell-info frame decoded with zero cells; refusing an empty capture');
+        return CaptureOutcome.failure(CaptureStrings.noCellVoltages);
       }
 
       // The telemetry series is exactly what fell inside the capture window.

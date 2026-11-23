@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:bms_core/bms_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_contributor/l10n/strings.dart';
 import 'package:jkbmsr_contributor/models/contribution.dart';
@@ -202,6 +203,24 @@ void main() {
         session.addFragment(c);
       }
       expect(session.statuses.length, 1); // parsed once layout is known
+    });
+
+    test('a valid frame with no cell voltages counts as no cell data', () {
+      // A real donated frame from a JK-B2A24S15P: every cell slot reads 0 V while
+      // the rest of the frame is intact. The frame is valid, so the parser must not
+      // reject it; the capture must, because there is nothing to learn from it.
+      final frame = bytesFromHex(_zeroCellFrameHex);
+      final status = BmsProtocolHelper.parseJk02CellInfoFrame(frame, is32s: true);
+      expect(status, isNotNull, reason: 'the frame is well formed');
+      expect(status!.cells, isEmpty);
+      expect(Jk02CaptureSession.hasAnyCellVoltage([status]), isFalse);
+
+      final normal = BmsProtocolHelper.parseJk02CellInfoFrame(
+        bytesFromHex(cellInfo24sHex),
+        is32s: false,
+      );
+      expect(normal, isNotNull);
+      expect(Jk02CaptureSession.hasAnyCellVoltage([normal!]), isTrue);
     });
 
     test('two cell-info frames before device-info both survive', () {
@@ -518,3 +537,8 @@ class _ThrowingSession implements BleSession {
     await _controller.close();
   }
 }
+
+/// 0x02 cell-info frame from a real donation in which no cell slot carries a
+/// voltage. Kept verbatim so the refusal is pinned to a frame the field produced.
+const String _zeroCellFrameHex =
+    '55aaeb9002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007d000000000000000000000000000000000072005f00040008000000000000000000f04902000000000000000000000000006f0e000000000000000000000000000000000000ff000000000001000000000063823f400000000000000000000001010b010100b1000000000000007d0030f830f8010091d0c10b790000008051010000000001000000000000000000feff7fdc0f0100800b010000ed';
