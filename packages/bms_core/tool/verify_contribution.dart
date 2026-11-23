@@ -78,12 +78,34 @@ void main(List<String> args) {
     problems.add('no deviceInfo frame');
   }
 
-  // Telemetry: each cell-info frame is the source of the sample at the same index.
+  // Telemetry: each cell-info frame INSIDE the capture window is the source of the
+  // sample at the same index.
+  //
+  // Frames that arrive after the window closed are expected, not lost: the logbook
+  // read happens after the samples are frozen, and the pack keeps streaming while it
+  // is answered. Comparing every stored frame to the sample count called that a
+  // failure, which is how seven healthy captures came back red. Measured on the
+  // payloads: in every one of them the extras are after the last sample.
+  //
+  // The check still catches what it exists for: a frame that arrived during the
+  // window and produced no sample (the pre-identification overwrite) leaves the
+  // in-window count higher than the sample count.
   final cellFrames = frames.where((f) => f['frameType'] == 'cellInfo').toList();
-  if (cellFrames.length != samples.length) {
-    problems.add('${cellFrames.length} cellInfo frames but ${samples.length} samples');
+  final sampleOffsets = [
+    for (final sample in samples)
+      if (sample['tOffsetMs'] case final num offset) offset,
+  ];
+  final windowEnds = sampleOffsets.isEmpty
+      ? -1
+      : sampleOffsets.reduce((a, b) => a > b ? a : b);
+  final inWindow = cellFrames
+      .where((f) => ((f['tOffsetMs'] as num?) ?? 0) <= windowEnds)
+      .toList();
+  final afterWindow = cellFrames.length - inWindow.length;
+  if (inWindow.length != samples.length) {
+    problems.add('${inWindow.length} cellInfo frames in the window but ${samples.length} samples');
   }
-  final count = cellFrames.length < samples.length ? cellFrames.length : samples.length;
+  final count = inWindow.length < samples.length ? inWindow.length : samples.length;
   var decoded = 0;
   var cellsChecked = 0;
 
@@ -95,7 +117,7 @@ void main(List<String> args) {
 
   for (var i = 0; i < count; i++) {
     final status = BmsProtocolHelper.parseJk02CellInfoFrame(
-      _bytes('${cellFrames[i]['hex']}'),
+      _bytes('${inWindow[i]['hex']}'),
       is32s: is32s,
     );
     if (status == null) {
@@ -127,6 +149,7 @@ void main(List<String> args) {
       '${bms['hardwareVersion']}/${bms['softwareVersion']}');
   print('  frames          : ${frames.length}  $byType');
   print('  samples         : ${samples.length}   decoded $decoded   cells $cellsChecked');
+  print('  after window    : $afterWindow frame(s) from the logbook wait');
   print('  omitted fields  : ${omitted.isEmpty ? 'none' : omitted.join(', ')}');
   print('  logbook         : '
       '${doc['logbook'] == null ? 'absent' : '${((doc['logbook'] as Map)['entries'] as List? ?? const []).length} entries'}');
