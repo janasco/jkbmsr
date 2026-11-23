@@ -41,7 +41,7 @@
 #   BLE_EXPECTED_TESTS       expected passing test count for apps/ble (default 180)
 #   PRO_EXPECTED_TESTS       expected passing test count for apps/pro (default 335)
 #   CONTRIBUTOR_EXPECTED_TESTS  expected passing test count for apps/contributor (default 160)
-#   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 24)
+#   BMS_CORE_EXPECTED_TESTS  expected passing test count for packages/bms_core (default 37)
 #
 # Exit status: 0 everything that ran passed (skips are allowed unless --strict),
 # 1 at least one component failed, 2 usage error.
@@ -59,7 +59,7 @@ ONLY=()
 BLE_EXPECTED_TESTS=${BLE_EXPECTED_TESTS:-180}
 PRO_EXPECTED_TESTS=${PRO_EXPECTED_TESTS:-335}
 CONTRIBUTOR_EXPECTED_TESTS=${CONTRIBUTOR_EXPECTED_TESTS:-160}
-BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-33}
+BMS_CORE_EXPECTED_TESTS=${BMS_CORE_EXPECTED_TESTS:-37}
 LOG_DIR=""
 
 # Result columns, indexed the same way as COMPONENTS.

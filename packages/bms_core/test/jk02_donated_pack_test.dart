@@ -173,9 +173,89 @@ void main() {
       }
     });
   });
+
+  group('JK02 on a donated JK-BD6A20S10P (10.XW/10.08), 24S layout', () {
+    test('the device-info frame decodes to the pack it came from', () {
+      final info = BmsProtocolHelper.parseJk02DeviceInfoFrame(_bytes(_bd24DeviceInfo))!;
+      expect(info.modelName, 'JK-BD6A20S10P');
+      expect(info.hardwareVersion, '10.XW');
+      expect(info.softwareVersion, '10.08');
+    });
+
+    test('the cell-info frame decodes twenty cells on the 24S layout', () {
+      final status =
+          BmsProtocolHelper.parseJk02CellInfoFrame(_bytes(_bd24CellInfo), is32s: false)!;
+
+      expect(status.cells, hasLength(20));
+      expect(status.enabledCellCount, 20);
+      expect(status.totalVoltage, closeTo(81.715, 0.01));
+      expect(status.soc, 91);
+      expect(status.mosTemp, closeTo(36.2, 0.5));
+
+      final volts = status.cells.map((c) => c.voltage).toList();
+      final expected = <double>[
+        4.0850,
+        4.0860,
+        4.0860,
+        4.0840,
+        4.0860,
+        4.0850,
+        4.0840,
+        4.0850,
+        4.0860,
+        4.0850,
+        4.0850,
+        4.0850,
+        4.0860,
+        4.0850,
+        4.0860,
+        4.0880,
+        4.0890,
+        4.0860,
+        4.0860,
+        4.0850,
+      ];
+      for (var i = 0; i < expected.length; i++) {
+        expect(volts[i], closeTo(expected[i], 0.0005), reason: 'cell ${i + 1}');
+      }
+    });
+
+    test('the cells add up to the pack voltage, which no offset error survives', () {
+      // Arithmetic rather than a recorded value: twenty series cells must sum to the
+      // pack voltage the same frame reports, so a wrong cell offset cannot pass by
+      // agreeing with the app that produced the fixture.
+      final status =
+          BmsProtocolHelper.parseJk02CellInfoFrame(_bytes(_bd24CellInfo), is32s: false)!;
+      final sum = status.cells.fold<double>(0, (total, cell) => total + cell.voltage);
+      expect(sum, closeTo(status.totalVoltage, 0.05));
+    });
+
+    test('the same bytes read as 32S are a different pack, so layout detection is load-bearing', () {
+      final bytes = _bytes(_bd24CellInfo);
+      final as32 = BmsProtocolHelper.parseJk02CellInfoFrame(bytes, is32s: true);
+      expect(as32, isNotNull, reason: 'the frame is well formed either way');
+      expect(as32!.cells.length, isNot(20));
+      expect(as32.totalVoltage, isNot(closeTo(81.715, 0.01)));
+    });
+  });
 }
 
 List<int> _bytes(String hex) => [
       for (var i = 0; i + 1 < hex.length; i += 2)
         int.parse(hex.substring(i, i + 2), radix: 16),
     ];
+
+
+/// Third donated pack, and the first real **24S-layout** capture:
+/// a JK-BD6A20S10P (hardware 10.XW, firmware 10.08), contribution
+/// `c_01a1f8ef-9ab6-746a-9618-8b76a3544927`, captured 2026-11-20T09:24:41Z.
+///
+/// Every other fixture in this suite is a 32-cell-register frame. This one says
+/// `JK02_24S` with **twenty 4.08 V cells**, so it pins the older layout against
+/// real bytes for the first time: the vendor fixtures for 24S were the only
+/// coverage, and they are a different pack on different firmware.
+const _bd24DeviceInfo =
+    '55aaeb90033c4a4b2d4244364132305331305000000031302e585700000031302e303800000044cbe8075c0000004a4b303332000000000000000000000031323334000000000000000000000000323230373230000032303432313036313435003030303000496e707574205573657264617461000031323334353600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e5';
+
+const _bd24CellInfo =
+    '55aaeb90023cf50ff60ff60ff40ff60ff50ff40ff50ff60ff50ff50ff50ff60ff50ff60ff80ff90ff60ff60ff50f0000000000000000ffff0f00f60f05001003a600a500a200a200a000a0009d009c009e009c009b009b009b009c009d009e00a0009f00a000a1000000000000000000000000000000333f01000000000000000000520153016a0100000000005bd6790000188500007c0300003d1bd0015100250487cbe8070101f105000000000000000000000000070001000000ab0300000000cb0a424000000000e20400000000000100050000c181fa1a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f';
