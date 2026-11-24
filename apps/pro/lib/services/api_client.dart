@@ -18,6 +18,7 @@ import '../models/cloud_history_point.dart';
 import '../models/telemetry_history_point.dart';
 import 'cache_service.dart';
 import 'session_expiry_handler.dart';
+import '../models/achievement.dart';
 
 /// Thrown by login when the account exists but hasn't verified its email
 /// yet (registration no longer issues a token until that happens — see
@@ -299,6 +300,14 @@ class APIClient with RequestDeduplicationMixin {
 
   /// The code to paste into the Contributor app. The server generates it on the
   /// first call, so this is also where an account gets one.
+  /// Milestones for this ACCOUNT. Points never belong to one gateway.
+  Future<AchievementSummary> getAchievements() async {
+    final url = Uri.parse('$baseUrl/v1/user/me/achievements');
+    final response = await _client.get(url, headers: await _headers());
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return AchievementSummary.fromJson(data);
+  }
+
   Future<String> getAccountCode() async {
     final url = Uri.parse('$baseUrl/v1/user/me/account-code');
     final response = await _client.get(url, headers: await _headers());

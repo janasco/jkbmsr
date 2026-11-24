@@ -26,6 +26,8 @@ import '../../main.dart';
 import '../../widgets/app_update_prompt.dart';
 import '../../widgets/plan_pill.dart';
 import '../../utils/error_messages.dart';
+import '../achievements/achievements_screen.dart';
+import '../../models/achievement.dart';
 
 class _SettingsCategory {
   final String key;
@@ -1757,6 +1759,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'account':
         return [
           const _ContributorCodeCard(),
+          const SizedBox(height: JKBMSRTokens.space16),
+          const _AchievementsCard(),
           const SizedBox(height: JKBMSRTokens.space16),
           _securityCard(),
           const SizedBox(height: JKBMSRTokens.space16),
@@ -3565,6 +3569,86 @@ class _ContributorCodeCardState extends State<_ContributorCodeCard> {
                   ),
                 ],
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The way into the achievement list, with the account's standing on the card.
+///
+/// Deliberately shows the count before opening: a reward screen nobody knows
+/// about is the failure the contributor code card had, where the mechanism
+/// existed and no one used it.
+class _AchievementsCard extends StatefulWidget {
+  const _AchievementsCard();
+
+  @override
+  State<_AchievementsCard> createState() => _AchievementsCardState();
+}
+
+class _AchievementsCardState extends State<_AchievementsCard> {
+  AchievementSummary? _summary;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final summary = await APIClient().getAchievements();
+      if (mounted) setState(() => _summary = summary);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final summary = _summary;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(JKBMSRTokens.space16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Achievements',
+              style: JKBMSRTypography.cardHeading.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: JKBMSRTokens.space8),
+            Text(
+              'Milestones from the packs you donate. Points belong to your account, '
+              'not to one gateway.',
+              style: JKBMSRTypography.bodySecondary.copyWith(color: colors.textMuted),
+            ),
+            const SizedBox(height: JKBMSRTokens.space12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _failed
+                        ? 'Could not be loaded. Open to try again.'
+                        : summary == null
+                            ? '…'
+                            : '${summary.earnedCount} of ${summary.achievements.length} earned'
+                                ' · ${summary.pointsEarned} points',
+                    style: JKBMSRTypography.bodySecondary.copyWith(color: colors.textPrimary),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                  ),
+                  child: const Text('View'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
