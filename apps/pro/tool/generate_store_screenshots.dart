@@ -42,6 +42,8 @@ import 'package:jkbmsr_pro/features/onboarding/onboarding_screen.dart';
 import 'package:jkbmsr_pro/features/settings/settings_screen.dart';
 import 'package:jkbmsr_pro/services/api_client.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/theme.dart';
+import 'package:jkbmsr_pro/features/simulation/simulation_screen.dart';
+import 'package:jkbmsr_pro/features/achievements/achievements_screen.dart';
 
 const Size _phone = Size(1080, 2340);
 const double _dpr = 3.0;
@@ -203,6 +205,26 @@ http.Client _stubApi() => MockClient((request) async {
         } else {
           body = {'device': _device(), 'telemetry': _telemetry()};
         }
+      } else if (path.endsWith('/v1/user/me/achievements')) {
+        // A representative account: three milestones earned, the rest locked. Real
+        // values, generated from the same definitions the backend serves.
+        body = {
+          'achievements': [
+            {'key': 'first_pack', 'title': 'First pack', 'detail': 'Contribute your first pack.', 'points': 50, 'earnedAt': '2026-11-18 09:12:00'},
+            {'key': 'linked', 'title': 'Linked', 'detail': 'Link your account code in the Contributor app.', 'points': 25, 'earnedAt': '2026-11-18 09:12:00'},
+            {'key': 'two_models', 'title': 'Two models', 'detail': 'Packs from two different models.', 'points': 50, 'earnedAt': '2026-11-20 14:03:00'},
+            {'key': 'five_packs', 'title': 'Five packs', 'detail': 'Five accepted packs.', 'points': 50, 'earnedAt': null},
+            {'key': 'ten_packs', 'title': 'Ten packs', 'detail': 'Ten accepted packs.', 'points': 100, 'earnedAt': null},
+            {'key': 'twenty_five_packs', 'title': 'Twenty-five packs', 'detail': 'Twenty-five accepted packs.', 'points': 150, 'earnedAt': null},
+            {'key': 'older_layout', 'title': 'Older protocol', 'detail': 'A pack on the 24S layout, which barely had coverage.', 'points': 50, 'earnedAt': null},
+            {'key': 'big_pack', 'title': 'Big pack', 'detail': 'A pack with 20 cells or more.', 'points': 50, 'earnedAt': null},
+            {'key': 'small_pack', 'title': 'Small pack', 'detail': 'A pack with 8 cells or fewer.', 'points': 50, 'earnedAt': null},
+            {'key': 'serial_shared', 'title': 'Serial shared', 'detail': 'A capture that carries the serial hash.', 'points': 25, 'earnedAt': null},
+          ],
+          'earned': 3,
+          'total': 10,
+          'pointsEarned': 125,
+        };
       } else if (path.endsWith('/v1/alerts') || path.contains('/alerts')) {
         body = {'alerts': [], 'hasMore': false};
       } else if (path.contains('/history')) {
@@ -308,19 +330,24 @@ void main() {
     }
   });
 
-  testWidgets('01 devices', (tester) async {
-    final key = await _mount(tester, const DeviceListScreen());
-    await _shoot(tester, key, '01-devices');
-  });
-
-  testWidgets('02 dashboard', (tester) async {
+  // The store set is exactly eight images, in the order a first-time visitor should
+  // meet them: what it monitors, what it shows, what it warns about, what it keeps,
+  // what it runs on, what it lets you practise, what it rewards, and the app itself.
+  // Onboarding and login go to verify/ because a listing thumbnail of a sign-in
+  // form sells nothing.
+  testWidgets('01 dashboard', (tester) async {
     final key = await _mount(tester, const BatteryDashboardScreen(deviceId: _deviceId));
-    await _shoot(tester, key, '02-dashboard');
+    await _shoot(tester, key, '01-dashboard');
   });
 
-  testWidgets('03 cells', (tester) async {
+  testWidgets('02 cells', (tester) async {
     final key = await _mount(tester, const CellVoltagesScreen());
-    await _shoot(tester, key, '03-cells');
+    await _shoot(tester, key, '02-cells');
+  });
+
+  testWidgets('03 alerts', (tester) async {
+    final key = await _mount(tester, const AlertsScreen());
+    await _shoot(tester, key, '03-alerts');
   });
 
   testWidgets('04 history', (tester) async {
@@ -328,27 +355,35 @@ void main() {
     await _shoot(tester, key, '04-history');
   });
 
-  testWidgets('05 alerts', (tester) async {
-    final key = await _mount(tester, const AlertsScreen());
-    await _shoot(tester, key, '05-alerts');
+  testWidgets('05 devices', (tester) async {
+    final key = await _mount(tester, const DeviceListScreen());
+    await _shoot(tester, key, '05-devices');
   });
 
-  testWidgets('06 onboarding', (tester) async {
-    final key = await _mount(tester, const OnboardingScreen());
-    await _shoot(tester, key, '06-onboarding');
+  testWidgets('06 simulate', (tester) async {
+    final key = await _mount(tester, const SimulationScreen());
+    await _shoot(tester, key, '06-simulate');
   });
 
-  testWidgets('07 settings', (tester) async {
+  testWidgets('07 achievements', (tester) async {
+    final key = await _mount(tester, const AchievementsScreen());
+    await _shoot(tester, key, '07-achievements');
+  });
+
+  testWidgets('08 settings', (tester) async {
     final key = await _mount(tester, const SettingsScreen());
-    await _shoot(tester, key, '07-settings');
+    await _shoot(tester, key, '08-settings');
   });
 
-  testWidgets('08 login', (tester) async {
-    final key = await _mount(tester, const LoginScreen());
-    await _shoot(tester, key, '08-login');
+  testWidgets('09 onboarding', (tester) async {
+    await _render(tester, const OnboardingScreen(), 'verify/09-onboarding');
   });
 
-  testWidgets('09 dashboard — dark', (tester) async {
-    await _render(tester, const BatteryDashboardScreen(deviceId: _deviceId), 'verify/09-dashboard-dark', theme: JKBMSRTheme.darkTheme);
+  testWidgets('10 login', (tester) async {
+    await _render(tester, const LoginScreen(), 'verify/10-login');
+  });
+
+  testWidgets('11 dashboard — dark', (tester) async {
+    await _render(tester, const BatteryDashboardScreen(deviceId: _deviceId), 'verify/11-dashboard-dark', theme: JKBMSRTheme.darkTheme);
   });
 }

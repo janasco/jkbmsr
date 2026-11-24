@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_pro/features/simulation/simulation_screen.dart';
 import 'package:jkbmsr_pro/models/simulation_claim.dart';
+import 'package:jkbmsr_pro/widgets/shared/design_system/colors.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/theme.dart';
 
 Widget _app(Widget child) => MaterialApp(theme: JKBMSRTheme.darkTheme, home: child);
@@ -95,6 +96,18 @@ void main() {
 
     expect(before.data, isNot(equals(after.data)));
     expect(after.data, contains('220 mV'));
+  });
+
+  testWidgets('a balanced pack shows no critical cell', (tester) async {
+    _tall(tester);
+    await tester.pumpWidget(_app(const SimulationScreen()));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(Scaffold));
+    final critical = Theme.of(context).extension<JKBMSRColors>()!.critical;
+    final firstCell = tester.widget<Text>(find.text('1: 3.320'));
+    expect(firstCell.style?.color, isNot(critical),
+        reason: 'sixteen equal cells are not sixteen faults');
   });
 
   testWidgets('a dropped link freezes the readings, as a real gateway looks', (tester) async {

@@ -205,6 +205,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
     ];
     final min = shown.reduce((a, b) => a < b ? a : b);
     final max = shown.reduce((a, b) => a > b ? a : b);
+    // With every cell at the same voltage, `shown[i] == min` is true for all of
+    // them and the whole grid rendered critical red, which says "everything is
+    // wrong" about a pack that is perfectly balanced. Colour is a signal, so it
+    // only appears when there is something to signal.
+    final hasSpread = (max - min) > 0.005;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(JKBMSRTokens.space16),
@@ -221,11 +226,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   Text(
                     '${i + 1}: ${shown[i].toStringAsFixed(3)}',
                     style: JKBMSRTypography.monoTechnical.copyWith(
-                      color: shown[i] == min
-                          ? colors.critical
-                          : shown[i] == max
-                              ? colors.signal
-                              : colors.textPrimary,
+                      color: !hasSpread
+                          ? colors.textPrimary
+                          : shown[i] == min
+                              ? colors.critical
+                              : shown[i] == max
+                                  ? colors.signal
+                                  : colors.textPrimary,
                     ),
                   ),
               ],
@@ -264,14 +271,24 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space8),
-            SegmentedButton<_Mode>(
-              segments: const [
-                ButtonSegment(value: _Mode.charge, label: Text('Charge')),
-                ButtonSegment(value: _Mode.idle, label: Text('Idle')),
-                ButtonSegment(value: _Mode.discharge, label: Text('Discharge')),
+            // Choice chips rather than a SegmentedButton: three labels as wide as
+            // these do not fit one row at a phone's width, and a segmented control
+            // breaks the long one mid-word ("Discha / rge"). A wrap moves whole
+            // chips to a second line instead.
+            Wrap(
+              spacing: JKBMSRTokens.space8,
+              children: [
+                for (final mode in _Mode.values)
+                  ChoiceChip(
+                    label: Text(switch (mode) {
+                      _Mode.charge => 'Charge',
+                      _Mode.idle => 'Idle',
+                      _Mode.discharge => 'Discharge',
+                    }),
+                    selected: _mode == mode,
+                    onSelected: (_) => setState(() => _mode = mode),
+                  ),
               ],
-              selected: {_mode},
-              onSelectionChanged: (selection) => setState(() => _mode = selection.first),
             ),
             const SizedBox(height: JKBMSRTokens.space8),
             Wrap(
