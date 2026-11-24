@@ -19,6 +19,7 @@ import '../models/telemetry_history_point.dart';
 import 'cache_service.dart';
 import 'session_expiry_handler.dart';
 import '../models/achievement.dart';
+import '../models/simulation_claim.dart';
 
 /// Thrown by login when the account exists but hasn't verified its email
 /// yet (registration no longer issues a token until that happens — see
@@ -300,6 +301,19 @@ class APIClient with RequestDeduplicationMixin {
 
   /// The code to paste into the Contributor app. The server generates it on the
   /// first call, so this is also where an account gets one.
+  /// Claim today's simulated-session points. The server owns the cap: a second
+  /// claim in the same UTC day returns `credited: 0`.
+  Future<SimulationClaimResult> claimSimulationReward(int seconds) async {
+    final url = Uri.parse('$baseUrl/v1/user/me/simulation/reward');
+    final response = await _client.post(
+      url,
+      headers: await _headers(),
+      body: jsonEncode({'seconds': seconds}),
+    );
+    final data = _handleResponse(response) as Map<String, dynamic>;
+    return SimulationClaimResult.fromJson(data);
+  }
+
   /// Milestones for this ACCOUNT. Points never belong to one gateway.
   Future<AchievementSummary> getAchievements() async {
     final url = Uri.parse('$baseUrl/v1/user/me/achievements');

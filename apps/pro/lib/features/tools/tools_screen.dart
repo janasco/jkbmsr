@@ -10,6 +10,7 @@ import '../provisioning/ble_gateway_scan_source.dart';
 import '../provisioning/gateway_provisioner.dart';
 import '../provisioning/gateway_scan_source.dart';
 import '../provisioning/gateway_scan_screen.dart';
+import '../simulation/simulation_screen.dart';
 
 /// One place for the things that are not the dashboard.
 ///
@@ -66,6 +67,17 @@ class ToolsScreen extends StatelessWidget {
                   'Short answers: cell spread, current direction, a lost battery link, time zones and the trial.',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const GuideScreen()),
+              ),
+            ),
+            const SizedBox(height: JKBMSRTokens.space8),
+            _ToolCard(
+              icon: Icons.science_outlined,
+              title: 'Simulate',
+              detail:
+                  'A made-up pack you can break on purpose: a weak cell, heat, a dropped '
+                  'link. Nothing here touches a gateway, and a session is worth 10 points a day.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SimulationScreen()),
               ),
             ),
             const SizedBox(height: JKBMSRTokens.space8),
