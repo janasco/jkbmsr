@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/logbook_screen.dart';
 import '../screens/settings_screen.dart';
@@ -14,6 +15,62 @@ const String contributorPlayListingUrl =
 /// Store app handles a listing link instead of a WebView inside the app.
 Future<bool> launchExternalApplication(Uri uri) =>
     launchUrl(uri, mode: LaunchMode.externalApplication);
+
+/// The installed build, read from the package instead of being typed into the
+/// footer.
+///
+/// The footer used to carry a literal "4.17.24 | BUILD 44" and kept printing it
+/// long after the app had shipped newer builds, so a user quoting it in a bug
+/// report named a version they were not running. A failure to read the package
+/// shows "unknown": no version is more useful than a wrong one.
+class _DrawerVersionFooter extends StatefulWidget {
+  const _DrawerVersionFooter();
+
+  @override
+  State<_DrawerVersionFooter> createState() => _DrawerVersionFooterState();
+}
+
+class _DrawerVersionFooterState extends State<_DrawerVersionFooter> {
+  String _version = 'unknown';
+  String _build = 'unknown';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _version = info.version;
+        _build = info.buildNumber;
+      });
+    } catch (_) {
+      // Leave the honest defaults; a stale literal would be worse.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: Text(
+          'JK BMS BLUETOOTH $_version | BUILD $_build',
+          style: const TextStyle(
+            fontSize: 11,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class BmsDrawer extends StatelessWidget {
   final VoidCallback onNavigateToDevices;
@@ -215,20 +272,7 @@ class BmsDrawer extends StatelessWidget {
 
             // DRAWER FOOTER
             Divider(color: borderColor, height: 1),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(
-                child: Text(
-                  'JK BMS BLUETOOTH 4.17.24 | BUILD 44',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ),
-            ),
+            const _DrawerVersionFooter(),
           ],
         ),
       ),

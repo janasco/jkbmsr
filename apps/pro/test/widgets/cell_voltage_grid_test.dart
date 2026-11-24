@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/cell_voltage_grid.dart';
+import 'package:jkbmsr_pro/widgets/shared/design_system/colors.dart';
 import 'package:jkbmsr_pro/widgets/shared/design_system/theme.dart';
 import 'package:jkbmsr_pro/models/telemetry.dart';
 
@@ -77,5 +78,40 @@ void main() {
     )));
 
     expect(find.byType(InkWell), findsNothing);
+  });
+
+  testWidgets('dark-mode bar values meet 4.5:1 contrast on every fill', (tester) async {
+    // The value is painted on the fill: accent (max), warning (min) and signal
+    // (everything between). White measured 2.04–2.90:1 in dark mode.
+    await tester.pumpWidget(_wrap(JKBMSRCellVoltageGrid(
+      cells: [
+        CellVoltage(cell: 1, voltage: 3.30), // signal
+        CellVoltage(cell: 2, voltage: 3.31), // accent (max)
+        CellVoltage(cell: 3, voltage: 3.28), // warning (min)
+      ],
+    )));
+
+    Color textColor(String value) =>
+        tester.widget<Text>(find.text(value)).style!.color!;
+
+    final colors = JKBMSRColors.dark;
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance();
+      final lb = b.computeLuminance();
+      final lighter = la > lb ? la : lb;
+      final darker = la > lb ? lb : la;
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    // The specific case from the report: an accent-filled cell (the max).
+    final accentContrast = contrast(textColor('3.310 V'), colors.accent);
+    expect(accentContrast, greaterThanOrEqualTo(4.5),
+        reason: 'accent fill contrast was $accentContrast');
+
+    // The other two fills share the same failure mode, so pin them too.
+    expect(contrast(textColor('3.280 V'), colors.warning),
+        greaterThanOrEqualTo(4.5));
+    expect(contrast(textColor('3.300 V'), colors.signal),
+        greaterThanOrEqualTo(4.5));
   });
 }

@@ -76,6 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final consent = ConsentScope.maybeOf(context);
+    final canTurnOff = consent?.isGranted ?? false;
 
     return Scaffold(
       body: SafeArea(
@@ -162,6 +164,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.bluetooth_searching_rounded),
                   label: const Text('Start a capture'),
                 ),
+                if (canTurnOff) ...[
+                  const SizedBox(height: 14),
+                  AppSurface(
+                    padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+                    radius: 18,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.verified_user_outlined,
+                          size: 16,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Contributing is on',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        TextButton(
+                          onPressed: () => consent!.revoke(),
+                          child: const Text('Turn off'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

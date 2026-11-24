@@ -1,5 +1,6 @@
 import '../services/theme_service.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'in_app_browser.dart';
 import 'motion_kit.dart';
@@ -64,11 +65,7 @@ class AboutModal extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Version 4.17.24 (Build 44)',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Color(0xFF10B981), fontFamily: 'monospace', fontWeight: FontWeight.bold),
-            ),
+            const _AboutVersionLine(),
             const SizedBox(height: 12),
             const Text(
               'JK BMS Bluetooth connects directly to your JK-BMS Bluetooth module for real-time '
@@ -123,6 +120,56 @@ class AboutModal extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The installed version, read from the package rather than hardcoded.
+///
+/// This line used to read "Version 4.17.24 (Build 44)" forever, so a bug report
+/// quoting it named a build the reporter was not running. When the package
+/// cannot be read it says "unknown" instead of guessing.
+class _AboutVersionLine extends StatefulWidget {
+  const _AboutVersionLine();
+
+  @override
+  State<_AboutVersionLine> createState() => _AboutVersionLineState();
+}
+
+class _AboutVersionLineState extends State<_AboutVersionLine> {
+  String _version = 'unknown';
+  String _build = 'unknown';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _version = info.version;
+        _build = info.buildNumber;
+      });
+    } catch (_) {
+      // Leave the honest defaults; a stale literal would be worse.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Version $_version (Build $_build)',
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 12,
+        color: Color(0xFF10B981),
+        fontFamily: 'monospace',
+        fontWeight: FontWeight.bold,
       ),
     );
   }

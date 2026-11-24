@@ -271,8 +271,10 @@ class Contribution {
   ///
   /// When [selection] is null the full, untrimmed document is written (this is
   /// what the tests and a plain export see). When it is given, every field the
-  /// user switched off is **omitted** — the key is absent, not zeroed — and
-  /// which ones were withheld is recorded in `redaction.omittedFields`.
+  /// user switched off is **omitted** — the key is absent, not zeroed — except
+  /// the three containers the server requires (`app`, `advertisement`,
+  /// `samples`), which stay present and empty so the document remains valid.
+  /// Which ones were withheld is recorded in `redaction.omittedFields`.
   Map<String, dynamic> toJson({ContributionSelection? selection}) {
     final fullJson = selection == null ? null : toJson();
     final omitted = fullJson == null ? const <String>[] : selection!.omittedIn(fullJson);
@@ -281,19 +283,23 @@ class Contribution {
       'schemaVersion': currentSchemaVersion,
       'contributionId': contributionId,
       'capturedAt': utcIso(capturedAt),
-      if (_include(selection, 'app')) 'app': app.toJson(),
+      // `app`, `advertisement` and `samples` are required containers on the
+      // server (an object, an object and an array). A privacy switch empties a
+      // container; it must never remove it, because a document the server
+      // refuses is a privacy choice that cannot be sent at all.
+      'app': _include(selection, 'app')
+          ? app.toJson()
+          : const <String, dynamic>{},
       if (consent != null) 'consent': consent!.toJson(),
       'bms': bms.toJson(
         include: (key) => _include(selection, 'bms.$key'),
       ),
-      // Advertisement has no top-level field of its own: it is carried when at
-      // least one of its sub-fields is selected, and dropped when none is.
-      if (_advertisementSelected(selection))
-        'advertisement': advertisement.toJson(
-          include: (key) => _include(selection, 'advertisement.$key'),
-        ),
-      if (_include(selection, 'samples'))
-        'samples': samples.map((s) => s.toJson()).toList(),
+      'advertisement': advertisement.toJson(
+        include: (key) => _include(selection, 'advertisement.$key'),
+      ),
+      'samples': _include(selection, 'samples')
+          ? samples.map((s) => s.toJson()).toList()
+          : const <dynamic>[],
       if (settings != null && _include(selection, 'settings'))
         'settings': settings!.toJson(),
       if (logbook != null && _include(selection, 'logbook'))
@@ -313,18 +319,6 @@ class Contribution {
 
   static bool _include(ContributionSelection? selection, String id) =>
       selection == null || selection.includes(id);
-
-  /// Advertisement is carried when any of its sub-fields is selected (or when
-  /// there is no selection at all).
-  static bool _advertisementSelected(ContributionSelection? selection) {
-    if (selection == null) return true;
-    return const [
-      'advertisement.namePattern',
-      'advertisement.serviceUuids',
-      'advertisement.rssiBucket',
-      'advertisement.addressMasked',
-    ].any(selection.includes);
-  }
 
   /// Encodes to the wire document.
   String encode({ContributionSelection? selection}) =>

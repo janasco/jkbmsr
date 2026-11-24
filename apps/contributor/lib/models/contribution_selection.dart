@@ -4,7 +4,9 @@
 /// things that can be serialised are the fields it names, and their defaults
 /// are the redacted ones. This file adds the *user's* layer on top of that —
 /// the review screen (plan §3.4) lets someone switch off any field, and the
-/// serialiser omits exactly the fields switched off.
+/// serialiser omits exactly the fields switched off. The three containers the
+/// server requires (`samples`, `app`, `advertisement`) are emptied rather than
+/// removed, so a privacy choice never produces an unsendable document.
 ///
 /// Granularity is one entry per meaningful field or collection, so a checkbox
 /// maps to something in the payload rather than to a vague "device info"

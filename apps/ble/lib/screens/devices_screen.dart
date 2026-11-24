@@ -48,15 +48,31 @@ class _DevicesScreenState extends State<DevicesScreen> {
     // Rebuild the scanner whenever the plugin's real scan state changes, so the
     // animation and the (re)start control always reflect a scan that is
     // actually running (startBleScan returns as soon as the scan has started).
-    return StreamBuilder<bool>(
-      stream: _bleService.scanStateStream,
-      initialData: _bleService.isScanning,
-      builder: (context, snapshot) =>
-          _buildScannedBody(context, snapshot.data ?? false),
+    //
+    // The scan *error* has its own stream because a scan that never started
+    // (unsupported hardware, a refused permission) produces no scanning-state
+    // change at all — without this, the screen would keep showing the
+    // "no devices found" card and blame the BMS for a scanner that never ran.
+    return StreamBuilder<String?>(
+      stream: _bleService.scanErrorStream,
+      initialData: _bleService.scanError,
+      builder: (context, errorSnapshot) => StreamBuilder<bool>(
+        stream: _bleService.scanStateStream,
+        initialData: _bleService.isScanning,
+        builder: (context, snapshot) => _buildScannedBody(
+          context,
+          snapshot.data ?? false,
+          errorSnapshot.data,
+        ),
+      ),
     );
   }
 
-  Widget _buildScannedBody(BuildContext context, bool isScanning) {
+  Widget _buildScannedBody(
+    BuildContext context,
+    bool isScanning,
+    String? scanError,
+  ) {
     final connectedDevId = _bleService.connectedDeviceId;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF131A20) : const Color(0xFFFFFFFF);
@@ -193,47 +209,62 @@ class _DevicesScreenState extends State<DevicesScreen> {
               final devices = snapshot.data ?? [];
 
               if (devices.isEmpty) {
-                // While the scan is live but has found nothing yet, show a few
-                // placeholder device cards beneath the radar. They mirror a
-                // real result card's height so the first device to appear does
-                // not shift the layout.
-                final emptyState = Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        // The one and only animated scanner: the big centred
-                        // radar is the single element allowed to sweep while a
-                        // scan runs (the small header icon is static).
-                        isScanning
-                            ? const ScanRadar(size: 64, color: Color(0xFF10B981))
-                            : const Icon(
-                                Icons.bluetooth_disabled_rounded,
-                                color: Color(0xFF64748B),
-                                size: 40,
-                              ),
-                        const SizedBox(height: 12),
-                        isScanning
-                            ? AnimatedDots(
-                                base: 'Scanning 2.4GHz Spectrum',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
-                              )
-                            : Text('No Bluetooth Devices Found', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary)),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Ensure your BMS Bluetooth module is powered and nearby. A blue "JK-BMS" style tag appears next to devices this app recognizes.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                      ],
+                // A scan that could not run is not the same as a scan that found
+                // nothing: the BMS may be healthy and the scanner unable to
+                // look. That case names its reason and offers a retry instead of
+                // the no-devices copy, which would blame the hardware.
+                final Widget emptyState;
+                if (scanError != null) {
+                  emptyState = _ScanErrorCard(
+                    reason: scanError,
+                    onRetry: _triggerScan,
+                    cardBg: cardBg,
+                    borderColor: borderColor,
+                    textPrimary: textPrimary,
+                  );
+                } else {
+                  // While the scan is live but has found nothing yet, show a few
+                  // placeholder device cards beneath the radar. They mirror a
+                  // real result card's height so the first device to appear does
+                  // not shift the layout.
+                  emptyState = Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: borderColor),
                     ),
-                  ),
-                );
+                    child: Center(
+                      child: Column(
+                        children: [
+                          // The one and only animated scanner: the big centred
+                          // radar is the single element allowed to sweep while a
+                          // scan runs (the small header icon is static).
+                          isScanning
+                              ? const ScanRadar(size: 64, color: Color(0xFF10B981))
+                              : const Icon(
+                                  Icons.bluetooth_disabled_rounded,
+                                  color: Color(0xFF64748B),
+                                  size: 40,
+                                ),
+                          const SizedBox(height: 12),
+                          isScanning
+                              ? AnimatedDots(
+                                  base: 'Scanning 2.4GHz Spectrum',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
+                                )
+                              : Text('No Bluetooth Devices Found', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary)),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Ensure your BMS Bluetooth module is powered and nearby. A blue "JK-BMS" style tag appears next to devices this app recognizes.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
                 if (!isScanning) return emptyState;
 
@@ -507,6 +538,76 @@ class _EntranceCard extends StatelessWidget {
         child: Transform.translate(
           offset: Offset(0, 14 * (1 - t)),
           child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// The empty-result card shown when the scan itself could not run.
+///
+/// Distinct from "no devices found" on purpose: the BMS is not implicated, the
+/// scanner is, and the reason plus a retry is what the owner needs. Styled like
+/// the rest of the screen's cards so it does not read as a system dialog.
+class _ScanErrorCard extends StatelessWidget {
+  final String reason;
+  final VoidCallback onRetry;
+  final Color cardBg;
+  final Color borderColor;
+  final Color textPrimary;
+
+  const _ScanErrorCard({
+    required this.reason,
+    required this.onRetry,
+    required this.cardBg,
+    required this.borderColor,
+    required this.textPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFEF4444),
+              size: 40,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Cannot scan for devices',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              reason,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, height: 1.35, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF38BDF8),
+                side: BorderSide(color: borderColor),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text(
+                'TRY AGAIN',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
         ),
       ),
     );

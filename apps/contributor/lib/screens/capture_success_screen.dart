@@ -143,6 +143,26 @@ class _CaptureSuccessScreenState extends State<CaptureSuccessScreen> {
                 height: 1.4,
               ),
             ),
+            if (widget.outcome.cancelled) ...[
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.stop_circle_outlined,
+                      size: 18, color: scheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      CaptureStrings.stoppedEarly,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 28),
             AppSurface(
               child: Column(

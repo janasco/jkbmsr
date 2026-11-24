@@ -67,7 +67,8 @@ abstract final class ConsentStrings {
   static const String decline = 'Not now';
 
   static const String declineNote =
-      'The app still works. You can turn contributing on any time from Home.';
+      'The app still works. To contribute later, tap Start a capture and agree '
+      'when asked.';
 }
 
 /// Copy for the home screen's corpus line.
@@ -122,6 +123,19 @@ abstract final class ScanStrings {
 /// keeping the raw cause in the logs; the error view's "Try again" restarts the
 /// scan beside every one of these.
 abstract final class CaptureStrings {
+  /// The user pressed Stop before any usable sample arrived. This is a
+  /// cancellation, not a verdict about the pack.
+  static const String stoppedTitle = 'Capture stopped';
+  static const String stoppedBody =
+      'You stopped this capture, so nothing was recorded and nothing was sent. '
+      'The battery was not changed.';
+
+  /// Shown on the result screen when the user stopped after samples had already
+  /// arrived, so the shorter capture is stated instead of looking complete.
+  static const String stoppedEarly =
+      'You stopped this capture early, so it carries only the samples collected '
+      'before you tapped Stop.';
+
   /// The BMS never answered the device-info request: the wrong device, or not a
   /// JK-BMS.
   static const String noDeviceInfo =
@@ -225,8 +239,8 @@ abstract final class SubmitStrings {
         return 'Could not reach the server. Check your connection, or export '
             'the file and share it later.';
       case SubmitFailureKind.invalid:
-        return 'The server could not read this contribution. Export the file '
-            'and it can still be sent later.';
+        return 'The server could not read this contribution. This is likely a '
+            'problem in the app, so please try again after updating it.';
       case SubmitFailureKind.tooLarge:
         return 'This contribution is larger than the 256 KB the server '
             'accepts. Export the file instead.';

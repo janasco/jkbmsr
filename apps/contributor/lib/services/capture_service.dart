@@ -110,20 +110,37 @@ class CaptureOutcome {
   /// a success carries none either.
   final BleCaptureFailureKind? failureKind;
 
+  /// True when the user pressed Stop. A cancellation can carry a contribution
+  /// (samples had already arrived) or be empty (stopped during the handshake),
+  /// and it is never a failure: the pack did nothing wrong.
+  final bool cancelled;
+
   const CaptureOutcome._({
     this.contribution,
     this.session,
     this.error,
     this.failureKind,
+    this.cancelled = false,
   });
 
   bool get success => contribution != null;
 
-  factory CaptureOutcome.success(Contribution contribution, Jk02CaptureSession session) =>
-      CaptureOutcome._(contribution: contribution, session: session);
+  factory CaptureOutcome.success(
+    Contribution contribution,
+    Jk02CaptureSession session, {
+    bool cancelled = false,
+  }) =>
+      CaptureOutcome._(
+        contribution: contribution,
+        session: session,
+        cancelled: cancelled,
+      );
 
   factory CaptureOutcome.failure(String error, {BleCaptureFailureKind? failureKind}) =>
       CaptureOutcome._(error: error, failureKind: failureKind);
+
+  /// The user stopped before there was anything worth keeping.
+  factory CaptureOutcome.stopped() => const CaptureOutcome._(cancelled: true);
 }
 
 /// Decodes complete JK02 frames into the pieces a donation carries.
@@ -326,9 +343,10 @@ class CaptureService implements CaptureController {
   /// Connects to [device], reads the device-info and cell-info frames, and
   /// returns a [Contribution] built with every anonymisation default applied.
   ///
-  /// [isCancelled] lets the UI stop collection early; the payload is still
-  /// built from whatever was captured (with an honest zero-sample failure when
-  /// nothing parsed).
+  /// [isCancelled] lets the UI stop collection early. A stop before any usable
+  /// sample is a cancellation, never a failure the pack is blamed for; a stop
+  /// after samples keeps them and marks the outcome cancelled so the result
+  /// screen can say it was stopped early.
   @override
   Future<CaptureOutcome> capture(
     BleScanResult device, {
@@ -359,10 +377,15 @@ class CaptureService implements CaptureController {
 
       final handshakeDeadline = DateTime.now().add(handshakeTimeout);
       while (session.deviceInfo == null && DateTime.now().isBefore(handshakeDeadline)) {
-        if (isCancelled?.call() ?? false) break;
+        if (isCancelled?.call() ?? false) {
+          // The user stopped us. This is not a wrong device and must never be
+          // reported as one.
+          return CaptureOutcome.stopped();
+        }
         await Future<void>.delayed(_pollInterval);
       }
       if (session.deviceInfo == null) {
+        if (isCancelled?.call() ?? false) return CaptureOutcome.stopped();
         return CaptureOutcome.failure(CaptureStrings.noDeviceInfo);
       }
 
@@ -370,16 +393,22 @@ class CaptureService implements CaptureController {
         BmsProtocolHelper.buildJk02Command(BmsProtocolHelper.jk02CommandCellInfo),
       );
 
+      var cancelled = false;
       final deadline = DateTime.now().add(duration);
       while (DateTime.now().isBefore(deadline)) {
-        if (isCancelled?.call() ?? false) break;
+        if (isCancelled?.call() ?? false) {
+          cancelled = true;
+          break;
+        }
         onProgress?.call(_progress(session, 'Capturing telemetry…'));
         await Future<void>.delayed(_pollInterval);
       }
       onProgress?.call(_progress(session, 'Finishing…'));
 
       if (session.statuses.isEmpty) {
-        return CaptureOutcome.failure(CaptureStrings.noCellInfo);
+        return cancelled
+            ? CaptureOutcome.stopped()
+            : CaptureOutcome.failure(CaptureStrings.noCellInfo);
       }
 
       // Samples with no cells are not a donation. Two real captures arrived like
@@ -387,6 +416,9 @@ class CaptureService implements CaptureController {
       // and they were stored as if they were data. Refusing here says so at the
       // moment it can still be fixed: a sense harness, or a pack not switched on.
       if (!Jk02CaptureSession.hasAnyCellVoltage(session.statuses)) {
+        // If the user stopped before a usable sample arrived, this is a
+        // cancellation rather than a verdict about the pack.
+        if (cancelled) return CaptureOutcome.stopped();
         _log('every cell-info frame decoded with zero cells; refusing an empty capture');
         return CaptureOutcome.failure(CaptureStrings.noCellVoltages);
       }
@@ -405,7 +437,10 @@ class CaptureService implements CaptureController {
         await ble.write(BmsProtocolHelper.buildJk02LogbookRequest());
         final logbookDeadline = DateTime.now().add(logbookTimeout);
         while (session.logbookEntries.isEmpty && DateTime.now().isBefore(logbookDeadline)) {
-          if (isCancelled?.call() ?? false) break;
+          if (isCancelled?.call() ?? false) {
+            cancelled = true;
+            break;
+          }
           await Future<void>.delayed(_pollInterval);
         }
         if (session.logbookEntries.isEmpty) {
@@ -441,7 +476,16 @@ class CaptureService implements CaptureController {
         includeSerial: includeSerial,
       );
 
-      return CaptureOutcome.success(contribution, session);
+      // A stop can also arrive after the window and the logbook read finished.
+      // Check once more before building the outcome so a late tap is recorded
+      // instead of silently producing a normal capture.
+      cancelled = cancelled || (isCancelled?.call() ?? false);
+
+      return CaptureOutcome.success(
+        contribution,
+        session,
+        cancelled: cancelled,
+      );
     } catch (e) {
       // A failure after the scan — Bluetooth switched off mid-session, the pack
       // going out of range, a GATT error — is classified like a scan failure:

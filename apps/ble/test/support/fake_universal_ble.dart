@@ -12,7 +12,10 @@ import 'package:universal_ble/universal_ble.dart';
 /// idle or empty states deterministically. The transport's own behaviour is
 /// covered in `test/services/universal_ble_transport_test.dart`, which
 /// installs a fake that does drive the radio.
-final class FakeUniversalBlePlatform extends UniversalBlePlatform {
+///
+/// Not `final`: a test that needs one specific call to fail (see
+/// devices_scanner_test.dart) subclasses it and overrides just that method.
+class FakeUniversalBlePlatform extends UniversalBlePlatform {
   @override
   Future<AvailabilityState> getBluetoothAvailabilityState() async => AvailabilityState.poweredOn;
 

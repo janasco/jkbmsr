@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_contributor/models/contribution.dart';
 import 'package:jkbmsr_contributor/models/contribution_selection.dart';
@@ -76,6 +78,48 @@ void main() {
       expect(decoded.samples, isEmpty);
       expect(decoded.rawFrames, isEmpty);
       expect(decoded.bms.modelName, isEmpty);
+    });
+
+    test('a switched-off required container is still present and empty', () {
+      // The server requires `app`, `advertisement` and `samples` to be present
+      // with the right JSON type. A privacy switch must not remove the container
+      // and turn an honest opt-out into an unsendable document.
+      final c = sampleContribution();
+      final selection = ContributionSelection.defaults()
+          .toggled('samples', false)
+          .toggled('app', false)
+          .toggled('advertisement.namePattern', false)
+          .toggled('advertisement.serviceUuids', false)
+          .toggled('advertisement.rssiBucket', false)
+          .toggled('advertisement.addressMasked', false);
+
+      final json = c.toJson(selection: selection);
+      final encoded =
+          jsonDecode(c.encode(selection: selection)) as Map<String, dynamic>;
+
+      // Required containers, exactly as the route checks them.
+      expect(json['app'], isA<Map<String, dynamic>>());
+      expect(json['bms'], isA<Map<String, dynamic>>());
+      expect(json['advertisement'], isA<Map<String, dynamic>>());
+      expect(json['samples'], isA<List<dynamic>>());
+      expect(json['redaction'], isA<Map<String, dynamic>>());
+
+      // The withheld values are genuinely absent, not replaced with fake ones.
+      expect(json['app'] as Map<String, dynamic>, isEmpty);
+      expect(json['advertisement'] as Map<String, dynamic>, isEmpty);
+      expect(json['samples'] as List<dynamic>, isEmpty);
+
+      // The wire document carries the keys too, so an encoder change cannot
+      // silently drop one.
+      expect(encoded.containsKey('samples'), isTrue);
+      expect(encoded['samples'], isEmpty);
+      expect(encoded.containsKey('app'), isTrue);
+      expect(encoded.containsKey('advertisement'), isTrue);
+
+      // And the opt-out is still recorded as withheld.
+      final redaction = json['redaction'] as Map<String, dynamic>;
+      expect((redaction['omittedFields'] as List).cast<String>(),
+          containsAll(['samples', 'app']));
     });
   });
 

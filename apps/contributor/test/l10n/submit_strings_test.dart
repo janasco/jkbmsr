@@ -45,11 +45,25 @@ void main() {
     expect(message, contains('418'));
   });
 
-  test('every failure message points at the export fallback', () {
+  test('every failure except a 400 points at the export fallback', () {
     for (final kind in SubmitFailureKind.values) {
       final message = SubmitStrings.failureMessage(SubmitFailure(kind: kind));
+      if (kind == SubmitFailureKind.invalid) {
+        // A document the server cannot read is exactly the document an export
+        // would fail to send later, so the 400 copy must not promise one.
+        continue;
+      }
       expect(message.toLowerCase(), contains('export'),
           reason: 'kind $kind does not offer the offline fallback');
     }
+  });
+
+  test('the 400 copy does not promise an export that would also fail', () {
+    final message = SubmitStrings.failureMessage(
+      const SubmitFailure(kind: SubmitFailureKind.invalid),
+    );
+    expect(message.toLowerCase(), isNot(contains('export')));
+    expect(message.toLowerCase(), isNot(contains('send it later')));
+    expect(message.trim(), isNotEmpty);
   });
 }

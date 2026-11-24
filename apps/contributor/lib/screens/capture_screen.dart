@@ -25,7 +25,7 @@ AppProvenance buildAppProvenance() {
   );
 }
 
-enum _Stage { idle, scanning, capturing, error }
+enum _Stage { idle, scanning, capturing, stopped, error }
 
 /// Scan → capture → hand off to [CaptureSuccessScreen].
 ///
@@ -161,6 +161,20 @@ class _CaptureScreenState extends State<CaptureScreen>
     if (!mounted) return;
     _bar.stop();
 
+    // Stopping before anything usable was collected is a cancellation, not a
+    // failure: the pack did nothing wrong, and the copy must not say it did.
+    if (outcome.cancelled && !outcome.success) {
+      setState(() {
+        _stage = _Stage.stopped;
+        _error = null;
+        _errorKind = null;
+        _captureErrorKind = null;
+        _status = '';
+        _progress = null;
+      });
+      return;
+    }
+
     if (!outcome.success) {
       setState(() {
         _stage = _Stage.error;
@@ -245,6 +259,8 @@ class _CaptureScreenState extends State<CaptureScreen>
         return _buildScanning(context);
       case _Stage.capturing:
         return _buildCapturing(context);
+      case _Stage.stopped:
+        return _buildStopped(context);
       case _Stage.error:
         return _buildError(context);
     }
@@ -507,13 +523,15 @@ class _CaptureScreenState extends State<CaptureScreen>
                         _CaptureOrb(progress: _bar.value),
                         const SizedBox(height: 28),
                         Text(
-                          _status,
+                          _cancelled ? CaptureStrings.stoppedTitle : _status,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Keep this screen open and stay near the pack.',
+                          _cancelled
+                              ? 'Finishing the stop…'
+                              : 'Keep this screen open and stay near the pack.',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
@@ -550,13 +568,66 @@ class _CaptureScreenState extends State<CaptureScreen>
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
               child: TextButton(
-                onPressed: () => setState(() => _cancelled = true),
-                child: const Text('Stop early'),
+                onPressed:
+                    _cancelled ? null : () => setState(() => _cancelled = true),
+                child: Text(_cancelled ? 'Stopping…' : 'Stop early'),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStopped(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.primary.withValues(alpha: 0.10),
+              ),
+              child: Icon(
+                Icons.stop_circle_outlined,
+                size: 40,
+                color: scheme.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              CaptureStrings.stoppedTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              CaptureStrings.stoppedBody,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 26),
+            FilledButton(onPressed: _startScan, child: const Text('Scan again')),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: const Text('Back'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -295,63 +295,77 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                            child: SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Center(
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF131A20) : const Color(0xFFF1F5F9),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isDark ? const Color(0xFF1E2830) : const Color(0xFFE2E8F0),
+                      // The title block is the only part that may shrink: the
+                      // menu button and the ON/OFF pill are fixed-size controls
+                      // with hit areas that must not move. Without `Expanded`
+                      // here the header Row had no flexible child, so at 2x
+                      // text the tab title ran into the pill and the title
+                      // column painted under it.
+                      Expanded(
+                        child: Row(
+                          children: [
+                            InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Center(
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF131A20) : const Color(0xFFF1F5F9),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isDark ? const Color(0xFF1E2830) : const Color(0xFFE2E8F0),
+                                      ),
                                     ),
-                                  ),
-                                  child: Icon(
-                                    Icons.menu_rounded,
-                                    color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-                                    size: 20,
-                                    // The InkWell carries no label of its own;
-                                    // this is what a screen reader announces.
-                                    semanticLabel: 'Open menu',
+                                    child: Icon(
+                                      Icons.menu_rounded,
+                                      color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                                      size: 20,
+                                      // The InkWell carries no label of its own;
+                                      // this is what a screen reader announces.
+                                      semanticLabel: 'Open menu',
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _getTabTitle(_currentTab),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.4,
-                                  color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-                                ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _getTabTitle(_currentTab),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.4,
+                                      color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    isConnected && deviceId != null
+                                        ? deviceId
+                                        : 'DISCONNECTED',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11.0,
+                                      fontFamily: 'monospace',
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                isConnected && deviceId != null
-                                    ? deviceId
-                                    : 'DISCONNECTED',
-                                style: const TextStyle(
-                                  fontSize: 11.0,
-                                  fontFamily: 'monospace',
-                                  color: Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                       Row(
                         children: [

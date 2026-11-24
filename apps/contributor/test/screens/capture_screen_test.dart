@@ -111,6 +111,39 @@ class _PendingCaptureController implements CaptureController {
   }
 }
 
+/// A capture that stays in the handshake until the user stops it, then returns
+/// the cancellation outcome the real service now produces.
+class _CancelOnStopController implements CaptureController {
+  @override
+  Future<bool> isSupported() async => true;
+
+  @override
+  Stream<List<BleScanResult>> scan({Duration timeout = const Duration(seconds: 1)}) =>
+      Stream.value(const [_device]);
+
+  @override
+  Future<CaptureOutcome> capture(
+    BleScanResult device, {
+    Duration duration = CaptureService.defaultDuration,
+    Duration handshakeTimeout = CaptureService.defaultHandshakeTimeout,
+    bool includeSerial = false,
+    required AppProvenance app,
+    bool Function()? isCancelled,
+    void Function(CaptureProgress progress)? onProgress,
+  }) async {
+    onProgress?.call(const CaptureProgress(
+      status: 'Reading device info…',
+      fragmentCount: 0,
+      frameCount: 0,
+      sampleCount: 0,
+    ));
+    while (!(isCancelled?.call() ?? false)) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    return CaptureOutcome.stopped();
+  }
+}
+
 void main() {
   setUp(installFakeUniversalBle);
 
@@ -291,6 +324,60 @@ void main() {
 
     expect(find.text('boom'), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
+  });
+
+  testWidgets(
+      'stopping during the handshake says the capture stopped, not that the '
+      'pack is not a JK-BMS', (WidgetTester tester) async {
+    final controller = _CancelOnStopController();
+    await tester.pumpWidget(MaterialApp(
+      home: CaptureScreen(
+        controller: controller,
+        captureDuration: const Duration(seconds: 10),
+      ),
+    ));
+
+    await tester.tap(find.text('Scan for JK-BMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JK_B2A24S15P'));
+    await tester.pump();
+    expect(find.text('Stop early'), findsOneWidget);
+
+    await tester.tap(find.text('Stop early'));
+    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pumpAndSettle();
+
+    expect(find.text(CaptureStrings.stoppedTitle), findsOneWidget);
+    expect(find.text(CaptureStrings.stoppedBody), findsOneWidget);
+    expect(find.text(CaptureStrings.noDeviceInfo), findsNothing);
+    expect(find.textContaining('JK-BMS?'), findsNothing);
+  });
+
+  testWidgets('a capture stopped after some samples says so on the result',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: CaptureSuccessScreen(
+        outcome: CaptureOutcome.success(
+          sampleContribution(),
+          Jk02CaptureSession(),
+          cancelled: true,
+        ),
+      ),
+    ));
+
+    expect(find.text(CaptureStrings.stoppedEarly), findsOneWidget);
+
+    // A normal capture carries no such note.
+    await tester.pumpWidget(MaterialApp(
+      home: CaptureSuccessScreen(
+        outcome: CaptureOutcome.success(
+          sampleContribution(),
+          Jk02CaptureSession(),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text(CaptureStrings.stoppedEarly), findsNothing);
   });
 
   testWidgets(

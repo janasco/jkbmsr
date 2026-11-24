@@ -18,12 +18,16 @@
 // detected. BottomNavBar is given its real bounded constraints instead.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jkbmsr_ble/main.dart';
 import 'package:jkbmsr_ble/models/bms_models.dart';
+import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/battery_metrics_grid.dart';
 import 'package:jkbmsr_ble/widgets/bottom_nav_bar.dart';
 import 'package:jkbmsr_ble/widgets/cell_voltages_section.dart';
 import 'package:jkbmsr_ble/widgets/soc_ring.dart';
 import 'package:jkbmsr_ble/widgets/wire_resistance_section.dart';
+
+import '../support/fake_universal_ble.dart';
 
 const double _largeTextScale = 2.0;
 
@@ -78,6 +82,12 @@ BmsStatus _status() => BmsStatus(
 
 void main() {
   group('textScale 2.0 overflow', () {
+    setUp(installFakeUniversalBle);
+    tearDown(() {
+      BleBmsService().debugResetScanningState();
+      BleBmsService().debugResetConnectionState();
+    });
+
     testWidgets('Cell Voltages section does not overflow', (tester) async {
       _phoneViewport(tester);
       await tester.pumpWidget(_wrapScaled(CellVoltagesSection(cells: _cells())));
@@ -124,6 +134,54 @@ void main() {
         scrollable: false,
       ));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('app header does not overflow on a 360dp phone', (tester) async {
+      // The real header: its title block must truncate rather than collide
+      // with the fixed ON/OFF pill when the OS text scale doubles.
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // The scale is raised only after the CONTROLS tab is on screen. The
+      // default STATUS tab has its own large-text overflow in sections that
+      // are not part of this audit; rendering it at 2x first would put those
+      // exceptions in the queue and this test could not say anything about the
+      // header. Selecting a tab is a state change inside the app, so the
+      // element (and `_currentTab`) survives the rebuild below.
+      final scale = ValueNotifier<double>(1.0);
+      addTearDown(scale.dispose);
+
+      await tester.pumpWidget(ValueListenableBuilder<double>(
+        valueListenable: scale,
+        builder: (context, value, _) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(value),
+          ),
+          child: const JkbmsrBleApp(),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The first-run overlay covers the tab bar. Its call to action sits below
+      // the fold on a phone this size, so scroll it into view before tapping.
+      final start = find.text('START SCANNING');
+      if (start.evaluate().isNotEmpty) {
+        await tester.ensureVisible(start);
+        await tester.pump();
+        await tester.tap(start);
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      // The longest tab title, which is the one that collided with the pill.
+      await tester.tap(find.text('CONTROLS').last);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('CONTROLS'), findsWidgets);
+
+      scale.value = _largeTextScale;
+      await tester.pump(const Duration(milliseconds: 400));
+
       expect(tester.takeException(), isNull);
     });
   });

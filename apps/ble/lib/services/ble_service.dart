@@ -69,6 +69,26 @@ class BleBmsService {
     _scanStateController.add(value);
   }
 
+  /// Why the last scan attempt could not run, or null when it was never
+  /// refused.
+  ///
+  /// A scan that cannot start (no BLE support, a denied permission, the adapter
+  /// off, a plugin fault) used to be recorded only in the diagnostics log, so
+  /// the Devices tab fell through to its "no devices found" card and told the
+  /// owner to check a BMS that may be perfectly healthy. This is the reason the
+  /// UI can show instead, and it is cleared the moment a new scan begins.
+  String? _scanError;
+  String? get scanError => _scanError;
+
+  final _scanErrorController = StreamController<String?>.broadcast();
+  Stream<String?> get scanErrorStream => _scanErrorController.stream;
+
+  void _setScanError(String? reason) {
+    if (_scanError == reason) return;
+    _scanError = reason;
+    _scanErrorController.add(reason);
+  }
+
   final _statusController = StreamController<BmsStatus>.broadcast();
   Stream<BmsStatus> get statusStream => _statusController.stream;
 
@@ -181,6 +201,7 @@ class BleBmsService {
     _scanTimer = null;
     _debugIsScanning = null;
     _scanning = false;
+    _setScanError(null);
   }
 
   bool get isConnected => _debugIsConnected ?? (_connectedDeviceId != null);
@@ -337,8 +358,15 @@ class BleBmsService {
   Future<void> startBleScan() async {
     try {
       _addLog("Starting BLE scan for Bluetooth BMS hardware...");
+      // A new attempt starts from a clean slate: the previous failure explains
+      // the previous scan, not this one.
+      _setScanError(null);
       if (!await _isBleSupported()) {
         _addLog("Bluetooth Low Energy is not supported on this device.");
+        _setScanError(
+          'This device does not support Bluetooth Low Energy. The scanner '
+          'cannot look for a BMS on it.',
+        );
         return;
       }
 
@@ -404,6 +432,7 @@ class BleBmsService {
       _setScanning(true);
       unawaited(UniversalBle.startScan().catchError((Object error) {
         _addLog("BLE scan start failed: $error");
+        _setScanError('The Bluetooth scan could not start: $error');
         _setScanning(false);
       }));
       // The window is ours: universal_ble's startScan runs until it is stopped,
@@ -413,6 +442,7 @@ class BleBmsService {
       _addLog("BLE scan active across 2.4GHz spectrum.");
     } catch (e) {
       _addLog("BLE Scan error: $e");
+      _setScanError('The Bluetooth scan could not start: $e');
       _setScanning(false);
     }
   }

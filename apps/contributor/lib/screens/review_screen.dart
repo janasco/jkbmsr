@@ -18,8 +18,9 @@ import '../widgets/app_surface.dart';
 ///
 /// Submitting posts exactly those bytes to the anonymous endpoint (plan §3.5)
 /// and shows the returned receipt id; the fallback writes the same bytes to a
-/// `.json` file and hands it to the OS share sheet, so a failed submit never
-/// loses a contribution.
+/// `.json` file and hands it to the OS share sheet, so a transport or server
+/// failure never loses a contribution. A `400` is the exception: the document
+/// itself is unreadable, so exporting it would fail the same way.
 class ReviewScreen extends StatefulWidget {
   const ReviewScreen({
     super.key,
@@ -97,8 +98,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   String get _payload => _effective.encode(selection: _selection);
 
   /// Submits the payload. There is no automatic retry: a `429` is surfaced
-  /// honestly rather than hammering the limiter, and every failure leaves the
-  /// export path available.
+  /// honestly rather than hammering the limiter. Transport and server failures
+  /// leave the export path available; a `400` does not, because the same bytes
+  /// would be refused again.
   Future<void> _onSubmitPressed() async {
     if (_busy != _BusyAction.none) return;
     setState(() {
@@ -282,14 +284,19 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     : const Text(ReviewStrings.submit),
               ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _busy == _BusyAction.none ? _onExportPressed : null,
-                icon: const Icon(Icons.ios_share_rounded),
-                label: Text(_busy == _BusyAction.export
-                    ? SubmitStrings.exporting
-                    : SubmitStrings.exportButton),
-              ),
-              const SizedBox(height: 8),
+              // A 400 means these exact bytes were unreadable, so exporting
+              // them as a later send is not a fallback. Every other failure
+              // keeps the file path.
+              if (_failure?.kind != SubmitFailureKind.invalid) ...[
+                OutlinedButton.icon(
+                  onPressed: _busy == _BusyAction.none ? _onExportPressed : null,
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: Text(_busy == _BusyAction.export
+                      ? SubmitStrings.exporting
+                      : SubmitStrings.exportButton),
+                ),
+                const SizedBox(height: 8),
+              ],
               TextButton(
                 onPressed: () => Navigator.of(context).maybePop(),
                 child: const Text(ReviewStrings.discard),
@@ -426,11 +433,15 @@ class _FailureCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              SubmitStrings.exportHint,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.onErrorContainer),
-            ),
+            // A 400 means the server could not read the document at all, so the
+            // same bytes exported to a file would be refused later too. The
+            // export fallback is only honest for transport and server failures.
+            if (failure.kind != SubmitFailureKind.invalid)
+              Text(
+                SubmitStrings.exportHint,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onErrorContainer),
+              ),
           ],
         ),
       ),

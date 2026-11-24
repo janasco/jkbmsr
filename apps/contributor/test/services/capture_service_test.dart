@@ -347,6 +347,50 @@ void main() {
       expect(outcome.success, isFalse);
       expect(outcome.error, contains('device-info'));
     });
+
+    test('a stop during the handshake is a cancellation, not a wrong-device failure',
+        () async {
+      final transport = _SilentTransport();
+      final service = CaptureService(transport: transport);
+
+      final outcome = await service.capture(
+        transport.device,
+        handshakeTimeout: const Duration(seconds: 5),
+        duration: const Duration(milliseconds: 20),
+        app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+        isCancelled: () => true,
+      );
+
+      expect(outcome.cancelled, isTrue);
+      expect(outcome.success, isFalse);
+      expect(outcome.error, isNull);
+      expect(outcome.error, isNot(CaptureStrings.noDeviceInfo));
+    });
+
+    test('a stop after some samples keeps them and marks the capture cancelled',
+        () async {
+      final transport = FakeBleTransport();
+      final service = CaptureService(transport: transport);
+      var cancelled = false;
+
+      final pending = service.capture(
+        transport.device,
+        duration: const Duration(seconds: 5),
+        handshakeTimeout: const Duration(milliseconds: 500),
+        app: const AppProvenance(version: '0.1.0+1', platform: 'android', osVersion: '34'),
+        isCancelled: () => cancelled,
+      );
+
+      // Let the handshake and at least one cell-info frame arrive, then stop.
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      cancelled = true;
+      final outcome = await pending;
+
+      expect(outcome.cancelled, isTrue);
+      expect(outcome.success, isTrue, reason: outcome.error);
+      expect(outcome.error, isNull);
+      expect(outcome.contribution!.samples, isNotEmpty);
+    });
   });
 
   group('CaptureService.capture failure translation', () {

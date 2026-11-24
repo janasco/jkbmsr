@@ -11,6 +11,7 @@ import 'package:jkbmsr_ble/main.dart';
 import 'package:jkbmsr_ble/screens/devices_screen.dart';
 import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/motion_kit.dart';
+import 'package:universal_ble/universal_ble.dart';
 
 import 'support/fake_universal_ble.dart';
 
@@ -18,6 +19,15 @@ Widget _wrap(Widget child) => MaterialApp(
       theme: ThemeData.dark(),
       home: Scaffold(body: child),
     );
+
+/// A platform whose scan cannot start, which is how a denied permission, an
+/// unsupported adapter or a plugin fault reaches the app in the field.
+final class _FailingScanPlatform extends FakeUniversalBlePlatform {
+  @override
+  Future<void> startScan({ScanFilter? scanFilter, PlatformConfig? platformConfig}) async {
+    throw StateError('scan permission denied');
+  }
+}
 
 void main() {
   setUp(() {
@@ -151,5 +161,33 @@ void main() {
     expect(find.byIcon(Icons.more_vert_rounded), findsNothing,
         reason: 'the redundant three-dot header overflow was removed');
     expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+  });
+
+  testWidgets('a scan that cannot start names the reason instead of blaming the BMS',
+      (tester) async {
+    tester.view.physicalSize = const Size(900, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // The shared fake never touches the radio, so the failing path is only
+    // reachable with the radio on and a platform whose startScan throws.
+    UniversalBle.setInstance(_FailingScanPlatform());
+    BleBmsService().debugRadioEnabled = true;
+    addTearDown(() => BleBmsService().debugRadioEnabled = false);
+
+    await tester.pumpWidget(_wrap(DevicesScreen(onConnected: () {})));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // The no-devices copy tells the owner to check hardware that may be fine;
+    // it must not appear when the scanner itself failed.
+    expect(find.text('No Bluetooth Devices Found'), findsNothing);
+    expect(
+      find.textContaining('Ensure your BMS Bluetooth module is powered'),
+      findsNothing,
+    );
+
+    expect(find.text('Cannot scan for devices'), findsOneWidget);
+    expect(find.textContaining('scan permission denied'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'TRY AGAIN'), findsOneWidget);
   });
 }

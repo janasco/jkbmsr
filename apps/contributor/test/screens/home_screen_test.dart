@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:jkbmsr_contributor/l10n/strings.dart';
+import 'package:jkbmsr_contributor/main.dart';
+import 'package:jkbmsr_contributor/models/consent.dart';
 import 'package:jkbmsr_contributor/screens/capture_screen.dart';
 import 'package:jkbmsr_contributor/screens/home_screen.dart';
+import 'package:jkbmsr_contributor/services/consent_controller.dart';
+import 'package:jkbmsr_contributor/services/consent_store.dart';
 import 'package:jkbmsr_contributor/services/coverage_service.dart';
 import 'package:jkbmsr_contributor/theme/app_theme.dart';
 
@@ -109,5 +114,30 @@ void main() {
     // Complete the request so nothing is left pending when the test ends.
     pending.complete(http.Response(jsonEncode(_summary), 200));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('granted consent can be turned off from Home, which re-asks',
+      (WidgetTester tester) async {
+    final controller = ConsentController(store: InMemoryConsentStore());
+    await controller.decide(ConsentDecision.granted);
+
+    await tester.pumpWidget(
+      ContributorApp(
+        consent: controller,
+        coverageService: _respondingWith(200, jsonEncode(_summary)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Contributing is on'), findsOneWidget);
+    expect(find.text('Turn off'), findsOneWidget);
+
+    await tester.tap(find.text('Turn off'));
+    await tester.pumpAndSettle();
+
+    expect(controller.isGranted, isFalse);
+    expect(controller.hasDecision, isFalse);
+    // The gate is back, so contributing must be turned on again before capture.
+    expect(find.text(ConsentStrings.title), findsOneWidget);
   });
 }

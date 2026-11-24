@@ -69,6 +69,13 @@ void main() {
     }
   });
 
+  test('the decline note names a control that exists', () {
+    // The old sentence said contributing could be turned on from Home while
+    // Home offered no such control. Start a capture is the control that
+    // re-opens the consent screen after a decline.
+    expect(ConsentStrings.declineNote, contains('Start a capture'));
+  });
+
   test('the reviewed payload carries no country and no IP field', () {
     final json = jsonDecode(
       sampleContribution().encode(selection: ContributionSelection.defaults()),

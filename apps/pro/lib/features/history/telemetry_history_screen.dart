@@ -89,6 +89,13 @@ class _TelemetryHistoryScreenState extends State<TelemetryHistoryScreen> {
       setState(() {
         _error = friendlyErrorMessage(e);
         _isLoading = false;
+        // The retained points describe the range that last loaded, not the one
+        // the selector now names. Drop them so the inline failure state renders
+        // instead of a chart labelled with a range it does not cover.
+        _points = [];
+        _downsampled = false;
+        _fromCache = false;
+        _cachedAt = null;
       });
       if (mounted) JKBMSRToast.show(context, _error ?? 'Failed to load history', isError: true);
     }

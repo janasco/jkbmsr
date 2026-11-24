@@ -268,6 +268,14 @@ class _CellBarRow extends StatelessWidget {
         : isMin
             ? context.colors.warning
             : context.colors.textMuted;
+    // The value is painted on the bar's fill, so it takes the fill's on-colour
+    // instead of a fixed white. In dark mode the fills are bright and white
+    // measured 2.0–2.9:1; the design system's dark on-colours are near-black.
+    // There is no onWarning token, so warning uses onAccent, which is white in
+    // light mode (the previous value, unchanged) and near-black in dark mode.
+    final valueColor = isMax || isMin
+        ? context.colors.onAccent
+        : context.colors.onSignal;
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space4),
       child: Row(
@@ -312,7 +320,7 @@ class _CellBarRow extends StatelessWidget {
                         '${voltage.toStringAsFixed(3)} V',
                         maxLines: 1,
                         style: JKBMSRTypography.monoTechnical.copyWith(
-                          color: Colors.white,
+                          color: valueColor,
                           fontWeight: FontWeight.w700,
                           fontSize: 12.0,
                         ),

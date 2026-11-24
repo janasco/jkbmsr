@@ -211,6 +211,32 @@ void main() {
     );
   });
 
+  testWidgets('a 400 does not offer an export that would fail the same way',
+      (WidgetTester tester) async {
+    final uploader = ContributionUploader(
+      client: MockClient((_) async => http.Response('{"error":"bad"}', 400)),
+    );
+
+    await _pumpReview(tester, uploader: uploader);
+    await tester.tap(find.widgetWithText(FilledButton, ReviewStrings.submit));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(SubmitStrings.failureMessage(
+        const SubmitFailure(kind: SubmitFailureKind.invalid),
+      )),
+      findsOneWidget,
+    );
+    // The file would carry the same unreadable document, so it is not offered
+    // as a way to send it later.
+    expect(find.text(SubmitStrings.exportHint), findsNothing);
+    expect(find.textContaining('export the file'), findsNothing);
+    expect(
+      find.widgetWithText(OutlinedButton, SubmitStrings.exportButton),
+      findsNothing,
+    );
+  });
+
   testWidgets('a 429 is surfaced with its Retry-After, not retried',
       (WidgetTester tester) async {
     var calls = 0;
