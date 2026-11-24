@@ -315,8 +315,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
             ),
             const SizedBox(height: JKBMSRTokens.space4),
             Text(
-              '10 points a day, once, after a session of a minute or more. A donated pack '
-              'is worth 250, so this is patience rather than a shortcut.',
+              '10 points a day, once, after a session of a minute or more. Needs a gateway '
+              'on your account, and stops at 300 points in total. A donated pack is worth '
+              '250, so this is patience rather than a shortcut.',
               style: JKBMSRTypography.bodySecondary.copyWith(color: colors.textMuted),
             ),
             const SizedBox(height: JKBMSRTokens.space12),
@@ -355,9 +356,20 @@ class _SimulationScreenState extends State<SimulationScreen> {
       final result = await (widget.claimReward ?? _defaultClaim)(_elapsedSeconds);
       if (!mounted) return;
       setState(() {
-        _claimMessage = result.credited > 0
-            ? '${result.credited} points added. Balance ${result.balance}.'
-            : 'Already claimed today. Come back tomorrow.';
+        // The reason comes from the server, so the sentence cannot drift from the
+        // rule that refused the claim.
+        switch (result.reason) {
+          case 'no gateway':
+            _claimMessage = 'Claim a gateway on this account first. Points are only '
+                'spendable on a gateway, so it is required before earning them here.';
+          case 'lifetime cap reached':
+            _claimMessage = 'You have reached the simulation limit of 300 points. '
+                'Donated packs still earn.';
+          default:
+            _claimMessage = result.credited > 0
+                ? '${result.credited} points added. Balance ${result.balance}.'
+                : 'Already claimed today. Come back tomorrow.';
+        }
       });
     } catch (_) {
       if (!mounted) return;

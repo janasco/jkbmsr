@@ -65,6 +65,22 @@ void main() {
     expect(find.textContaining('10 points added'), findsOneWidget);
   });
 
+  testWidgets('a refused claim explains the rule that refused it', (tester) async {
+    _tall(tester);
+    await tester.pumpWidget(_app(SimulationScreen(
+      claimReward: (seconds) async =>
+          const SimulationClaimResult(credited: 0, reason: 'no gateway', balance: 0),
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Run'));
+    await tester.pump(const Duration(seconds: 61));
+    await tester.tap(find.widgetWithText(FilledButton, 'Claim 10 points'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Claim a gateway on this account first'), findsOneWidget);
+  });
+
   testWidgets('a weak cell lowers one cell and widens the spread', (tester) async {
     _tall(tester);
     await tester.pumpWidget(_app(const SimulationScreen()));
