@@ -142,7 +142,7 @@ class _AuthPinDialogState extends State<AuthPinDialog>
             const SizedBox(height: 6),
             const Text(
               'Local control PIN, not an account. Sent only to authorise a '
-              'command to your connected BMS (default: 1234).',
+              'command to your connected BMS.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
             ),

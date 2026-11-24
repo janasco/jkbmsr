@@ -209,6 +209,64 @@ class Contribution {
 
   // ---- Serialisation -------------------------------------------------------
 
+  /// The device serial lives at bytes 86..97 of the JK02 device-info frame. The
+  /// serial has its own opt-in (`bms.serialHash`), but the raw frame carries the
+  /// same bytes, so leaving the frame untouched would put the serial back into a
+  /// payload whose redaction says it was withheld. Zeroing those bytes here is
+  /// what makes "withheld" true of the whole document.
+  static String redactDeviceInfoSerialHex(String hex) {
+    const startByte = 86;
+    const endByte = 97; // inclusive
+    final out = StringBuffer();
+    for (var i = 0; i + 1 < hex.length; i += 2) {
+      final byteIndex = i ~/ 2;
+      final inSerial = byteIndex >= startByte && byteIndex <= endByte;
+      out.write(inSerial ? '00' : hex.substring(i, i + 2));
+    }
+    // Raw frames are always whole bytes, but never drop a stray trailing nibble.
+    if (hex.length.isOdd) out.write(hex[hex.length - 1]);
+
+    // Zeroing twelve payload bytes breaks the frame's checksum, and a frame with a
+    // bad checksum is not evidence: the triage verifier would reject every default
+    // capture, and the donor's frame would stop being decodable. JK02's check is a
+    // one-byte sum over everything before the last byte, so it is recomputed here.
+    //
+    // Only whole 300-byte JK02 frames have that shape; anything else is returned as
+    // redacted, without inventing a checksum for a frame this code does not know.
+    var redacted = out.toString();
+    if (redacted.length == 600) {
+      final bytes = [
+        for (var i = 0; i < 600; i += 2)
+          int.parse(redacted.substring(i, i + 2), radix: 16),
+      ];
+      var sum = 0;
+      for (var i = 0; i < bytes.length - 1; i++) {
+        sum += bytes[i];
+      }
+      bytes[bytes.length - 1] = sum & 0xFF;
+      final fixed = StringBuffer();
+      for (final byte in bytes) {
+        fixed.write(byte.toRadixString(16).padLeft(2, '0'));
+      }
+      redacted = fixed.toString();
+    }
+    return redacted;
+  }
+
+  /// The frame as it is written to the payload. Every device-info frame is
+  /// stripped of the serial bytes unless the serial was explicitly shared.
+  RawFrame _frameForEncoding(RawFrame frame) {
+    if (redaction.serialNumber == 'shared' || frame.frameType != 'deviceInfo') {
+      return frame;
+    }
+    return RawFrame(
+      dir: frame.dir,
+      tOffsetMs: frame.tOffsetMs,
+      hex: redactDeviceInfoSerialHex(frame.hex),
+      frameType: frame.frameType,
+    );
+  }
+
   /// Serialises the payload.
   ///
   /// When [selection] is null the full, untrimmed document is written (this is
@@ -241,7 +299,7 @@ class Contribution {
       if (logbook != null && _include(selection, 'logbook'))
         'logbook': logbook!.toJson(),
       if (_include(selection, 'rawFrames'))
-        'rawFrames': rawFrames.map((f) => f.toJson()).toList(),
+        'rawFrames': rawFrames.map((f) => _frameForEncoding(f).toJson()).toList(),
       'redaction': RedactionInfo(
         serialNumber: redaction.serialNumber,
         omittedFields: omitted,

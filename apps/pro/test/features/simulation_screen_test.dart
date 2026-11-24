@@ -130,4 +130,33 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
     expect(voltage(), frozen);
   });
+
+  testWidgets('pausing stops the session clock and the cell drift', (tester) async {
+    _tall(tester);
+    await tester.pumpWidget(_app(const SimulationScreen()));
+    await tester.pumpAndSettle();
+
+    String session() => tester.widget<Text>(find.textContaining('Session ')).data!;
+    String cellOne() =>
+        tester.widget<Text>(find.textContaining(RegExp(r'^1: '))).data!;
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Run'));
+    await tester.pump(const Duration(seconds: 3));
+
+    final pausedSession = session();
+    final pausedCell = cellOne();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Pause'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+
+    expect(session(), pausedSession, reason: 'a paused session must not count');
+    expect(cellOne(), pausedCell, reason: 'a paused pack must not drift');
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Run'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(session(), isNot(pausedSession));
+    expect(cellOne(), isNot(pausedCell));
+  });
 }

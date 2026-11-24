@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:bms_core/bms_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_contributor/models/contribution.dart';
+import 'package:jkbmsr_contributor/models/contribution_selection.dart';
 
 import '../support/jk02_fixtures.dart';
 
@@ -110,6 +111,34 @@ void main() {
       final c = sampleContribution();
       expect(c.bms.serialHash, isNull);
       expect(c.redaction.serialNumber, 'withheld');
+    });
+
+    test('a withheld serial never survives in the raw device-info frame', () {
+      // The review screen promises the serial is withheld by default, but the
+      // raw device-info frame carries the same bytes. The encoded document must
+      // therefore contain neither the serial digits nor their ASCII hex.
+      final withheld = sampleContribution()
+          .encode(selection: ContributionSelection.defaults());
+      expect(withheld, isNot(contains('2021602096')));
+      expect(withheld, isNot(contains('32303231363032303936')));
+
+      // The bytes are zeroed, not merely renamed, and only the device-info frame
+      // is touched: the serial occupies bytes 86..97 inclusive.
+      final frames = ((jsonDecode(withheld) as Map<String, dynamic>)['rawFrames']
+              as List)
+          .cast<Map<String, dynamic>>();
+      final device =
+          frames.firstWhere((f) => f['frameType'] == 'deviceInfo');
+      expect((device['hex'] as String).substring(86 * 2, 98 * 2), '0' * 24);
+      final cell = frames.firstWhere((f) => f['frameType'] == 'cellInfo');
+      expect(cell['hex'], cellInfo24sHex);
+
+      // Sharing the serial still works exactly as before: the structured field
+      // carries it, and the frame is left intact.
+      final shared = sampleContribution()
+          .withSerial('2021602096', include: true)
+          .encode(selection: ContributionSelection.defaults());
+      expect(shared, contains('"serialHash":"2021602096"'));
     });
 
     test('opting in carries the serial and marks it shared', () {
@@ -251,5 +280,38 @@ void main() {
       expect(c.rawFrames.last.tOffsetMs, 249);
       expect(c.rawFrames.first.tOffsetMs, 50);
     });
+  });
+
+  test('a redacted frame still passes the frame checksum', () {
+    // The serial bytes sit inside a 300-byte frame whose last byte is a sum of the
+    // rest. Zeroing them without recomputing that byte would turn every default
+    // capture into a frame the triage verifier rejects.
+    final encoded = sampleContribution().encode();
+    final frames = (jsonDecode(encoded)['rawFrames'] as List)
+        .cast<Map<String, dynamic>>()
+        .where((frame) => frame['frameType'] == 'deviceInfo')
+        .toList();
+    expect(frames, isNotEmpty);
+
+    for (final frame in frames) {
+      final hex = (frame['hex'] as String).replaceAll(' ', '');
+      expect(hex.length, 600, reason: 'a whole JK02 frame');
+      final bytes = [
+        for (var i = 0; i < hex.length; i += 2)
+          int.parse(hex.substring(i, i + 2), radix: 16),
+      ];
+      var sum = 0;
+      for (var i = 0; i < bytes.length - 1; i++) {
+        sum += bytes[i];
+      }
+      expect(bytes.last, sum & 0xFF, reason: 'checksum still matches');
+
+      // And the frame must still tell us what pack it came from: redacting the
+      // serial is not allowed to destroy the model, hardware or firmware strings
+      // that the triage check compares against the payload.
+      final info = BmsProtocolHelper.parseJk02DeviceInfoFrame(bytes);
+      expect(info, isNotNull, reason: 'the redacted frame still parses');
+      expect(info!.modelName, isNotEmpty);
+    }
   });
 }

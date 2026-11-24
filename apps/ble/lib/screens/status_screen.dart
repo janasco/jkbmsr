@@ -78,7 +78,7 @@ class StatusScreen extends StatelessWidget {
                   // voltage/current/power/temp metrics, and a cell-imbalance
                   // + balancing footer, modeled on jkbmsr-mobile's gateway
                   // dashboard card.
-                  BatteryHeroCard(status: status, isConnected: hasLiveData),
+                  BatteryHeroCard(status: status, isConnected: isConnected, hasLiveData: hasLiveData),
                   const SizedBox(height: 14),
 
                   // LIVE STATUS (READ-ONLY — Control tab handles toggling)

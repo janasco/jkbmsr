@@ -355,6 +355,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
     }
   }
 
+  void _clearAlertFilters() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _severityFilter = 'all';
+      _selectedDate = null;
+    });
+  }
+
   List<Alert> _getFilteredActiveAlerts() {
     var filtered = _activeAlerts;
 
@@ -1003,7 +1012,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 ),
               ),
             )
-          else if (filteredAlerts.isEmpty)
+          else if (_activeAlerts.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
               child: JKBMSREmptyState(
@@ -1011,6 +1020,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 title: 'No active alarms',
                 description:
                     'All battery systems are operating within normal parameters.',
+              ),
+            )
+          else if (filteredAlerts.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: JKBMSREmptyState(
+                icon: Icons.filter_alt_off_outlined,
+                title: 'No alarms match this search or filter',
+                description:
+                    'Active alarms exist, but none match the current search, severity, or date filter.',
+                action: OutlinedButton(
+                  onPressed: _clearAlertFilters,
+                  child: const Text('Show all alarms'),
+                ),
               ),
             )
           else

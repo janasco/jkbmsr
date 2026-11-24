@@ -120,10 +120,10 @@ class ContributionUploader {
   Future<SubmitResult> submit(String payload, {String? accountCode}) async {
     // The code travels beside the contribution document, not inside it: the
     // document is the redacted evidence, and mixing an account identifier into it
-    // would mean the export file carried it too.
+    // would make the review preview false and archive the identifier with the
+    // capture. Older servers accepted a body field; this client is the newer one.
     final code = accountCode?.trim();
-    final body = (code == null || code.isEmpty) ? payload : _withAccountCode(payload, code);
-    final bytes = utf8.encode(body);
+    final bytes = utf8.encode(payload);
     // Same cap the server enforces, checked before the network so an oversized
     // document fails fast with the same reason the server would give.
     if (bytes.length > Contribution.maxPayloadBytes) {
@@ -137,9 +137,11 @@ class ContributionUploader {
       response = await _client
           .post(
             _endpoint,
-            headers: const {
+            headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
+              if (code != null && code.isNotEmpty)
+                'X-Contribution-Code': code,
             },
             body: bytes,
           )
@@ -157,20 +159,6 @@ class ContributionUploader {
     }
 
     return _interpret(response);
-  }
-
-  /// Adds the optional code to the request body. Done by editing the JSON rather
-  /// than threading a parameter through the model, because the document itself must
-  /// stay exactly what an export produces.
-  String _withAccountCode(String payload, String code) {
-    try {
-      final decoded = jsonDecode(payload);
-      if (decoded is! Map<String, dynamic>) return payload;
-      decoded['accountCode'] = code;
-      return jsonEncode(decoded);
-    } catch (_) {
-      return payload;
-    }
   }
 
   SubmitResult _interpret(http.Response response) {

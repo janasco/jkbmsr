@@ -14,7 +14,21 @@ class BatteryHeroCard extends StatelessWidget {
   final BmsStatus status;
   final bool isConnected;
 
-  const BatteryHeroCard({super.key, required this.status, required this.isConnected});
+  /// Whether a telemetry frame has actually been decoded.
+  ///
+  /// Defaults to [isConnected] so callers that only know the link state keep
+  /// working. The status screen passes it explicitly, because a link that is
+  /// up but has not produced a frame is a distinct state: the BMS is reachable
+  /// but there is nothing to show yet, and rendering that as OFFLINE with a
+  /// connected indicator says two contradictory things at once.
+  final bool? hasLiveData;
+
+  const BatteryHeroCard({
+    super.key,
+    required this.status,
+    required this.isConnected,
+    this.hasLiveData,
+  });
 
   static const _green = Color(0xFF10B981);
   static const _blue = Color(0xFF0284C7);
@@ -31,8 +45,11 @@ class BatteryHeroCard extends StatelessWidget {
     final insetBg = isDark ? const Color(0xFF0D1318) : const Color(0xFFF8FAFC);
     final textPrimary = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
 
-    final soc = isConnected ? status.soc.toDouble() : 0.0;
-    final socColor = !isConnected
+    final linkUp = isConnected;
+    final live = hasLiveData ?? isConnected;
+
+    final soc = live ? status.soc.toDouble() : 0.0;
+    final socColor = !live
         ? _muted
         : soc < 20
             ? _red
@@ -41,10 +58,12 @@ class BatteryHeroCard extends StatelessWidget {
                 : _green;
 
     final current = status.currentA;
-    final charging = isConnected && current > 0.05;
-    final discharging = isConnected && current < -0.05;
-    final (String statusLabel, Color statusColor, IconData statusIcon) = !isConnected
-        ? ('OFFLINE', _muted, Icons.bluetooth_disabled_rounded)
+    final charging = live && current > 0.05;
+    final discharging = live && current < -0.05;
+    final (String statusLabel, Color statusColor, IconData statusIcon) = !live
+        ? linkUp
+            ? ('WAITING FOR DATA', _blue, Icons.hourglass_empty_rounded)
+            : ('OFFLINE', _muted, Icons.bluetooth_disabled_rounded)
         : charging
             ? ('CHARGING (${current.toStringAsFixed(1)} A)', _green, Icons.battery_charging_full_rounded)
             : discharging
@@ -52,16 +71,20 @@ class BatteryHeroCard extends StatelessWidget {
                 : ('STANDBY', _muted, Icons.battery_std_rounded);
 
     final maxTemp = [status.t1Temp, status.t2Temp, status.mosTemp].reduce((a, b) => a > b ? a : b);
-    final tempColor = !isConnected ? _muted : (maxTemp > 50 ? _red : _blue);
+    final tempColor = !live ? _muted : (maxTemp > 50 ? _red : _blue);
 
     final power = status.powerW;
-    final powerLabel = isConnected
+    final powerLabel = live
         ? (power.abs() >= 1000 ? '${(power / 1000).toStringAsFixed(2)} kW' : '${power.toStringAsFixed(0)} W')
         : '-';
 
+    // Imbalance is only known once cells have actually arrived. With an empty
+    // list max - min is 0, which reads as a perfectly balanced pack directly
+    // above the banner that says no cell voltages were reported.
+    final cellsKnown = live && status.cells.isNotEmpty;
     final deltaMv = status.deltaVoltageMv;
     final imbalanceOk = deltaMv < 30;
-    final balancingActive = isConnected && status.isBalancingActive;
+    final balancingActive = live && status.isBalancingActive;
 
     return Container(
       width: double.infinity,
@@ -95,7 +118,9 @@ class BatteryHeroCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        isConnected ? status.modelName : 'No device connected',
+                        live
+                            ? status.modelName
+                            : (linkUp ? 'Waiting for data' : 'No device connected'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
@@ -143,7 +168,7 @@ class BatteryHeroCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                SocRing(percent: soc, live: isConnected, color: socColor, size: 108),
+                SocRing(percent: soc, live: live, color: socColor, size: 108),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -158,7 +183,7 @@ class BatteryHeroCard extends StatelessWidget {
                       _SocStat(
                         icon: Icons.battery_full_rounded,
                         label: 'Capacity',
-                        value: isConnected
+                        value: live
                             ? '${status.remainingCapacityAh.toStringAsFixed(1)} / ${status.nominalCapacityAh.toStringAsFixed(1)} Ah'
                             : '- / - Ah',
                         color: socColor,
@@ -168,7 +193,7 @@ class BatteryHeroCard extends StatelessWidget {
                       _SocStat(
                         icon: Icons.autorenew_rounded,
                         label: 'Cycles',
-                        value: isConnected ? '${status.cycleCount}' : '-',
+                        value: live ? '${status.cycleCount}' : '-',
                         color: _blue,
                         textPrimary: textPrimary,
                       ),
@@ -187,10 +212,10 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'PACK VOLTAGE',
-                  value: isConnected ? '${status.totalVoltage.toStringAsFixed(2)} V' : '-',
-                  subValue: isConnected ? 'Avg: ${status.averageCellVoltage.toStringAsFixed(3)} V' : '',
+                  value: live ? '${status.totalVoltage.toStringAsFixed(2)} V' : '-',
+                  subValue: live ? 'Avg: ${status.averageCellVoltage.toStringAsFixed(3)} V' : '',
                   icon: Icons.bolt_rounded,
-                  accentColor: isConnected ? _blue : _muted,
+                  accentColor: live ? _blue : _muted,
                   isDark: isDark,
                   insetBg: insetBg,
                   textPrimary: textPrimary,
@@ -200,12 +225,12 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'CURRENT',
-                  value: isConnected ? '${current.toStringAsFixed(1)} A' : '-',
-                  animValue: isConnected ? current : null,
+                  value: live ? '${current.toStringAsFixed(1)} A' : '-',
+                  animValue: live ? current : null,
                   formatter: (v) => '${v.toStringAsFixed(1)} A',
-                  subValue: isConnected ? (charging ? 'Charging' : (discharging ? 'Discharging' : 'Standby')) : '',
+                  subValue: live ? (charging ? 'Charging' : (discharging ? 'Discharging' : 'Standby')) : '',
                   icon: Icons.speed_rounded,
-                  accentColor: !isConnected ? _muted : (charging ? _green : _skyBlue),
+                  accentColor: !live ? _muted : (charging ? _green : _skyBlue),
                   isDark: isDark,
                   insetBg: insetBg,
                   textPrimary: textPrimary,
@@ -220,13 +245,13 @@ class BatteryHeroCard extends StatelessWidget {
                 child: _MetricTile(
                   title: 'POWER',
                   value: powerLabel,
-                  animValue: isConnected ? power : null,
+                  animValue: live ? power : null,
                   formatter: (v) => v.abs() >= 1000
                       ? '${(v / 1000).toStringAsFixed(2)} kW'
                       : '${v.toStringAsFixed(0)} W',
-                  subValue: isConnected ? '${power.toStringAsFixed(1)} W calc' : '',
+                  subValue: live ? '${power.toStringAsFixed(1)} W calc' : '',
                   icon: Icons.electric_bolt_rounded,
-                  accentColor: isConnected ? _skyBlue : _muted,
+                  accentColor: live ? _skyBlue : _muted,
                   isDark: isDark,
                   insetBg: insetBg,
                   textPrimary: textPrimary,
@@ -236,8 +261,8 @@ class BatteryHeroCard extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   title: 'MOSFET / CELL TEMP',
-                  value: isConnected ? '${status.mosTemp.toStringAsFixed(1)} °C' : '-',
-                  subValue: isConnected ? 'Cells: ${status.t1Temp.toStringAsFixed(1)} / ${status.t2Temp.toStringAsFixed(1)} °C' : '',
+                  value: live ? '${status.mosTemp.toStringAsFixed(1)} °C' : '-',
+                  subValue: live ? 'Cells: ${status.t1Temp.toStringAsFixed(1)} / ${status.t2Temp.toStringAsFixed(1)} °C' : '',
                   icon: Icons.thermostat_rounded,
                   accentColor: tempColor,
                   isDark: isDark,
@@ -262,11 +287,11 @@ class BatteryHeroCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        !isConnected
+                        !cellsKnown
                             ? Icons.remove_circle_outline_rounded
                             : (imbalanceOk ? Icons.check_circle_rounded : Icons.warning_amber_rounded),
                         size: 18,
-                        color: !isConnected ? _muted : (imbalanceOk ? _green : _amber),
+                        color: !cellsKnown ? _muted : (imbalanceOk ? _green : _amber),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -274,10 +299,10 @@ class BatteryHeroCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isConnected ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: -',
+                              cellsKnown ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: -',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
                             ),
-                            if (isConnected && status.cells.isNotEmpty)
+                            if (cellsKnown)
                               Text(
                                 'Min C${status.minCellIndex + 1}: ${status.minCellVoltage.toStringAsFixed(3)}V • '
                                 'Max C${status.maxCellIndex + 1}: ${status.maxCellVoltage.toStringAsFixed(3)}V',

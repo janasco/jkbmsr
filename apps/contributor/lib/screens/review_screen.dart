@@ -28,6 +28,7 @@ class ReviewScreen extends StatefulWidget {
     this.consent,
     this.uploader,
     this.exporter,
+    this.onSubmitted,
   });
 
   final Contribution contribution;
@@ -46,6 +47,10 @@ class ReviewScreen extends StatefulWidget {
   /// The offline file writer + share sheet. Injected in tests so the write is
   /// exercised without a platform plugin.
   final ContributionExporter? exporter;
+
+  /// Called when a submit succeeds, so the screen underneath can state that
+  /// the capture was sent even if the user leaves with the system back gesture.
+  final ValueChanged<SubmitReceipt>? onSubmitted;
 
   @override
   State<ReviewScreen> createState() => _ReviewScreenState();
@@ -104,16 +109,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     final result = await _uploader.submit(_payload, accountCode: _accountCode);
     if (!mounted) return;
+    final receipt = result.receipt;
     setState(() {
       _busy = _BusyAction.none;
       if (result.isSuccess) {
-        _receipt = result.receipt;
+        _receipt = receipt;
         _failure = null;
       } else {
         _receipt = null;
         _failure = result.failure;
       }
     });
+    if (receipt != null) widget.onSubmitted?.call(receipt);
   }
 
   /// The offline fallback: write the same payload to a file and share it.
@@ -157,6 +164,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
     final selectedCount = _included.length;
     final totalCount = ContributionFields.all.length;
+    // Once a receipt exists the document has been sent, so the fields it
+    // describes are frozen: editing them would only make the preview disagree
+    // with what the server archived.
+    final frozen = _receipt != null;
 
     return Scaffold(
       appBar: AppBar(title: const Text(ReviewStrings.title)),
@@ -179,7 +190,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               child: SwitchListTile(
                 value: _includeSerial,
-                onChanged: widget.rawSerial == null || widget.rawSerial!.isEmpty
+                onChanged: widget.rawSerial == null ||
+                        widget.rawSerial!.isEmpty ||
+                        frozen
                     ? null
                     : (value) => setState(() => _includeSerial = value),
                 title: const Text(ReviewStrings.serialLabel),
@@ -195,6 +208,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     .toList(growable: false),
                 fullJson: fullJson,
                 included: _included,
+                enabled: !frozen,
                 onToggle: (id, value) => setState(
                     () => value ? _included.add(id) : _included.remove(id)),
               ),
@@ -220,7 +234,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (_receipt != null) _SuccessCard(receipt: _receipt!),
+            if (_receipt != null) _SuccessCard(receipt: _receipt!, serialShared: _effective.redaction.serialNumber == 'shared'),
             if (_failure != null) ...[
               _FailureCard(failure: _failure!),
               const SizedBox(height: 16),
@@ -235,7 +249,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
             ],
             if (_receipt != null)
               FilledButton(
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: () => Navigator.of(context).pop(_receipt),
                 child: const Text(SubmitStrings.done),
               )
             else ...[
@@ -252,7 +266,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
               Text(
                 'Linking means this capture, its BMS model and its serial hash are '
                 'associated with your account, and it earns points you can use for '
-                'Cloud Service.',
+                'Cloud Service. Points need the serial number, so leave that switched '
+                'on if you want them.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -301,9 +316,13 @@ enum _BusyAction { none, submit, export }
 
 /// Shown after a successful submit, carrying the server's receipt id.
 class _SuccessCard extends StatelessWidget {
-  const _SuccessCard({required this.receipt});
+  const _SuccessCard({required this.receipt, required this.serialShared});
 
   final SubmitReceipt receipt;
+
+  /// Whether this capture carried the serial. Points are only credited when it
+  /// does, so the zero-credit explanation depends on it.
+  final bool serialShared;
 
   @override
   Widget build(BuildContext context) {
@@ -345,8 +364,11 @@ class _SuccessCard extends StatelessWidget {
               Text(
                 receipt.credited > 0
                     ? 'Linked to your account, ${receipt.credited} points added.'
-                    : 'Linked to your account. No points this time: the daily limit or an '
-                        'already credited pack.',
+                    : !serialShared
+                        ? 'Linked to your account. No points: this capture did not include '
+                            'the serial number, and points need it so one pack is not paid twice.'
+                        : 'Linked to your account. No points this time: the daily limit or an '
+                            'already credited pack.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onPrimaryContainer,
@@ -564,6 +586,7 @@ class _GroupSection extends StatelessWidget {
     required this.fields,
     required this.fullJson,
     required this.included,
+    required this.enabled,
     required this.onToggle,
   });
 
@@ -571,6 +594,7 @@ class _GroupSection extends StatelessWidget {
   final List<ContributionField> fields;
   final Map<String, dynamic> fullJson;
   final Set<String> included;
+  final bool enabled;
   final void Function(String id, bool value) onToggle;
 
   @override
@@ -595,7 +619,9 @@ class _GroupSection extends StatelessWidget {
                 CheckboxListTile(
                   dense: true,
                   value: included.contains(field.id),
-                  onChanged: (value) => onToggle(field.id, value ?? false),
+                  onChanged: enabled
+                      ? (value) => onToggle(field.id, value ?? false)
+                      : null,
                   title: Text(field.label),
                   subtitle: Text(
                     included.contains(field.id)

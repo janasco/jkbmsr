@@ -165,6 +165,29 @@ void main() {
         isNot(contains('authorization')));
   });
 
+  testWidgets('once a receipt exists the review fields are frozen',
+      (WidgetTester tester) async {
+    final uploader = ContributionUploader(
+      client: MockClient((_) async => http.Response('{"id":"c_sent"}', 201)),
+    );
+
+    await _pumpReview(tester, uploader: uploader);
+    await tester.tap(find.widgetWithText(FilledButton, ReviewStrings.submit));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<CheckboxListTile>(
+      find.widgetWithText(CheckboxListTile, 'Model name'),
+    );
+    expect(field.onChanged, isNull,
+        reason: 'the document was already sent; editing it would make the '
+            'preview disagree with what the server archived');
+
+    final serialTile = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, ReviewStrings.serialLabel),
+    );
+    expect(serialTile.onChanged, isNull);
+  });
+
   testWidgets('a failed submit shows the honest reason and offers export',
       (WidgetTester tester) async {
     final uploader = ContributionUploader(

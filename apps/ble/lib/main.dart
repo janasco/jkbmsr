@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'services/ble_adapter.dart';
 import 'services/ble_service.dart';
+import 'services/bluetooth_notice.dart';
 import 'services/bluetooth_on.dart';
 import 'services/entitlement_service.dart';
 import 'services/theme_service.dart';
@@ -129,14 +130,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   int _tabChangeCounter = 0;
 
   StreamSubscription<BleAdapterState>? _adapterStateSub;
-  bool _bluetoothOff = false;
+  BleAdapterState _adapterState = BleAdapterState.unknown;
 
   @override
   void initState() {
     super.initState();
     _adapterStateSub = _bleService.adapterStateStream.listen((state) {
       if (!mounted) return;
-      setState(() => _bluetoothOff = !state.isOn);
+      setState(() => _adapterState = state);
     });
     // Attempt to reconnect to whichever BMS was connected last session.
     _bleService.autoReconnectLastDevice().then((_) {
@@ -264,6 +265,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     required String? deviceId,
     required bool isDark,
   }) {
+    final notice = bluetoothNoticeFor(_adapterState);
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: isDark ? const Color(0xFF090D10) : const Color(0xFFF8FAFC),
@@ -401,33 +403,43 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   ),
                 ),
 
-                // BLUETOOTH DISABLED NOTICE
-                if (_bluetoothOff)
+                // BLUETOOTH ADAPTER NOTICE. Off, a denied Nearby-devices
+                // permission and missing Bluetooth LE each have their own
+                // remedy, so the text says which one applies and the turn-on
+                // button is offered only when the OS dialog can actually help.
+                if (notice != null)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     color: const Color(0xFFEF4444).withValues(alpha: 0.15),
                     child: Row(
                       children: [
-                        const Icon(Icons.bluetooth_disabled_rounded, color: Color(0xFFEF4444), size: 18),
+                        Icon(
+                          _adapterState == BleAdapterState.unauthorized
+                              ? Icons.lock_outline_rounded
+                              : Icons.bluetooth_disabled_rounded,
+                          color: const Color(0xFFEF4444),
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Bluetooth is off. Turn it on to scan for BMS devices.',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
+                            '${notice.title}. ${notice.body}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
                           ),
                         ),
-                        TextButton(
-                          onPressed: _requestBluetoothOn,
-                          style: TextButton.styleFrom(
-                            foregroundColor: const Color(0xFFEF4444),
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                        if (notice.offersTurnOn)
+                          TextButton(
+                            onPressed: _requestBluetoothOn,
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFFEF4444),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                            ),
+                            child: const Text(
+                              'TURN ON',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                            ),
                           ),
-                          child: const Text(
-                            'TURN ON',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
-                          ),
-                        ),
                       ],
                     ),
                   ),

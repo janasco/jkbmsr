@@ -66,7 +66,7 @@ class AlertsSection extends StatelessWidget {
                   border: Border.all(color: (active.isEmpty ? _ok : _critical).withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  active.isEmpty ? 'ALL CLEAR' : '${active.length} ACTIVE',
+                  active.isEmpty ? 'NO FLAGS' : '${active.length} ACTIVE',
                   style: TextStyle(
                       fontSize: 11.0,
                       fontWeight: FontWeight.bold,
@@ -92,8 +92,8 @@ class AlertsSection extends StatelessWidget {
             borderColor: borderColor,
             color: _ok,
             icon: Icons.verified_rounded,
-            title: 'All systems normal',
-            subtitle: 'No active alarms reported by the BMS.',
+            title: 'Wire resistance and cell count look normal',
+            subtitle: 'Other BMS alarms are not decoded by this app yet.',
           )
         else
           for (int i = 0; i < active.length; i++) ...[

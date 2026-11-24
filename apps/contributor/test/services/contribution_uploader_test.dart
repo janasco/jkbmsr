@@ -67,6 +67,31 @@ void main() {
         isNot(contains('authorization')));
   });
 
+  test('the account code travels in a header, never in the body', () async {
+    http.Request? seen;
+    final u = uploader(201, '{"id":"c_x"}', onRequest: (r) => seen = r);
+
+    await u.submit(_payload, accountCode: '  ABCD-1234  ');
+
+    expect(seen, isNotNull);
+    // The code is a request header, trimmed, and the body is byte-for-byte the
+    // document the review screen previewed.
+    expect(seen!.headers['X-Contribution-Code'], 'ABCD-1234');
+    expect(seen!.body, _payload);
+    expect((jsonDecode(seen!.body) as Map<String, dynamic>).containsKey('accountCode'),
+        isFalse);
+  });
+
+  test('an empty account code adds no header at all', () async {
+    http.Request? seen;
+    final u = uploader(201, '{"id":"c_x"}', onRequest: (r) => seen = r);
+
+    await u.submit(_payload, accountCode: '   ');
+
+    expect(seen!.headers.keys.map((k) => k.toLowerCase()),
+        isNot(contains('x-contribution-code')));
+  });
+
   test('400 -> invalid', () async {
     final result = await uploader(400, '{"error":"bad schema"}').submit(_payload);
     expect(result.requireFailure.kind, SubmitFailureKind.invalid);

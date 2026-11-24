@@ -159,6 +159,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // the device config so it still shows even with no gateway configured yet.
   List<RecentSession> _sessions = [];
   bool _sessionsLoading = true;
+  // Non-null means the read failed. Distinct from an empty list so a failed
+  // read is never rendered as "no sign-in history".
+  String? _sessionsError;
   String? _revokingSessionId;
   bool _revokingAllSessions = false;
   bool _clearingExpiredSessions = false;
@@ -1290,17 +1293,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSessions() async {
+    if (mounted) {
+      setState(() {
+        _sessionsLoading = true;
+        _sessionsError = null;
+      });
+    }
     try {
       final sessions = await _apiClient.getRecentSessions();
       if (!mounted) return;
       setState(() {
         _sessions = sessions;
         _sessionsLoading = false;
+        _sessionsError = null;
       });
-    } catch (_) {
+    } catch (e) {
       // Non-critical — the rest of the settings screen still works without
-      // this list, so fail silently rather than blocking on it.
-      if (mounted) setState(() => _sessionsLoading = false);
+      // this list — but a failed read must not be shown as an empty history.
+      if (mounted) {
+        setState(() {
+          _sessionsLoading = false;
+          _sessionsError = friendlyErrorMessage(e);
+        });
+      }
     }
   }
 
@@ -1892,7 +1907,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: JKBMSRTokens.space16),
             if (_sessionsLoading) ...[
               for (var i = 0; i < 2; i++) const _SessionSkeleton(),
-            ] else if (_sessions.isEmpty)
+            ] else if (_sessionsError != null)
+              Row(
+                children: [
+                  Icon(Icons.error_outline, size: 16, color: context.colors.warning),
+                  const SizedBox(width: JKBMSRTokens.space8),
+                  Expanded(
+                    child: Text(
+                      'Sign-in history could not be loaded.',
+                      style: JKBMSRTypography.bodySecondary
+                          .copyWith(color: context.colors.warning),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loadSessions,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              )
+            else if (_sessions.isEmpty)
               Text('No sign-in history recorded yet.', style: JKBMSRTypography.bodySecondary)
             else
               Column(

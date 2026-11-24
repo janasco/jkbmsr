@@ -56,6 +56,11 @@ class _SimulationScreenState extends State<SimulationScreen> {
     setState(() => _running = !_running);
     if (_running) {
       _timer ??= Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+    } else {
+      // A paused session is paused: the clock and the readings stop, and a
+      // paused minute must not unlock the claim.
+      _timer?.cancel();
+      _timer = null;
     }
   }
 
@@ -63,7 +68,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   /// worth reading rather than random noise: charging raises the voltage and the
   /// state of charge, discharging lowers both, and a hot pack drifts up.
   void _tick() {
-    if (!mounted) return;
+    if (!mounted || !_running) return;
     setState(() {
       _elapsedSeconds += 1;
       if (_linkDropped) {

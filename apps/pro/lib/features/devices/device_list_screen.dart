@@ -49,7 +49,13 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   // list itself, which is this screen's primary job.
   List<Alert> _alerts = [];
   bool _alertsLoading = true;
+  // Non-null means the alerts read failed. It has to be distinct from an empty
+  // list, or a failed fetch renders as "no alerts" — a status claim the app has
+  // no evidence for.
+  String? _alertsError;
   String _alertPeriod = 'today'; // 'today' | 'week' | 'month'
+
+  static const _alertsErrorCopy = 'Alerts could not be loaded. Pull to refresh.';
 
   // Decorative Current/Power wave behind each gateway card — keyed by device
   // id, filled in as each device's history call resolves (see
@@ -90,16 +96,25 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
   // this makes the Month bucket a most-recent-100 approximation rather than
   // an exact count; Today/Week rarely hit that ceiling in practice.
   Future<void> _loadAlerts() async {
-    setState(() => _alertsLoading = true);
+    setState(() {
+      _alertsLoading = true;
+      _alertsError = null;
+    });
     try {
       final result = await _apiClient.getAlerts(status: 'all', limit: 100);
       if (!mounted) return;
       setState(() {
         _alerts = result.alerts;
         _alertsLoading = false;
+        _alertsError = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _alertsLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _alertsLoading = false;
+          _alertsError = friendlyErrorMessage(e);
+        });
+      }
     }
   }
 
@@ -675,7 +690,7 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         Expanded(
           child: _FleetStatTile(
             label: 'Active Alerts',
-            value: '$_activeAlertsCount',
+            value: _alertsError != null ? '-' : '$_activeAlertsCount',
             icon: Icons.warning_amber_rounded,
             color: context.colors.critical,
             onTap: () => context.go('/alerts'),
@@ -717,6 +732,8 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               (index) => const _RecentAlertSkeleton(),
             ),
           )
+        else if (_alertsError != null)
+          _alertsErrorLine()
         else if (recent.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space8),
@@ -726,6 +743,26 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
         else
           ...recent.map((alert) => _RecentAlertTile(alert: alert)),
       ],
+    );
+  }
+
+  Widget _alertsErrorLine() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: JKBMSRTokens.space8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: context.colors.warning),
+          const SizedBox(width: JKBMSRTokens.space8),
+          Expanded(
+            child: Text(
+              _alertsErrorCopy,
+              style: JKBMSRTypography.bodySecondary
+                  .copyWith(color: context.colors.warning),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -777,7 +814,9 @@ class _DeviceListScreenState extends State<DeviceListScreen> {
               ),
               const SizedBox(height: JKBMSRTokens.space8),
             ],
-          ] else if (total == 0)
+          ] else if (_alertsError != null)
+            _alertsErrorLine()
+          else if (total == 0)
             Padding(
               padding:
                   const EdgeInsets.symmetric(vertical: JKBMSRTokens.space8),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../services/capture_service.dart';
 import '../services/consent_controller.dart';
+import '../services/contribution_export.dart';
+import '../services/contribution_uploader.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_surface.dart';
 import 'review_screen.dart';
@@ -14,37 +17,97 @@ import 'review_screen.dart';
 /// screen mixed the two — a spinner, then a list of field labels in its place —
 /// which read like a log dump rather than like something was achieved.
 ///
-/// Nothing has been sent at this point, and the copy says so. The only way data
-/// leaves the device is the review screen's Submit button.
-class CaptureSuccessScreen extends StatelessWidget {
-  const CaptureSuccessScreen({super.key, required this.outcome});
+/// Nothing has been sent when this screen first appears, and the copy says so.
+/// The only way data leaves the device is the review screen's Submit button; a
+/// successful submit carries its receipt back here, and the screen then states
+/// that the capture was sent instead of offering the review again.
+class CaptureSuccessScreen extends StatefulWidget {
+  const CaptureSuccessScreen({
+    super.key,
+    required this.outcome,
+    this.uploader,
+    this.exporter,
+  });
 
   final CaptureOutcome outcome;
 
-  void _review(BuildContext context) {
-    final contribution = outcome.contribution;
+  /// Injected in tests so a submit can be driven without the live endpoint.
+  final ContributionUploader? uploader;
+
+  /// Injected in tests, mirroring [ReviewScreen.exporter].
+  final ContributionExporter? exporter;
+
+  @override
+  State<CaptureSuccessScreen> createState() => _CaptureSuccessScreenState();
+}
+
+class _CaptureSuccessScreenState extends State<CaptureSuccessScreen> {
+  /// Set once a submit succeeds, so this screen can never return to
+  /// "Nothing has been sent yet" after the review screen is popped.
+  SubmitReceipt? _receipt;
+
+  void _onSubmitted(SubmitReceipt receipt) {
+    if (!mounted) return;
+    setState(() => _receipt = receipt);
+  }
+
+  Future<void> _review() async {
+    final contribution = widget.outcome.contribution;
     if (contribution == null) return;
     final consent = ConsentScope.maybeOf(context);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final receipt = await Navigator.of(context).push<SubmitReceipt>(
+      MaterialPageRoute<SubmitReceipt>(
         builder: (_) => ReviewScreen(
           contribution: contribution,
-          rawSerial: outcome.session?.deviceInfo?.serialNumber,
+          rawSerial: widget.outcome.session?.deviceInfo?.serialNumber,
           consent: consent?.record,
+          uploader: widget.uploader,
+          exporter: widget.exporter,
+          onSubmitted: _onSubmitted,
         ),
       ),
     );
+    if (receipt != null && mounted) {
+      setState(() => _receipt = receipt);
+    }
+  }
+
+  /// Discarding is destructive, so it asks first. "Done" used to pop silently,
+  /// which read as "finish" and threw away 30 seconds of capture.
+  Future<void> _discard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(SubmitStrings.discardConfirmTitle),
+        content: const Text(SubmitStrings.discardConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(SubmitStrings.discardConfirmKeep),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(SubmitStrings.discardCapture),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop(false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final contribution = outcome.contribution!;
+    final contribution = widget.outcome.contribution!;
     final bms = contribution.bms;
     final cells =
         bms.cellCountReported ?? contribution.samples.last.cellVoltagesV.length;
     final serialShared = contribution.redaction.serialNumber == 'shared';
+    final receipt = _receipt;
+    final sent = receipt != null;
 
     // No app bar. A lone close button floating in the top-right corner with no
     // title above it reads as a stray control - in a listing screenshot it looked
@@ -60,14 +123,20 @@ class CaptureSuccessScreen extends StatelessWidget {
             const Center(child: _SuccessBadge()),
             const SizedBox(height: 24),
             Text(
-              'Contribution ready',
+              sent ? SubmitStrings.sentTitle : 'Contribution ready',
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Real data from your pack. Nothing has been sent yet: you review '
-              'it first and decide.',
+              sent
+                  ? receipt.linked
+                      ? 'Your capture was sent and linked to your account. Receipt '
+                          '${receipt.id}.'
+                      : 'Your capture was sent and stored anonymously. Receipt '
+                          '${receipt.id}.'
+                  : 'Real data from your pack. Nothing has been sent yet: you review '
+                      'it first and decide.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
@@ -128,27 +197,29 @@ class CaptureSuccessScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            Text('What happens next', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 10),
-            const _NextStep(
-              number: '1',
-              text:
-                  'Review the exact payload, field by field, and switch off anything '
-                  'you would rather not share.',
-            ),
-            const _NextStep(
-              number: '2',
-              text:
-                  'The battery serial stays withheld unless you turn it on. The '
-                  'Bluetooth address is always reduced to its vendor prefix.',
-            ),
-            const _NextStep(
-              number: '3',
-              text:
-                  'Submit anonymously. There is no account, no sign-in and no device '
-                  'identifier attached.',
-            ),
+            if (!sent) ...[
+              const SizedBox(height: 24),
+              Text('What happens next', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 10),
+              const _NextStep(
+                number: '1',
+                text:
+                    'Review the exact payload, field by field, and switch off anything '
+                    'you would rather not share.',
+              ),
+              const _NextStep(
+                number: '2',
+                text:
+                    'The battery serial stays withheld unless you turn it on. The '
+                    'Bluetooth address is always reduced to its vendor prefix.',
+              ),
+              const _NextStep(
+                number: '3',
+                text:
+                    'Submit anonymously. There is no account, no sign-in and no device '
+                    'identifier attached.',
+              ),
+            ],
           ],
         ),
       ),
@@ -169,19 +240,29 @@ class CaptureSuccessScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                FilledButton.icon(
-                  onPressed: () => _review(context),
-                  icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Review & contribute'),
-                ),
+                if (sent)
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    icon: const Icon(Icons.check_rounded),
+                    label: const Text(SubmitStrings.done),
+                  )
+                else
+                  FilledButton.icon(
+                    onPressed: _review,
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: const Text('Review & contribute'),
+                  ),
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   spacing: 8,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Done'),
-                    ),
+                    // A submitted capture cannot be discarded: the review
+                    // screen already sent it.
+                    if (!sent)
+                      TextButton(
+                        onPressed: _discard,
+                        child: const Text(SubmitStrings.discardCapture),
+                      ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       child: const Text('Capture another pack'),

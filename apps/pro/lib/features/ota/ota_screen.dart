@@ -63,8 +63,8 @@ class _OTAScreenState extends State<OTAScreen> {
 
       setState(() {
         _activeDeviceId = targetId;
-        _currentVersion = config['firmwareVersion'] as String? ?? '0.1.2';
-        _latestVersion = config['latestFirmwareVersion'] as String? ?? '0.1.2';
+        _currentVersion = config['firmwareVersion'] as String? ?? '-';
+        _latestVersion = config['latestFirmwareVersion'] as String? ?? '-';
         _updateAvailable = config['updateAvailable'] as bool? ?? false;
         _events = history;
         _isLoading = false;
@@ -89,14 +89,19 @@ class _OTAScreenState extends State<OTAScreen> {
       await _apiClient.requestOtaCheck(_activeDeviceId!);
       // Reload configuration after queuing a live server query.
       final config = await _apiClient.getDeviceConfig(_activeDeviceId!);
+      final latest = config['latestFirmwareVersion'] as String?;
       setState(() {
-        _latestVersion = config['latestFirmwareVersion'] as String? ?? _latestVersion;
+        if (latest != null) _latestVersion = latest;
         _updateAvailable = config['updateAvailable'] as bool? ?? false;
       });
-      if (_updateAvailable) {
-        JKBMSRToast.show(context, 'New firmware update $_latestVersion is available!');
-      } else {
+      if (_updateAvailable && latest != null) {
+        JKBMSRToast.show(context, 'New firmware update $latest is available!');
+      } else if (latest != null) {
         JKBMSRToast.show(context, 'Gateway is currently up to date');
+      } else {
+        // No latest version was reported, so "up to date" would be a claim the
+        // response did not support.
+        JKBMSRToast.show(context, 'The server did not report a latest firmware version');
       }
     } catch (e) {
       JKBMSRToast.show(context, 'Check failed: ${friendlyErrorMessage(e)}', isError: true);

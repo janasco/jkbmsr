@@ -198,6 +198,18 @@ abstract final class SubmitStrings {
 
   static const String done = 'Done';
 
+  // Result screen ----------------------------------------------------------
+  static const String sentTitle = 'Contribution sent';
+
+  /// The discard action is destructive: it throws away a capture that took 30
+  /// seconds to collect, so it is named for what it does and confirmed first.
+  static const String discardCapture = 'Discard capture';
+  static const String discardConfirmTitle = 'Discard this capture?';
+  static const String discardConfirmBody =
+      'This capture will be deleted and cannot be recovered. If you want to '
+      'keep it, choose Review & contribute.';
+  static const String discardConfirmKeep = 'Keep it';
+
   // Failure ----------------------------------------------------------------
   /// Offered beside every failure so a contribution is never lost.
   static const String exportHint =

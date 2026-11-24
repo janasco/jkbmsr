@@ -3,11 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:jkbmsr_contributor/l10n/strings.dart';
 import 'package:jkbmsr_contributor/models/contribution.dart';
 import 'package:jkbmsr_contributor/screens/capture_screen.dart';
+import 'package:jkbmsr_contributor/screens/capture_success_screen.dart';
 import 'package:jkbmsr_contributor/services/ble_transport.dart';
 import 'package:jkbmsr_contributor/services/capture_service.dart';
+import 'package:jkbmsr_contributor/services/contribution_uploader.dart';
 import 'package:jkbmsr_contributor/widgets/rotating_glyph.dart';
 
 import '../support/fake_universal_ble.dart';
@@ -136,11 +140,42 @@ void main() {
     expect(find.text('Review & contribute'), findsOneWidget);
 
     // And the screen underneath went back to idle, so leaving does not land on
-    // a dead progress bar.
-    await tester.tap(find.text('Done'));
+    // a dead progress bar. Discarding is destructive, so it asks first.
+    await tester.tap(find.text(SubmitStrings.discardCapture));
+    await tester.pumpAndSettle();
+    expect(find.text(SubmitStrings.discardConfirmTitle), findsOneWidget);
+    expect(find.text('Contribution ready'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(FilledButton, SubmitStrings.discardCapture),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Scan for JK-BMS'), findsOneWidget);
     expect(find.text('Contribution ready'), findsNothing);
+  });
+
+  testWidgets('discarding asks first, and cancelling keeps the capture',
+      (WidgetTester tester) async {
+    final controller = FakeCaptureController();
+    await tester.pumpWidget(MaterialApp(home: CaptureScreen(controller: controller)));
+
+    await tester.tap(find.text('Scan for JK-BMS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JK_B2A24S15P'));
+    await tester.pumpAndSettle();
+
+    // The old "Done" popped silently and threw away the capture.
+    expect(find.text('Done'), findsNothing);
+    await tester.tap(find.text(SubmitStrings.discardCapture));
+    await tester.pumpAndSettle();
+    expect(find.text(SubmitStrings.discardConfirmTitle), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, SubmitStrings.discardConfirmKeep));
+    await tester.pumpAndSettle();
+
+    // Cancelling returns to the result screen, with the capture intact.
+    expect(find.text('Contribution ready'), findsOneWidget);
+    expect(find.text('Review & contribute'), findsOneWidget);
   });
 
   testWidgets('Capture another pack returns to a fresh scan', (WidgetTester tester) async {
@@ -161,6 +196,43 @@ void main() {
 
     expect(controller.scanCalls, 2);
     expect(find.text('JK_B2A24S15P'), findsOneWidget);
+  });
+
+  testWidgets('after a successful submit the result screen says it was sent '
+      'and offers no review', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 7000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final uploader = ContributionUploader(
+      client: MockClient((_) async => http.Response('{"id":"c_sent"}', 201)),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: CaptureSuccessScreen(
+        outcome: CaptureOutcome.success(sampleContribution(), Jk02CaptureSession()),
+        uploader: uploader,
+      ),
+    ));
+
+    expect(find.textContaining('Nothing has been sent yet'), findsOneWidget);
+    expect(find.text('Review & contribute'), findsOneWidget);
+
+    await tester.tap(find.text('Review & contribute'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, ReviewStrings.submit));
+    await tester.pumpAndSettle();
+    expect(find.text(SubmitStrings.successTitle), findsOneWidget);
+
+    // Leaving the review screen the way a user would must not land back on
+    // "Nothing has been sent yet" with the same capture still submittable.
+    await tester.tap(find.widgetWithText(FilledButton, SubmitStrings.done));
+    await tester.pumpAndSettle();
+
+    expect(find.text(SubmitStrings.sentTitle), findsOneWidget);
+    expect(find.textContaining('Nothing has been sent yet'), findsNothing);
+    expect(find.text('Review & contribute'), findsNothing);
+    expect(find.text(SubmitStrings.discardCapture), findsNothing);
   });
 
   testWidgets('while capturing, the bar advances and the glyph changes',
