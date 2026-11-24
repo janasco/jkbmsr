@@ -137,6 +137,23 @@ class BleBmsService {
   }
 
   /// Test-only: clears any [debugSetConnectionState] override.
+  /// Test and tooling only: publish a status as if a frame had arrived.
+  ///
+  /// The store-screenshot generator has no radio and no pack, and the screens read
+  /// `statusStream` with `currentStatus` as their initial value. This is the smallest
+  /// seam that lets the app's own widgets render real-looking values instead of the
+  /// empty state, which is what makes a screenshot honest rather than drawn.
+  @visibleForTesting
+  void debugPublishStatus(BmsStatus status, {bool connected = true}) {
+    debugSetConnectionState(
+      isConnected: connected,
+      brand: status.brand,
+      hasLiveData: true,
+    );
+    _currentStatus = status;
+    _statusController.add(status);
+  }
+
   @visibleForTesting
   void debugResetConnectionState() {
     _debugIsConnected = null;
