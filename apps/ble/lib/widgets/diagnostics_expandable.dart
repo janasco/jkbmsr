@@ -52,31 +52,38 @@ class _DiagnosticsExpandableState extends State<DiagnosticsExpandable> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E2830).withValues(alpha: 0.6) : const Color(0xFFE0F2FE),
-                          borderRadius: BorderRadius.circular(10),
+                  // Expanded so the subtitle can wrap: at 2x text the label
+                  // column is wider than a 360dp phone and the Row has no
+                  // other flexible child.
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E2830).withValues(alpha: 0.6) : const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.terminal_rounded, color: Color(0xFF0284C7), size: 20),
                         ),
-                        child: const Icon(Icons.terminal_rounded, color: Color(0xFF0284C7), size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Diagnostics',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Diagnostics',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
+                              ),
+                              const Text(
+                                'Technical frame and runtime details',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
                           ),
-                          const Text(
-                            'Technical frame and runtime details',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                   // Chevron rotates smoothly instead of swapping glyphs.
                   AnimatedRotation(

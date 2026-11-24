@@ -67,12 +67,14 @@ class AboutModal extends StatelessWidget {
             const SizedBox(height: 4),
             const _AboutVersionLine(),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'JK BMS Bluetooth connects directly to your JK-BMS Bluetooth module for real-time '
               'telemetry, cell-level diagnostics, and power-flow visualization, with hardware '
               'control where the JK-BMS protocol supports it.',
               textAlign: TextAlign.left,
-              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.45),
+              // Theme-aware muted tone: the dark-theme grey literal was ~2.3:1
+              // on the light card.
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted(context), height: 1.45),
             ),
             const SizedBox(height: 8),
             const Text(

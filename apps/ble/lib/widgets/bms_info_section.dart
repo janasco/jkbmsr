@@ -87,14 +87,20 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12.5, color: BmsInfoSection._muted)),
+          // Both sides are flexible: the label is long ("Remaining capacity")
+          // and at 2x text it alone was wider than a 360dp phone, so the
+          // unconstrained label pushed the row past its bounds.
+          Flexible(
+            child: Text(label, style: const TextStyle(fontSize: 12.5, color: BmsInfoSection._muted)),
+          ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              // No maxLines/ellipsis: the value wraps instead of being hidden
+              // when the row is narrow.
               textAlign: TextAlign.right,
               style: TextStyle(
                   fontSize: 12.5, fontWeight: FontWeight.w700, color: textPrimary, fontFamily: 'monospace'),

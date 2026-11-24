@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jkbmsr_ble/main.dart';
 import 'package:jkbmsr_ble/models/bms_models.dart';
+import 'package:jkbmsr_ble/screens/status_screen.dart';
 import 'package:jkbmsr_ble/services/ble_service.dart';
 import 'package:jkbmsr_ble/widgets/battery_metrics_grid.dart';
 import 'package:jkbmsr_ble/widgets/bottom_nav_bar.dart';
@@ -181,6 +182,72 @@ void main() {
 
       scale.value = _largeTextScale;
       await tester.pump(const Duration(milliseconds: 400));
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('STATUS tab does not overflow at 2x on a 360dp phone',
+        (tester) async {
+      // The whole status list, not one section: the Alerts header and the
+      // Battery & BMS info label/value rows each overflowed on their own at
+      // double text on a narrow phone. The header test above deliberately
+      // avoids this tab for that reason; this is the case that pins it.
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Live values make the info rows show real strings ("243.6 Ah"), which
+      // is where the label/value row has the least room.
+
+      final scale = ValueNotifier<double>(1.0);
+      addTearDown(scale.dispose);
+
+      await tester.pumpWidget(ValueListenableBuilder<double>(
+        valueListenable: scale,
+        builder: (context, value, _) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(value),
+          ),
+          child: const JkbmsrBleApp(),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The first-run overlay covers the tab bar. Its call to action sits below
+      // the fold on a phone this size, so scroll it into view before tapping.
+      final start = find.text('START SCANNING');
+      if (start.evaluate().isNotEmpty) {
+        await tester.ensureVisible(start);
+        await tester.pump();
+        await tester.tap(start);
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      await tester.tap(find.text('STATUS').last);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      scale.value = _largeTextScale;
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Walk the status list to its end in steps, so every section is laid out
+      // at the doubled scale rather than only what fits on the first screen.
+      final scrollable = find
+          .descendant(
+            of: find.byType(StatusScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      for (var i = 0; i < 60; i++) {
+        if (position.pixels >= position.maxScrollExtent) break;
+        final target = position.pixels + 300;
+        position.jumpTo(
+          target > position.maxScrollExtent ? position.maxScrollExtent : target,
+        );
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      expect(position.pixels, position.maxScrollExtent,
+          reason: 'the status list should be scrolled through to its end');
 
       expect(tester.takeException(), isNull);
     });

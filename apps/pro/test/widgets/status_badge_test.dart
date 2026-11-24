@@ -29,6 +29,31 @@ void main() {
     expect(find.bySemanticsLabel('Critical status'), findsOneWidget);
   });
 
+  testWidgets('version states use purpose-built words, not alarm or link words',
+      (tester) async {
+    for (final entry in {
+      JKBMSRStatus.updateAvailable: 'Update available',
+      JKBMSRStatus.upToDate: 'Up to date',
+      JKBMSRStatus.latest: 'Latest',
+    }.entries) {
+      await tester.pumpWidget(_wrap(JKBMSRStatusBadge(status: entry.key)));
+      expect(find.text(entry.value), findsOneWidget);
+      expect(find.text('Warning'), findsNothing);
+      expect(find.text('Online'), findsNothing);
+    }
+  });
+
+  testWidgets('version states expose a complete semantics label', (tester) async {
+    await tester.pumpWidget(
+      _wrap(const JKBMSRStatusBadge(status: JKBMSRStatus.updateAvailable)),
+    );
+
+    // "Update available status" would be the operational template applied to a
+    // sentence that is already complete.
+    expect(find.bySemanticsLabel('Update available'), findsOneWidget);
+    expect(find.bySemanticsLabel('Update available status'), findsNothing);
+  });
+
   testWidgets('renders in both light and dark themes without error', (tester) async {
     await tester.pumpWidget(
       _wrap(const JKBMSRStatusBadge(status: JKBMSRStatus.online), brightness: Brightness.light),

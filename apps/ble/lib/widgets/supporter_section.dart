@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/entitlement_service.dart';
+import '../services/theme_service.dart';
 
 /// The Supporter unlock inside the Support sheet: buy the one-time
 /// non-consumable that removes ads, and re-apply an existing purchase on a new
@@ -142,9 +143,11 @@ class _SupporterSectionState extends State<SupporterSection> {
           const SizedBox(height: 6),
           Text(
             _blurb(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF94A3B8),
+              // Theme-aware: the dark-theme muted grey was unreadable on the
+              // light inset this card uses.
+              color: AppColors.textMuted(context),
               height: 1.35,
             ),
           ),
@@ -216,7 +219,11 @@ class _SupporterSectionState extends State<SupporterSection> {
             const SizedBox(height: 8),
             Text(
               _message!,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), height: 1.3),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textMuted(context),
+                height: 1.3,
+              ),
             ),
           ],
         ],

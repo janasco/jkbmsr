@@ -50,14 +50,20 @@ class AlertsSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Alerts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPrimary)),
-                const Text('Active BMS alarms', style: TextStyle(fontSize: 12, color: _muted)),
-              ],
+            // Expanded, not a bare Column: at 2x text the two lines and the
+            // status pill are wider than a 360dp phone, and the Column had no
+            // constraint so the Row overflowed.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Alerts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPrimary)),
+                  const Text('Active BMS alarms', style: TextStyle(fontSize: 12, color: _muted)),
+                ],
+              ),
             ),
-            if (isConnected)
+            if (isConnected) ...[
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -74,6 +80,7 @@ class AlertsSection extends StatelessWidget {
                       color: active.isEmpty ? _ok : _critical),
                 ),
               ),
+            ],
           ],
         ),
         const SizedBox(height: 10),

@@ -9,6 +9,7 @@ import '../../services/api_client.dart';
 import '../../models/ota_event.dart';
 import '../../utils/device_id.dart';
 import '../../utils/error_messages.dart';
+import '../alerts/event_log.dart' show formatEventLogTime;
 
 class OTAScreen extends StatefulWidget {
   final String? deviceId;
@@ -214,9 +215,11 @@ class _OTAScreenState extends State<OTAScreen> {
                             ),
                             const SizedBox(height: JKBMSRTokens.space24),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Current Version', style: JKBMSRTypography.body),
+                                Expanded(
+                                  child: Text('Current Version', style: JKBMSRTypography.body),
+                                ),
+                                const SizedBox(width: JKBMSRTokens.space8),
                                 Text(
                                   _currentVersion,
                                   style: JKBMSRTypography.monoTechnical.copyWith(fontWeight: FontWeight.bold),
@@ -225,9 +228,11 @@ class _OTAScreenState extends State<OTAScreen> {
                             ),
                             const SizedBox(height: JKBMSRTokens.space12),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Latest Server Version', style: JKBMSRTypography.body),
+                                Expanded(
+                                  child: Text('Latest Server Version', style: JKBMSRTypography.body),
+                                ),
+                                const SizedBox(width: JKBMSRTokens.space8),
                                 _isChecking
                                     ? const JKBMSRSkeleton(width: 40, height: 16)
                                     : Text(
@@ -252,8 +257,10 @@ class _OTAScreenState extends State<OTAScreen> {
                               ),
                             ),
                             Divider(height: JKBMSRTokens.space32, color: context.colors.line),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                            Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: JKBMSRTokens.space12,
+                              runSpacing: JKBMSRTokens.space8,
                               children: [
                                 _isChecking
                                     ? const LabelledProgress(
@@ -264,14 +271,12 @@ class _OTAScreenState extends State<OTAScreen> {
                                         onPressed: _checkUpdate,
                                         child: const Text('Check Update'),
                                       ),
-                                if (_updateAvailable) ...[
-                                  const SizedBox(width: JKBMSRTokens.space12),
+                                if (_updateAvailable)
                                   ElevatedButton(
                                     onPressed: _triggerOTAUpdate,
                                     style: ElevatedButton.styleFrom(backgroundColor: context.colors.accent),
                                     child: const Text('Update Now'),
                                   ),
-                                ],
                               ],
                             ),
                           ],
@@ -298,28 +303,38 @@ class _OTAScreenState extends State<OTAScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'Version: ${event.offeredVersion}',
-                                        style: JKBMSRTypography.body.copyWith(fontWeight: FontWeight.w600),
+                                      Expanded(
+                                        child: Text(
+                                          'Version: ${event.offeredVersion}',
+                                          style: JKBMSRTypography.body.copyWith(fontWeight: FontWeight.w600),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
+                                      const SizedBox(width: JKBMSRTokens.space8),
                                       JKBMSRStatusBadge(status: _mapResultStatus(event.lastResult)),
                                     ],
                                   ),
                                   const SizedBox(height: JKBMSRTokens.space8),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Status: ${event.lastResult}',
-                                        style: JKBMSRTypography.bodySecondary.copyWith(fontSize: 13.0),
-                                      ),
-                                      Text(
-                                        event.createdAt,
-                                        style: JKBMSRTypography.label,
-                                      ),
-                                    ],
+                                  // Status above time, each on its own line: a
+                                  // spaceBetween Row with two unconstrained
+                                  // Texts clipped at 2x text. The API sends a
+                                  // naive UTC string, so it is converted to
+                                  // local time like everywhere else.
+                                  Text(
+                                    'Status: ${event.lastResult}',
+                                    style: JKBMSRTypography.bodySecondary.copyWith(fontSize: 13.0),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: JKBMSRTokens.space4),
+                                  Text(
+                                    formatEventLogTime(event.createdAt),
+                                    style: JKBMSRTypography.label,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),

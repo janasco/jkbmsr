@@ -1365,6 +1365,13 @@ enum JKBMSRStatus {
   maintenance,
   warning,
   critical,
+
+  // Version state is not connectivity or alarm state. An available update is
+  // routine news, not a fault, so it gets its own values instead of borrowing
+  // "warning"/"online" from the operational vocabulary above.
+  updateAvailable,
+  upToDate,
+  latest,
 }
 
 class JKBMSRStatusBadge extends StatelessWidget {
@@ -1391,6 +1398,14 @@ class JKBMSRStatusBadge extends StatelessWidget {
       case JKBMSRStatus.maintenance:
       case JKBMSRStatus.offline:
         return context.colors.textMuted;
+      case JKBMSRStatus.updateAvailable:
+        // Informational, not a fault: the blue signal colour is the design
+        // system's "needs attention, nothing is wrong" tone.
+        return context.colors.signal;
+      case JKBMSRStatus.upToDate:
+        return context.colors.accent;
+      case JKBMSRStatus.latest:
+        return context.colors.textMuted;
     }
   }
 
@@ -1414,6 +1429,25 @@ class JKBMSRStatusBadge extends StatelessWidget {
         return 'Warning';
       case JKBMSRStatus.critical:
         return 'Critical';
+      case JKBMSRStatus.updateAvailable:
+        return 'Update available';
+      case JKBMSRStatus.upToDate:
+        return 'Up to date';
+      case JKBMSRStatus.latest:
+        return 'Latest';
+    }
+  }
+
+  /// Operational states read as "<state> status"; the version states are
+  /// already complete phrases and must not become "Update available status".
+  String get _semanticLabel {
+    switch (status) {
+      case JKBMSRStatus.updateAvailable:
+      case JKBMSRStatus.upToDate:
+      case JKBMSRStatus.latest:
+        return _label;
+      default:
+        return '$_label status';
     }
   }
 
@@ -1423,7 +1457,7 @@ class JKBMSRStatusBadge extends StatelessWidget {
     // text already conveys the same status, so merge them into one
     // announcement instead of exposing the decorative dot separately.
     return Semantics(
-      label: '$_label status',
+      label: _semanticLabel,
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(

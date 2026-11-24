@@ -2489,13 +2489,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Firmware & OTA Updates', style: JKBMSRTypography.cardHeading),
+                Expanded(
+                  child: Text('Firmware & OTA Updates', style: JKBMSRTypography.cardHeading),
+                ),
+                const SizedBox(width: JKBMSRTokens.space8),
                 if (_updateAvailable)
-                  JKBMSRStatusBadge(status: JKBMSRStatus.warning)
+                  JKBMSRStatusBadge(status: JKBMSRStatus.updateAvailable)
                 else
-                  JKBMSRStatusBadge(status: JKBMSRStatus.online),
+                  JKBMSRStatusBadge(status: JKBMSRStatus.upToDate),
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space8),
@@ -2505,29 +2508,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: JKBMSRTokens.space16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Current Installed Version', style: JKBMSRTypography.body),
+                Expanded(
+                  child: Text('Current Installed Version', style: JKBMSRTypography.body),
+                ),
+                const SizedBox(width: JKBMSRTokens.space8),
                 Text(_currentVersion, style: JKBMSRTypography.monoTechnical.copyWith(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Latest Cloud Version', style: JKBMSRTypography.body),
+                Expanded(
+                  child: Text('Latest Cloud Version', style: JKBMSRTypography.body),
+                ),
+                const SizedBox(width: JKBMSRTokens.space8),
                 Text(
                   _latestVersion,
                   style: JKBMSRTypography.monoTechnical.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: _updateAvailable ? context.colors.warning : context.colors.textSecondary,
+                    color: _updateAvailable ? context.colors.signal : context.colors.textSecondary,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: JKBMSRTokens.space12,
+              runSpacing: JKBMSRTokens.space8,
               children: [
                 _isOtaChecking
                     ? CircularProgressIndicator(color: context.colors.accent)
@@ -2535,27 +2544,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onPressed: _checkOtaUpdate,
                         child: const Text('Check Update'),
                       ),
-                if (_updateAvailable) ...[
-                  const SizedBox(width: JKBMSRTokens.space12),
+                if (_updateAvailable)
                   ElevatedButton(
                     onPressed: _triggerOtaUpdate,
                     style: ElevatedButton.styleFrom(backgroundColor: context.colors.accent),
                     child: const Text('Update Now'),
                   ),
-                ],
               ],
             ),
             const SizedBox(height: JKBMSRTokens.space24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('OTA Updates Allowed', style: JKBMSRTypography.body),
-                    const SizedBox(height: JKBMSRTokens.space4),
-                    Text('Allow firmware updates over-the-air', style: JKBMSRTypography.bodySecondary),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('OTA Updates Allowed', style: JKBMSRTypography.body),
+                      const SizedBox(height: JKBMSRTokens.space4),
+                      Text('Allow firmware updates over-the-air', style: JKBMSRTypography.bodySecondary),
+                    ],
+                  ),
                 ),
                 Switch(
                   value: _otaEnabled,

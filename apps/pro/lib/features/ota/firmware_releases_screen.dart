@@ -153,7 +153,7 @@ class _FirmwareReleasesScreenState extends State<FirmwareReleasesScreen> {
                                         ),
                                         if (release.isLatest) ...[
                                           const SizedBox(width: JKBMSRTokens.space8),
-                                          JKBMSRStatusBadge(status: JKBMSRStatus.online),
+                                          JKBMSRStatusBadge(status: JKBMSRStatus.latest),
                                         ],
                                       ],
                                     ),
