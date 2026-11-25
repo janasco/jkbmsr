@@ -4,7 +4,11 @@ import 'package:jkbmsr_ble/models/bms_parameter.dart';
 import 'package:jkbmsr_ble/widgets/bms_device_info_section.dart';
 import 'package:jkbmsr_ble/widgets/motion_kit.dart';
 
+import 'support/test_fonts.dart';
+
 void main() {
+  setUpAll(loadMonospaceTestFont);
+
   testWidgets('device-info panel renders the decoded identity fields', (tester) async {
     const info = BmsModelInfo(
       modelName: 'JK-B2A24S15P',
@@ -83,5 +87,72 @@ void main() {
 
     expect(find.text('JK-B2A24S15P'), findsNothing);
     expect(find.text('-'), findsNWidgets(7));
+  });
+
+  group('at 2x text on a 360dp phone', () {
+    // 360 dp phone minus 16 dp of page padding, which is the status list's
+    // real content width. Inside the card another 14 dp of padding each side
+    // leaves ~300 dp for the row.
+    Widget wrap(Widget child) => MaterialApp(
+          theme: ThemeData.dark(),
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(2.0),
+              ),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        );
+
+    void phone(WidgetTester tester) {
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('label/value rows wrap instead of overflowing', (tester) async {
+      phone(tester);
+      const info = BmsModelInfo(
+        modelName: 'JK-B2A24S15P',
+        hardwareVersion: '10.XW',
+        softwareVersion: '10.07',
+        serialNumber: '2021602096',
+        manufacturingDate: '2022-04-07',
+        uptimeSeconds: 110400,
+        powerOnCount: 6,
+      );
+
+      await tester.pumpWidget(wrap(
+        const BmsDeviceInfoSection(info: info, isConnected: true),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // Nothing hidden: both halves of the longest row are still laid out.
+      expect(find.text('Serial number'), findsOneWidget);
+      expect(find.text('2021602096'), findsOneWidget);
+      expect(find.text('Hardware version'), findsOneWidget);
+      expect(find.text('10.XW'), findsOneWidget);
+    });
+
+    testWidgets('skeleton rows wrap instead of overflowing', (tester) async {
+      phone(tester);
+
+      await tester.pumpWidget(wrap(
+        const BmsDeviceInfoSection(info: null, isConnected: true),
+      ));
+      // The skeleton bars pulse; a single long-pump is enough to lay out.
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Hardware version'), findsOneWidget);
+      expect(find.byType(JkSkeleton), findsNWidgets(7));
+    });
   });
 }

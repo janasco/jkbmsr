@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
+import 'adaptive_grid.dart';
 
 class BatteryMetricsGrid extends StatelessWidget {
   final BmsStatus status;
@@ -49,19 +50,34 @@ class BatteryMetricsGrid extends StatelessWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPrimary),
         ),
         const SizedBox(height: 8),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          // Fixed tile height (instead of a width-derived aspect ratio) scaled
-          // with the OS text size, so the label + value never clip.
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: 68 * textScale,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          itemCount: metrics.length,
-          itemBuilder: (context, index) {
+        // ADAPTIVE-COLUMN DETAIL MATRIX. Two columns at the default text
+        // scale; one when the labels and values grow, because "AVERAGE CELL
+        // VOLTAGE" at 2x is wider than a half-width tile and truncating a
+        // label hides what the number means.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = gridColumnsFor(
+              width: constraints.maxWidth,
+              textScale: textScale,
+              maxColumns: 2,
+              minTileWidth: 160,
+            );
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              // Fixed tile height (instead of a width-derived aspect ratio)
+              // scaled with the OS text size, so the label + value never clip.
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                // 76 rather than 68: a long label ("AVERAGE CELL VOLTAGE")
+                // wraps to a second line at 1x on a 360 dp phone rather than
+                // being abbreviated, and the two lines need the extra room.
+                mainAxisExtent: 76 * textScale,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: metrics.length,
+              itemBuilder: (context, index) {
             final item = metrics[index];
             // Per-tile entrance stagger: each tile slides up + fades in
             // slightly after the previous one. The tween starts negative to
@@ -88,7 +104,7 @@ class BatteryMetricsGrid extends StatelessWidget {
                       letterSpacing: 1.0,
                       color: Color(0xFF64748B),
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
@@ -107,6 +123,8 @@ class BatteryMetricsGrid extends StatelessWidget {
                 ],
               ),
             ),
+            );
+              },
             );
           },
         ),

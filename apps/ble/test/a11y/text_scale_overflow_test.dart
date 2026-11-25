@@ -29,6 +29,7 @@ import 'package:jkbmsr_ble/widgets/soc_ring.dart';
 import 'package:jkbmsr_ble/widgets/wire_resistance_section.dart';
 
 import '../support/fake_universal_ble.dart';
+import '../support/test_fonts.dart';
 
 const double _largeTextScale = 2.0;
 
@@ -83,6 +84,10 @@ BmsStatus _status() => BmsStatus(
 
 void main() {
   group('textScale 2.0 overflow', () {
+    // The numeric values use `fontFamily: 'monospace'`, which the test engine
+    // cannot resolve. Without a real face the measurements are of the test
+    // font's ~2x advance, not of the app.
+    setUpAll(loadMonospaceTestFont);
     setUp(installFakeUniversalBle);
     tearDown(() {
       BleBmsService().debugResetScanningState();
@@ -249,6 +254,131 @@ void main() {
       expect(position.pixels, position.maxScrollExtent,
           reason: 'the status list should be scrolled through to its end');
 
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'connected 24-cell pack at 2x does not overflow on a 360dp phone',
+        (tester) async {
+      // The idle STATUS case above renders no cells and no decoded identity,
+      // so it never lays out the fixed four-column cell matrix or a real
+      // label/value row. This seeds a CONNECTED 24-cell pack — the shape that
+      // was measured — through the service's own publish seam, then walks the
+      // whole status list at double text.
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final cells = [
+        for (var i = 1; i <= 24; i++)
+          CellInfo(
+            index: i,
+            voltage: 3.2 + i * 0.003,
+            wireResistance: 0.1 + i * 0.01,
+            isBalancing: i % 5 == 0,
+          ),
+      ];
+      BleBmsService().debugPublishStatus(BmsStatus(
+        soc: 87,
+        totalVoltage: 53.4,
+        currentA: -12.34,
+        powerW: -659.1,
+        remainingCapacityAh: 243.6,
+        nominalCapacityAh: 280,
+        cycleCount: 1234,
+        totalCycleCapacityAh: 11760.5,
+        cells: cells,
+        enabledCellCount: 24,
+        timestamp: DateTime(2026, 9, 22, 12),
+      ));
+
+      final scale = ValueNotifier<double>(1.0);
+      addTearDown(scale.dispose);
+
+      await tester.pumpWidget(ValueListenableBuilder<double>(
+        valueListenable: scale,
+        builder: (context, value, _) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(value),
+          ),
+          child: const JkbmsrBleApp(),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The first-run overlay still appears: the test has no stored device id.
+      final start = find.text('START SCANNING');
+      if (start.evaluate().isNotEmpty) {
+        await tester.ensureVisible(start);
+        await tester.pump();
+        await tester.tap(start);
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      await tester.tap(find.text('STATUS').last);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The seeded pack must actually be on screen, or this test proves
+      // nothing about the 24-cell matrix.
+      expect(find.text('Cell voltages'), findsOneWidget);
+      expect(find.text('C24'), findsWidgets);
+
+      scale.value = _largeTextScale;
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final scrollable = find
+          .descendant(
+            of: find.byType(StatusScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      for (var i = 0; i < 120; i++) {
+        if (position.pixels >= position.maxScrollExtent) break;
+        final target = position.pixels + 400;
+        position.jumpTo(
+          target > position.maxScrollExtent ? position.maxScrollExtent : target,
+        );
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      expect(position.pixels, position.maxScrollExtent,
+          reason: 'the status list should be scrolled through to its end');
+
+      // Every section has now been laid out at double text, including the
+      // cell matrix and the device-info rows.
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Battery Metrics grid does not overflow at 2x on a 360dp phone',
+        (tester) async {
+      // The existing 400 dp case above fits two columns comfortably. On the
+      // measured 360 dp phone the content is 328 dp, which is where the
+      // longest value ("11760.5 Ah") had the least room.
+      tester.view.physicalSize = const Size(360, 780);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(_wrapScaled(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: BatteryMetricsGrid(
+            status: BmsStatus(
+              soc: 87,
+              totalVoltage: 53.4,
+              currentA: -12.34,
+              powerW: -659.1,
+              remainingCapacityAh: 243.6,
+              nominalCapacityAh: 280,
+              cycleCount: 1234,
+              totalCycleCapacityAh: 11760.5,
+              timestamp: DateTime(2026, 9, 22, 12),
+            ),
+            isConnected: true,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
   });

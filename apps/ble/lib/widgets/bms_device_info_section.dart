@@ -110,15 +110,21 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Both halves are Expanded and the value may wrap: at 2x text a label
+        // like "Hardware version" plus a ten-digit serial no longer fit on one
+        // line at a phone's width, and the old single-line value column
+        // overflowed the row. Wrapping keeps every character visible instead
+        // of truncating the value.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12.5, color: BmsDeviceInfoSection._muted)),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(fontSize: 12.5, color: BmsDeviceInfoSection._muted)),
+          ),
           const SizedBox(width: 12),
-          Flexible(
+          Expanded(
             child: Text(
               value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
               style: TextStyle(
                   fontSize: 12.5, fontWeight: FontWeight.w700, color: textPrimary, fontFamily: 'monospace'),
@@ -143,9 +149,14 @@ class _SkeletonInfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // The label takes all the room the fixed skeleton does not need, and
+        // wraps at large text scales rather than overflowing the row.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12.5, color: BmsDeviceInfoSection._muted)),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(fontSize: 12.5, color: BmsDeviceInfoSection._muted)),
+          ),
           const SizedBox(width: 12),
           const JkSkeleton(width: 96, height: 12, borderRadius: 4),
         ],

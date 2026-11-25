@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
+import 'adaptive_grid.dart';
 import 'motion_kit.dart';
 
 class CellVoltagesSection extends StatelessWidget {
@@ -19,9 +20,10 @@ class CellVoltagesSection extends StatelessWidget {
     final textPrimary = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
 
     // Grow the fixed cell-matrix tile height with the OS text scale so the
-    // cell id + voltage lines never clip at large accessibility sizes. At the
-    // default scale this is exactly 1.0, so the layout is unchanged.
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    // cell id + voltage lines never clip at large accessibility sizes, and
+    // derive the column count from the same scale (see gridColumnsFor). The
+    // labels inside a tile are 11 px, so the scale is taken from that size.
+    final textScale = MediaQuery.textScalerOf(context).scale(11) / 11;
 
     CellInfo minCell = cells[0];
     CellInfo maxCell = cells[0];
@@ -265,20 +267,28 @@ class CellVoltagesSection extends StatelessWidget {
         _CellSparkline(cells: cells, minCell: minCell, maxCell: maxCell, avgV: avgV),
         const SizedBox(height: 6),
 
-        // 4-COLUMN CELL MATRIX
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          // Fixed cell height scaled with the OS text size so the id/voltage
-          // lines never clip at large accessibility scales.
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisExtent: 64 * textScale,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-          ),
-          itemCount: cells.length,
-          itemBuilder: (context, idx) {
+        // ADAPTIVE-COLUMN CELL MATRIX. Four columns at the default text
+        // scale; fewer as the text grows, so a tile is never squeezed below
+        // the width its own text needs.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = gridColumnsFor(
+              width: constraints.maxWidth,
+              textScale: textScale,
+            );
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              // Fixed cell height scaled with the OS text size so the
+              // id/voltage lines never clip at large accessibility scales.
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisExtent: 64 * textScale,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
+              ),
+              itemCount: cells.length,
+              itemBuilder: (context, idx) {
             final cell = cells[idx];
             final isMin = cell.index == minCell.index;
             final isMax = cell.index == maxCell.index;
@@ -369,6 +379,8 @@ class CellVoltagesSection extends StatelessWidget {
               ),
             ),
             ),
+            );
+              },
             );
           },
         ),

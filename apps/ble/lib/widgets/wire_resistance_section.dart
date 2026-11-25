@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
+import 'adaptive_grid.dart';
 import 'motion_kit.dart';
 
 class WireResistanceSection extends StatelessWidget {
@@ -16,9 +17,10 @@ class WireResistanceSection extends StatelessWidget {
     final textPrimary = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
 
     // Grow the fixed grid-tile height with the OS text scale so the two text
-    // lines never clip at large accessibility sizes. At the default scale
-    // this is exactly 1.0, so the layout is unchanged.
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    // lines never clip at large accessibility sizes, and derive the column
+    // count from the same scale (see gridColumnsFor). The labels inside a
+    // tile are 11 px, so the scale is taken from that size.
+    final textScale = MediaQuery.textScalerOf(context).scale(11) / 11;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,19 +34,28 @@ class WireResistanceSection extends StatelessWidget {
           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 10),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          // Fixed tile height scaled with the OS text size so the two text
-          // lines never clip at large accessibility scales.
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisExtent: 58 * textScale,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-          ),
-          itemCount: cells.length,
-          itemBuilder: (context, idx) {
+        // ADAPTIVE-COLUMN GRID. Four columns at the default text scale; fewer
+        // as the text grows, so a tile is never squeezed below the width its
+        // own text needs.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = gridColumnsFor(
+              width: constraints.maxWidth,
+              textScale: textScale,
+            );
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              // Fixed tile height scaled with the OS text size so the two
+              // text lines never clip at large accessibility scales.
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisExtent: 58 * textScale,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
+              ),
+              itemCount: cells.length,
+              itemBuilder: (context, idx) {
             final cell = cells[idx];
             return TileEntrance(
               delayIndex: idx,
@@ -80,6 +91,8 @@ class WireResistanceSection extends StatelessWidget {
                 ],
               ),
             ),
+            );
+              },
             );
           },
         ),

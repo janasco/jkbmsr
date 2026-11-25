@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
+import 'adaptive_chip_row.dart';
 import 'motion_kit.dart';
 import 'soc_ring.dart';
 
@@ -104,33 +105,12 @@ class BatteryHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: device model + live status badge.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    // Live status dot: pulses while connected, static when
-                    // offline.
-                    StatusDot(color: statusColor, size: 8),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        live
-                            ? status.modelName
-                            : (linkUp ? 'Waiting for data' : 'No device connected'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
+          // Header: device model + live status badge. At large text scales the
+          // badge moves under the model instead of squeezing it to an ellipsis.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chipStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor);
+              final statusChip = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
@@ -142,14 +122,67 @@ class BatteryHeroCard extends StatelessWidget {
                   children: [
                     Icon(statusIcon, size: 14, color: statusColor),
                     const SizedBox(width: 4),
-                    Text(
-                      statusLabel,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
-                    ),
+                    Flexible(child: Text(statusLabel, style: chipStyle)),
                   ],
                 ),
-              ),
-            ],
+              );
+
+              final chipWidth = measuredTextWidth(
+                    text: statusLabel,
+                    style: chipStyle,
+                    textScaler: MediaQuery.textScalerOf(context),
+                    textDirection: Directionality.of(context),
+                  ) +
+                  // icon, its gap, horizontal padding and border
+                  14 +
+                  4 +
+                  16 +
+                  2;
+              final inline = chipFitsBeside(
+                availableWidth: constraints.maxWidth,
+                chipWidth: chipWidth,
+                leadingWidth: 8 + 8, // status dot and its gap
+                minPrimaryWidth: 72,
+              );
+
+              final modelLine = Row(
+                children: [
+                  // Live status dot: pulses while connected, static when
+                  // offline.
+                  StatusDot(color: statusColor, size: 8),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      live
+                          ? status.modelName
+                          : (linkUp ? 'Waiting for data' : 'No device connected'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+                    ),
+                  ),
+                ],
+              );
+
+              if (inline) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: modelLine),
+                    const SizedBox(width: 8),
+                    statusChip,
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  modelLine,
+                  const SizedBox(height: 8),
+                  statusChip,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
 
@@ -279,60 +312,96 @@ class BatteryHeroCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: insetBg, borderRadius: BorderRadius.circular(14)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        !cellsKnown
-                            ? Icons.remove_circle_outline_rounded
-                            : (imbalanceOk ? Icons.check_circle_rounded : Icons.warning_amber_rounded),
-                        size: 18,
-                        color: !cellsKnown ? _muted : (imbalanceOk ? _green : _amber),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final balanceLabel =
+                    'Balancing ${status.balanceCurrentA.toStringAsFixed(1)}A';
+                const chipStyle = TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold, color: _green);
+
+                final primary = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      !cellsKnown
+                          ? Icons.remove_circle_outline_rounded
+                          : (imbalanceOk ? Icons.check_circle_rounded : Icons.warning_amber_rounded),
+                      size: 18,
+                      color: !cellsKnown ? _muted : (imbalanceOk ? _green : _amber),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cellsKnown ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: -',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
+                          ),
+                          if (cellsKnown)
                             Text(
-                              cellsKnown ? 'Cell imbalance: $deltaMv mV' : 'Cell imbalance: -',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
+                              'Min C${status.minCellIndex + 1}: ${status.minCellVoltage.toStringAsFixed(3)}V • '
+                              'Max C${status.maxCellIndex + 1}: ${status.maxCellVoltage.toStringAsFixed(3)}V',
+                              style: const TextStyle(fontSize: 11.0, color: _muted),
                             ),
-                            if (cellsKnown)
-                              Text(
-                                'Min C${status.minCellIndex + 1}: ${status.minCellVoltage.toStringAsFixed(3)}V • '
-                                'Max C${status.maxCellIndex + 1}: ${status.maxCellVoltage.toStringAsFixed(3)}V',
-                                style: const TextStyle(fontSize: 11.0, color: _muted),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
+                    ),
+                  ],
+                );
+
+                if (!balancingActive) return primary;
+
+                final chip = Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: _green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const StatusDot(color: _green, size: 6),
+                      const SizedBox(width: 5),
+                      Flexible(child: Text(balanceLabel, style: chipStyle)),
                     ],
                   ),
-                ),
-                if (balancingActive) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: _green.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const StatusDot(color: _green, size: 6),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Balancing ${status.balanceCurrentA.toStringAsFixed(1)}A',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _green),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+                );
+
+                // Same rule as the header: share the line while the text keeps
+                // a readable width, otherwise the chip takes its own line.
+                final chipWidth = measuredTextWidth(
+                      text: balanceLabel,
+                      style: chipStyle,
+                      textScaler: MediaQuery.textScalerOf(context),
+                      textDirection: Directionality.of(context),
+                    ) +
+                    6 +
+                    5 +
+                    16 +
+                    2;
+                final inline = chipFitsBeside(
+                  availableWidth: constraints.maxWidth,
+                  chipWidth: chipWidth,
+                  leadingWidth: 18 + 8, // status icon and its gap
+                );
+
+                if (inline) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: primary),
+                      const SizedBox(width: 8),
+                      chip,
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    primary,
+                    const SizedBox(height: 8),
+                    chip,
+                  ],
+                );
+              },
             ),
           ),
         ],

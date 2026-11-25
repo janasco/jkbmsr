@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/bms_models.dart';
 import '../services/brand_registry.dart';
+import 'adaptive_chip_row.dart';
 import 'motion_kit.dart';
 
 /// Compact brand-identity strip shown above the battery hero on the Status
@@ -47,96 +48,143 @@ class BrandHeroStrip extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final chipStyle = TextStyle(
+              fontSize: 11.0, fontWeight: FontWeight.w900, color: stateColor);
+
+          final identity = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: design.accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(design.icon, color: design.accent, size: 20),
+              Text(
+                brand.isPublic ? design.name.toUpperCase() : 'UNSUPPORTED DEVICE',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.8, color: textPrimary),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      brand.isPublic
-                          ? design.name.toUpperCase()
-                          : 'UNSUPPORTED DEVICE',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.8, color: textPrimary),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      brand.isPublic
-                          ? design.tagline
-                          : 'Identified as an unsupported battery system. '
-                              'JKBMSR supports JK-BMS only.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.0, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: stateColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: stateColor.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasLiveData)
-                      // Breathing confirmation dot next to the shield once
-                      // real telemetry is flowing.
-                      const StatusDot(color: Color(0xFF10B981), size: 7)
-                    else
-                      Icon(stateIcon, size: 12, color: stateColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      stateLabel,
-                      style: TextStyle(fontSize: 11.0, fontWeight: FontWeight.w900, color: stateColor),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 2),
+              Text(
+                brand.isPublic
+                    ? design.tagline
+                    : 'Identified as an unsupported battery system. '
+                        'JKBMSR supports JK-BMS only.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11.0, color: Color(0xFF64748B)),
               ),
             ],
-          ),
-          if (model.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Row(
+          );
+
+          final chip = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: stateColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: stateColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.memory_rounded, size: 13, color: design.accent),
-                const SizedBox(width: 5),
+                if (hasLiveData)
+                  // Breathing confirmation dot next to the shield once
+                  // real telemetry is flowing.
+                  const StatusDot(color: Color(0xFF10B981), size: 7)
+                else
+                  Icon(stateIcon, size: 12, color: stateColor),
+                const SizedBox(width: 4),
                 Flexible(
-                  child: Text(
-                    model,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                      color: design.accent,
-                    ),
-                  ),
+                  child: Text(stateLabel, style: chipStyle),
                 ),
               ],
             ),
-          ],
-        ],
+          );
+
+          // The chip grows with the OS text scale. While it leaves a readable
+          // width for the brand name it stays on the right; once it does not,
+          // it moves under the name instead of squeezing it to nothing.
+          final chipWidth = measuredTextWidth(
+                text: stateLabel,
+                style: chipStyle,
+                textScaler: MediaQuery.textScalerOf(context),
+                textDirection: Directionality.of(context),
+              ) +
+              // dot/icon, its gap, horizontal padding and border
+              7 +
+              4 +
+              16 +
+              2;
+          final inline = chipFitsBeside(
+            availableWidth: constraints.maxWidth,
+            chipWidth: chipWidth,
+            leadingWidth: 38 + 12,
+          );
+
+          final logo = Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: design.accent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(design.icon, color: design.accent, size: 20),
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (inline)
+                Row(
+                  children: [
+                    logo,
+                    const SizedBox(width: 12),
+                    Expanded(child: identity),
+                    const SizedBox(width: 8),
+                    chip,
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    logo,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          identity,
+                          const SizedBox(height: 8),
+                          chip,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              if (model.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.memory_rounded, size: 13, color: design.accent),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        model,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          color: design.accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
